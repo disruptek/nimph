@@ -227,7 +227,7 @@ $ nimph compare /some/distribution.file
 
 ## Combining Distributions
 
-You can merge an arbitrary numble of distributions.
+You can merge an arbitrary number of distributions.
 
 #### What You Type
 ```
