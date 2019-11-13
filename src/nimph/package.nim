@@ -92,6 +92,7 @@ proc add*(group: PackageGroup; name: string; package: Package) =
     group.table.add name, package
 
 proc aimAt*(package: Package; req: Requirement): Package =
+  ## produce a refined package which might meet the requirement
   var
     aim = package.url
   if aim.anchor == "":
@@ -114,6 +115,7 @@ proc aimAt*(package: Package; req: Requirement): Package =
   result.web = package.web
 
 proc add(group: PackageGroup; js: JsonNode) =
+  ## how packages get added to a group from the json list
   var
     name = js["name"].getStr
     package = newPackage(name = name,
@@ -139,6 +141,7 @@ proc add(group: PackageGroup; js: JsonNode) =
   group.add name, package
 
 proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
+  ## parse the official packages list from nimbledir
   let
     filename = nimbledir / officialPackages
 
@@ -221,6 +224,7 @@ iterator pairs*(group: PackageGroup): tuple[name: string; package: Package] =
     yield (name: name, package: package)
 
 proc bareUrlsAreEqual*(a, b: Uri): bool =
+  ## compare two urls without regard to their anchors
   if a.scheme.len != 0 and b.scheme.len != 0:
     var
       x = a
@@ -230,6 +234,7 @@ proc bareUrlsAreEqual*(a, b: Uri): bool =
     result = $x == $y
 
 proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
+  ## select a subgroup of packages that appear to match the requirement
   result = newPackageGroup()
   if req.isUrl:
     let
