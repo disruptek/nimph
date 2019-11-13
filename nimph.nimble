@@ -8,7 +8,8 @@ requires "https://github.com/disruptek/github.git#c6dfa4447106514697232c968b99b8
 requires "cligen >= 0.9.41"
 requires "bump >= 1.8.5"
 requires "nimgit2 >= 0.1.0"
-requires "npeg >= 0.21.0"
+requires "npeg"
+requires "parsetoml"
 requires "https://github.com/disruptek/cutelog.git >= 1.0.0"
 requires "https://github.com/stefantalpalaru/nim-unittest2.git >= 0.0.1"
 
