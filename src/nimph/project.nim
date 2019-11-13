@@ -369,7 +369,7 @@ proc findRepositoryUrl(path: string): Option[Uri] =
     gitTrap openRepository(open, path):
       warn &"error opening repository {path}"
       return
-    gitTrap remote, remoteLookup(remote, open.repo, "origin"):
+    gitTrap remote, remoteLookup(remote, open.repo, defaultRemote):
       warn &"unable to fetch remote `{name}` from repo in {path}"
       return
     try:
