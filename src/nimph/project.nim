@@ -123,6 +123,7 @@ proc fetchDump*(project: var Project; refresh = false): bool {.discardable.} =
   result = project.fetchDump(project.nimble.repo, refresh = refresh)
 
 proc knowVersion*(project: var Project): Version =
+  ## pull out all the stops to determine the version of a project
   if project.dump != nil:
     if "version" in project.dump:
       let
@@ -206,6 +207,7 @@ proc hasReleaseTag(project: Project): bool =
   result = project.release.kind == Tag
 
 proc inventRelease(project: var Project): Release {.discardable.} =
+  ## compute the most accurate release specification for the project
   if project.hasGit:
     project.release = newRelease("#" & $project.getHeadOid)
   elif project.url.anchor.len > 0:
@@ -228,6 +230,7 @@ proc inventRelease(project: var Project): Release {.discardable.} =
   result = project.release
 
 proc guessDist(project: Project): DistMethod =
+  ## guess at the distribution method used to deposit the assets
   if project.hasGit:
     result = Git
   elif project.hasHg:
@@ -238,6 +241,7 @@ proc guessDist(project: Project): DistMethod =
     result = Local
 
 proc followFoundTarget(dir: string): SearchResult =
+  ## recurse through .nimble-link files to find the .nimble
   result = findTarget(dir, extensions = @[dotNimble, dotNimbleLink])
   if result.found.isNone:
     return
@@ -317,6 +321,7 @@ proc availableProjects*(path: string): ProjectGroup =
       warn &"unable to identify package in {directory}"
 
 proc availableProjects*(project: Project): ProjectGroup =
+  ## convenience
   result = availableProjects(packageDirectory(project))
 
 proc determineDeps*(project: Project): Option[Requires] =
