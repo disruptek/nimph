@@ -74,7 +74,14 @@ template hasNimph*(project: Project): bool = fileExists(project.nimphConfig)
 
 proc nimbleDir*(project: Project): string =
   ## the path to the project's dependencies
-  result = absolutePath(project.repo / DepDir).normalizedPath
+  var
+    localdeps = project.repo / DepDir
+    globaldeps = getHomeDir() / dotNimble
+  if dirExists(localdeps):
+    result = localdeps
+  else:
+    result = globaldeps
+  result = absolutePath(result).normalizedPath
 
 proc `$`*(project: Project): string =
   result = &"{project.name}-{project.release}"
