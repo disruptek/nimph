@@ -8,9 +8,10 @@ import nimgit2
 import nimph/spec
 
 type
-  GitHeapGits = git_repository | git_reference
+  GitHeapGits = git_repository | git_reference | git_remote
   NimHeapGits = git_clone_options
   GitOid* = ptr git_oid
+  GitRemote* = ptr git_remote
   GitReference* = ptr git_reference
   GitRepository* = ptr git_repository
   GitClone* = object
@@ -64,6 +65,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
       git_repository_free(point)
     elif T is git_reference:
       git_reference_free(point)
+    elif T is git_remote:
+      git_remote_free(point)
     else:
       {.error: "missing a free definition".}
 
@@ -87,6 +90,12 @@ proc name*(got: GitReference): string =
 proc isTag*(got: GitReference): bool =
   result = git_reference_is_tag(got) == 1
 
+proc `$`*(reference: GitReference): string =
+  if reference.isTag:
+    result = reference.name
+  else:
+    result = $reference.oid
+
 proc clone*(got: var GitClone; uri: Uri; path: string; branch = ""): int =
   ## clone a repository
   got.options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
@@ -104,7 +113,20 @@ proc repositoryHead*(tag: var GitReference; repo: GitRepository): int =
   ## get the reference that points to HEAD
   result = git_repository_head(addr tag, repo)
 
+proc headReference*(repo: GitRepository; tag: var GitReference): int =
+  ## get the reference that points to HEAD
+  result = repositoryHead(tag, repo)
+
 proc openRepository*(got: var GitOpen; path: string): int =
   got.path = path
   #got.repo = cast[ptr git_repository](sizeof(git_repository).alloc)
   result = git_repository_open(addr got.repo, got.path)
+
+proc remoteLookup*(remote: var GitRemote; repo: GitRepository;
+                   name: string): int =
+  ## get the remote by name
+  result = git_remote_lookup(addr remote, repo, name)
+
+proc url*(remote: GitRemote): Uri =
+  ## retrieve the url of a remote
+  result = parseUri($git_remote_url(remote))

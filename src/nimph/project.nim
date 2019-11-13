@@ -349,17 +349,45 @@ proc `==`*(a, b: Project): bool =
     debug "had to use samefile to compare {apath} to {bpath}"
     result = sameFile(apath, bpath)
 
+proc isValid*(url: Uri): bool =
+  result = url.scheme.len != 0
+
+proc findRepositoryUrl(path: string): Option[Uri] =
+  var
+    remote: GitRemote
+    open: GitOpen
+    name = defaultRemote
+
+  withGit:
+    gitTrap openRepository(open, path):
+      warn &"error opening repository {path}"
+      return
+    gitTrap remote, remoteLookup(remote, open.repo, "origin"):
+      warn &"unable to fetch remote `{name}` from repo in {path}"
+      return
+    try:
+      let url = remote.url
+      if url.isValid:
+        result = remote.url.some
+    except:
+      warn &"unable to parse url from remote `{name}` from repo in {path}"
+
 proc createUrl(project: Project; dist: DistMethod): Uri =
   ## determine the source url for a project which may be local
   assert dist == project.guessDist
-  if project.url.scheme.len > 0:
+  if project.url.isValid:
     result = project.url
   else:
     case dist:
     of Local:
-      result = Uri(scheme: "file", path: repo(project))
+      result = Uri(scheme: "file", path: project.repo)
     of Git:
-      result = Uri(scheme: "file", path: repo(project))
+      var
+        url = findRepositoryUrl(project.repo)
+      if url.isSome:
+        result = url.get
+      else:
+        result = Uri(scheme: "file", path: project.repo)
     else:
       raise newException(Defect, "not implemented")
 

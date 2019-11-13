@@ -20,6 +20,7 @@ const
   nimbleMeta* {.strdefine.} = "nimblemeta".addFileExt("json")
   officialPackages* {.strdefine.} = "packages_official.json"
   emptyRelease* {.strdefine.} = "#head"
+  defaultRemote* {.strdefine.} = "origin"
   hubTime* = initTimeFormat "yyyy-MM-dd\'T\'HH:mm:ss\'Z\'"
   shortDate* = initTimeFormat "yyyy-MM-dd"
 
