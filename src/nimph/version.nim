@@ -30,6 +30,7 @@ type
     Under = "<"
     NotMore = "<="
 
+  # the specification of a version, release, or mask
   Release* = object
     case kind*: Operator
     of Tag:
@@ -39,6 +40,7 @@ type
     of Equal, AtLeast, Over, Under, NotMore:
       version*: Version
 
+  # the specification of a package requirement
   Requirement* = object
     identity*: string
     operator*: Operator
@@ -82,6 +84,7 @@ proc `$`*(req: Requirement): string =
   result = &"{req.identity} {req.operator}{req.release}"
 
 proc isValid*(release: Release): bool =
+  ## true if the release seems plausible
   const sensible = @[
     [ true, false, false],
     [ true,  true, false],
@@ -103,6 +106,7 @@ proc isValid*(release: Release): bool =
     result = release.version.isValid
 
 proc isValid*(req: Requirement): bool =
+  ## true if the requirement seems sensible
   result = req.release.isValid
   if not result:
     return
@@ -169,6 +173,7 @@ proc `==`*(a: VersionMask; b: Version): bool =
 
 proc acceptable*(mask: VersionMaskField; op: Operator;
                  value: VersionField): bool =
+  ## true if the versionfield value passes the mask
   case op:
   of Wild:
     result = mask.isNone or value == mask.get
@@ -182,6 +187,7 @@ proc acceptable*(mask: VersionMaskField; op: Operator;
     raise newException(Defect, "inconceivable!")
 
 proc at*[T: Version | VersionMask](version: T; index: VersionIndex): auto =
+  ## like [int] but clashless
   case index:
   of 0: result = version.major
   of 1: result = version.minor
@@ -216,6 +222,7 @@ proc contains(requirement: Requirement; version: Version): bool =
     accepts = requirement.release.accepts
   case op:
   of Caret:
+    # i know, this looks nuts
     for index, field in accepts.pairs:
       if field.isNone:
         break
@@ -236,7 +243,8 @@ proc contains(requirement: Requirement; version: Version): bool =
   of Wild:
     result = acceptable(accepts.major, op, version.major)
     result = result and acceptable(accepts.minor, op, version.minor)
-    result = result and acceptable(accepts.patch, requirement.operator, version.patch)
+    result = result and acceptable(accepts.patch, requirement.operator,
+                                   version.patch)
   else:
     raise newException(Defect, "unexpected (yet)")
 
@@ -270,6 +278,7 @@ proc contains*(req: Requirement; spec: Release): bool =
       raise newException(Defect, &"unimplemented for {spec.kind} release")
 
 template starOrDigits(s: string): VersionMaskField =
+  ## parse a star or digit as in a version mask
   if s == "*":
     # VersionMaskField is Option[VersionField]
     none(VersionField)
@@ -306,6 +315,7 @@ proc newRelease*(version: Version): Release =
   result = Release(kind: Equal, version: version)
 
 proc newRelease*(reference: string; operator = Equal): Release =
+  ## parse a version, mask, or tag with an operator hint from the requirement
   if reference in ["", "any version"]:
     result = Release(kind: Wild, accepts: newVersionMask("*"))
   elif reference.startsWith("#"):
