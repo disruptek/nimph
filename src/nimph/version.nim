@@ -385,7 +385,10 @@ proc newRequirement*(id: string; operator: Operator; spec: string): Requirement 
   result.identity = id
   result.release = newRelease(spec, operator = operator)
   # if it parsed as Caret, Tilde, or Wild, then paint the requirement as such
-  if result.release.kind in Wildlings:
+  if result.release in Wildlings:
+    result.operator = result.release.kind
+  elif result.release in {Tag}:
+    # eventually, we'll support tag comparisons...
     result.operator = result.release.kind
   else:
     result.operator = operator
