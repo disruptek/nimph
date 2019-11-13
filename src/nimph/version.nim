@@ -81,7 +81,7 @@ proc `$`*(spec: Release): string =
     result = spec.accepts.omitStars
 
 proc `$`*(req: Requirement): string =
-  result = &"{req.identity} {req.operator}{req.release}"
+  result = &"{req.identity}{req.operator}{req.release}"
 
 proc isValid*(release: Release): bool =
   ## true if the release seems plausible
@@ -318,7 +318,7 @@ proc newRelease*(reference: string; operator = Equal): Release =
   ## parse a version, mask, or tag with an operator hint from the requirement
   if reference in ["", "any version"]:
     result = Release(kind: Wild, accepts: newVersionMask("*"))
-  elif reference.startsWith("#"):
+  elif reference.startsWith("#") or operator == Tag:
     result = Release(kind: Tag, reference: reference)
     removePrefix(result.reference, {'#'})
   elif "*" in reference:

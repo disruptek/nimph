@@ -209,9 +209,9 @@ proc hasReleaseTag(project: Project): bool =
 proc inventRelease(project: var Project): Release {.discardable.} =
   ## compute the most accurate release specification for the project
   if project.hasGit:
-    project.release = newRelease("#" & $project.getHeadOid)
+    project.release = newRelease($project.getHeadOid, operator = Tag)
   elif project.url.anchor.len > 0:
-    project.release = newRelease("#" & project.url.anchor)
+    project.release = newRelease(project.url.anchor, operator = Tag)
   elif project.version.isValid:
     project.release = newRelease($project.version)
   else:
@@ -510,6 +510,8 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
     var
       proj: Project
     if findProject(proj, directory):
+      if not writeNimbleMeta(directory, bare, $getHeadOid(got.repo)):
+        warn &"unable to write {nimbleMeta} in {directory}"
       project.relocateDependency(proj)
     else:
       error "couldn't make sense of the project i just cloned"
