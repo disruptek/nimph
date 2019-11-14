@@ -51,6 +51,7 @@ type
     config*: NimphConfig
     cfg*: ConfigRef
     deps*: PackageGroup
+    tags*: GitTagTable
     refs*: Releases
     meta*: NimbleMeta
     url*: Uri
@@ -213,10 +214,49 @@ proc relocateDependency(project: Project; package: var Project) =
 proc hasReleaseTag(project: Project): bool =
   result = project.release.kind == Tag
 
+proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
+  var
+    opened: GitOpen
+  withGit:
+    gitTrap opened, openRepository(opened, project.repo):
+      let path {.used.} = project.repo # template reasons
+      warn &"error opening repository {path}"
+      return
+    gitTrap tagTable(opened.repo, result):
+      let path {.used.} = project.repo # template reasons
+      warn &"unable to fetch tags from repo in {path}"
+      return
+    project.tags = result
+
+proc findCurrentTag*(project: Project): Release =
+  let
+    head = project.getHeadOid
+  var
+    name: string
+  if project.tags == nil:
+    error "unable to determine tags without fetching them from git"
+    name = $head
+  else:
+    block search:
+      for tag, target in project.tags.pairs:
+        if target.oid == head:
+          name = $tag
+          info &"{project.name} positioned at {name}"
+          break search
+      name = $head
+  result = newRelease(name, operator = Tag)
+
+proc findCurrentTag*(project: var Project): Release =
+  let
+    readonly = project
+  if project.tags == nil:
+    project.fetchTagTable
+  result = readonly.findCurrentTag
+
 proc inventRelease(project: var Project): Release {.discardable.} =
   ## compute the most accurate release specification for the project
   if project.hasGit:
-    project.release = newRelease($project.getHeadOid, operator = Tag)
+    project.release = project.findCurrentTag
   elif project.url.anchor.len > 0:
     project.release = newRelease(project.url.anchor, operator = Tag)
   elif project.version.isValid:
@@ -282,7 +322,7 @@ proc findProject*(project: var Project; dir = "."): bool =
   project.version = project.knowVersion
   project.inventRelease
   if project.release.isValid:
-    debug &"{project} reference {project.release}"
+    debug &"{project} release {project.release}"
   else:
     error &"unable to determine reference for {project}"
     return
@@ -422,7 +462,9 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
   # if it does, check that the version matches
   if result:
     result = project.release in req
-    if project.version.isValid:
+    # if we have a version number and the requirement isn't for a
+    # particular tag, then accept a matching version release
+    if project.version.isValid and req.operator != Tag:
       result = result or newRelease(project.version) in req
 
 proc resolveDependency*(project: Project;

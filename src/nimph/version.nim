@@ -316,11 +316,11 @@ proc newRelease*(version: Version): Release =
 
 proc newRelease*(reference: string; operator = Equal): Release =
   ## parse a version, mask, or tag with an operator hint from the requirement
-  if reference in ["", "any version"]:
-    result = Release(kind: Wild, accepts: newVersionMask("*"))
-  elif reference.startsWith("#") or operator == Tag:
+  if reference.startsWith("#") or operator == Tag:
     result = Release(kind: Tag, reference: reference)
     removePrefix(result.reference, {'#'})
+  elif reference in ["", "any version"]:
+    result = Release(kind: Wild, accepts: newVersionMask("*"))
   elif "*" in reference:
     result = Release(kind: Wild, accepts: newVersionMask(reference))
   elif operator in Wildlings:
