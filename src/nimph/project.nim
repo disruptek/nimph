@@ -525,7 +525,7 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
       result = true
     # else, if we have a version number and the requirement isn't for
     # a particular tag, then accept a matching version release
-    elif project.version.isValid:
+    elif project.version.isValid and req.operator != Tag:
       result = result or newRelease(project.version) in req
 
 proc resolveDependency*(project: Project;
