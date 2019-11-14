@@ -14,9 +14,9 @@ some outstanding issues:
 ✅clone a repo from a url;
 ❌shallow clone with only the most recent reference?
 ✅rename package directory to match nimble semantics;
-❌determine a url for the original repo -- use origin;
+✅determine a url for the original repo -- use origin;
 ✅determine the appropriate reference to add to the anchor;
-❌does the current commit match an existing tag?
+✅does the current commit match an existing tag?
 
 
 ]#
