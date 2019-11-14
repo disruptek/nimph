@@ -55,6 +55,7 @@ type
     refs*: Releases
     meta*: NimbleMeta
     url*: Uri
+    parent*: Project
 
   ProjectGroup* = ref object
     table*: TableRef[string, Project]
@@ -75,14 +76,17 @@ template hasNimph*(project: Project): bool = fileExists(project.nimphConfig)
 
 proc nimbleDir*(project: Project): string =
   ## the path to the project's dependencies
-  var
-    localdeps = project.repo / DepDir
-    globaldeps = getHomeDir() / dotNimble
-  if dirExists(localdeps):
-    result = localdeps
+  if project.parent != nil:
+    result = project.parent.nimbleDir
   else:
-    result = globaldeps
-  result = absolutePath(result).normalizedPath
+    var
+      localdeps = project.repo / DepDir
+      globaldeps = getHomeDir() / dotNimble
+    if dirExists(localdeps):
+      result = localdeps
+    else:
+      result = globaldeps
+    result = absolutePath(result).normalizedPath
 
 proc `$`*(project: Project): string =
   result = &"{project.name}-{project.release}"
@@ -102,7 +106,7 @@ proc guessVersion*(project: Project): Version =
     parsed = parseVersion(contents)
 
   if parsed.isNone:
-    warn &"unable to parse version from {project.nimble}"
+    debug &"unable to parse version from {project.nimble}"
   else:
     result = parsed.get
     if not result.isValid:
@@ -353,6 +357,23 @@ iterator pairs*(group: ProjectGroup): tuple[name: string; project: Project] =
   for directory, project in group.table.pairs:
     yield (name: directory.pathToImport, project: project)
 
+iterator values*(group: ProjectGroup): Project =
+  for project in group.table.values:
+    yield project
+
+iterator mvalues*(group: ProjectGroup): var Project =
+  for project in group.table.mvalues:
+    yield project
+
+proc hasProjectIn(group: ProjectGroup; directory: string): bool =
+  result = group.table.hasKey(directory)
+
+proc getProjectIn(group: ProjectGroup; directory: string): Project =
+  result = group.table[directory]
+
+proc mgetProjectIn(group: var ProjectGroup; directory: string): var Project =
+  result = group.table[directory]
+
 proc availableProjects*(path: string): ProjectGroup =
   ## find packages locally available to a project; note that
   ## this can include the project itself -- perfectly fine
@@ -367,9 +388,11 @@ proc availableProjects*(path: string): ProjectGroup =
     else:
       warn &"unable to identify package in {directory}"
 
-proc availableProjects*(project: Project): ProjectGroup =
+proc childProjects*(project: Project): ProjectGroup =
   ## convenience
   result = availableProjects(packageDirectory(project))
+  for child in result.mvalues:
+    child.parent = project
 
 proc determineDeps*(project: Project): Option[Requires] =
   if project.dump == nil:
@@ -503,21 +526,14 @@ proc resolveDependency*(project: Project;
 
   raise newException(ValueError, &"dunno where to get requirement {requirement}")
 
-proc resolveDependencies*(project: var Project; dependencies: var PackageGroup): bool =
-  let
-    findPacks = getOfficialPackages(project.nimbleDir)
-    findReqs = project.determineDeps
-  var
-    packages: PackageGroup
-    projects = project.availableProjects
-
-  if not findPacks.ok:
-    packages = newPackageGroup()
-  else:
-    packages = findPacks.packages
-
+proc resolveDependencies*(project: var Project;
+                          projects: var ProjectGroup;
+                          packages: PackageGroup;
+                          dependencies: var PackageGroup): bool =
   result = true
 
+  let
+    findReqs = project.determineDeps
   if findReqs.isNone:
     warn &"no requirements found for {project}"
     return
@@ -538,12 +554,39 @@ proc resolveDependencies*(project: var Project; dependencies: var PackageGroup):
       discard
     else:
       warn &"found {resolved.len} options for {requirement} dependency"
+      var
+        count = 1
+      for name, package in resolved.pairs:
+        warn &"{count}\t{name}"
+        warn &"\t{package.url}\n"
+        count.inc
     for name, package in resolved.pairs:
       if name notin dependencies:
-        info name, "-->", $package.url
+        debug name, "-->", $package.url
         dependencies.add name, package
       else:
-        notice "(dupe)", name, "-->", $package.url
+        debug "(dupe)", name, "-->", $package.url
+    for name, package in resolved.pairs:
+      if projects.hasProjectIn(name):
+        var
+          recurse = projects.mgetProjectIn(name)
+        result = result and recurse.resolveDependencies(projects, packages,
+                                                        dependencies)
+
+proc resolveDependencies*(project: var Project;
+                          dependencies: var PackageGroup): bool =
+  let
+    findPacks = getOfficialPackages(project.nimbleDir)
+  var
+    packages: PackageGroup
+    projects = project.childProjects
+
+  if not findPacks.ok:
+    packages = newPackageGroup()
+  else:
+    packages = findPacks.packages
+
+  result = project.resolveDependencies(projects, packages, dependencies)
 
 proc clone*(project: var Project; url: Uri; name: string): bool =
   ## clone a package into the project's nimbleDir
