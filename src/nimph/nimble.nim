@@ -85,7 +85,6 @@ proc fetchNimbleDump*(path: string): DumpResult =
   if parsed.isNone:
     result.why = &"unable to parse `nimble dump` output"
     return
-  debug "ran `nimble dump` and parsed result"
   result.table = parsed.get
   result.ok = true
 
