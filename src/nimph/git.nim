@@ -85,12 +85,14 @@ template gitTrap*(code: int; body: untyped) =
 proc init*(): bool =
   let count = git_libgit2_init()
   result = count > 0
-  debug "open gits:", count
+  when defined(debug):
+    debug "open gits:", count
 
 proc shutdown*(): bool =
   let count = git_libgit2_shutdown()
   result = count >= 0
-  debug "open gits:", count
+  when defined(debug):
+    debug "open gits:", count
 
 template withGit*(body: untyped) =
   if not init():
