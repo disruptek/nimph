@@ -21,6 +21,8 @@ some outstanding issues:
 
 ]#
 
+import std/hashes
+import std/sets
 import std/strutils
 import std/tables
 import std/uri
@@ -264,7 +266,7 @@ proc inventRelease(project: var Project): Release {.discardable.} =
   elif project.url.anchor.len > 0:
     project.release = newRelease(project.url.anchor, operator = Tag)
   elif project.version.isValid:
-    project.release = newRelease($project.version)
+    project.release = newRelease(project.version)
   else:
     # grab the directory name
     let name = repo(project).lastPathPart
@@ -470,6 +472,39 @@ proc asPackage(project: Project): Package =
                       dist = dist,
                       url = project.createUrl(dist))
 
+proc releaseSymbols(release: Release; head = "";
+                    tags: GitTagTable = nil): HashSet[Hash] =
+  if release.kind != Tag:
+    raise newException(Defect, &"why are you calling this on {release.kind}?")
+  if release.reference.toLowerAscii == "head":
+    if head != "":
+      result.incl head.hash
+  else:
+    result.incl release.reference.hash
+  if tags != nil:
+    if tags.hasKey(release.reference):
+      result.incl hash($tags[release.reference].oid)
+
+proc symbolicMatch(req: Requirement; release: Release; head = "";
+                   tags: GitTagTable = nil): bool =
+  if req.operator notin {Equal, Tag} or release.kind != Tag:
+    return
+
+  let
+    required = releaseSymbols(req.release, head, tags = tags)
+    provided = releaseSymbols(release, head, tags = tags)
+  result = len(required * provided) > 0
+
+proc symbolicMatch(project: Project; req: Requirement): bool =
+  if project.hasGit:
+    if project.tags == nil:
+      warn &"i wanted to examine tags for {project} but they were empty"
+    result = symbolicMatch(req, project.release, $project.getHeadOid,
+                           tags = project.tags)
+  else:
+    warn &"without a git repo for {project.name}, i cannot determine tags"
+    result = symbolicMatch(req, project.release)
+
 proc isSatisfiedBy(req: Requirement; project: Project): bool =
   # first, check that the identity matches
   if project.name == req.identity:
@@ -485,9 +520,12 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
   # if it does, check that the version matches
   if result:
     result = project.release in req
-    # if we have a version number and the requirement isn't for a
-    # particular tag, then accept a matching version release
-    if project.version.isValid and req.operator != Tag:
+    # if we want #head, see if the current position is also #head
+    if project.symbolicMatch(req):
+      result = true
+    # else, if we have a version number and the requirement isn't for
+    # a particular tag, then accept a matching version release
+    elif project.version.isValid:
       result = result or newRelease(project.version) in req
 
 proc resolveDependency*(project: Project;
@@ -553,7 +591,7 @@ proc resolveDependencies*(project: var Project;
     of 1:
       discard
     else:
-      warn &"found {resolved.len} options for {requirement} dependency"
+      warn &"found {resolved.len} options for {requirement} dependency:"
       var
         count = 1
       for name, package in resolved.pairs:
@@ -564,8 +602,6 @@ proc resolveDependencies*(project: var Project;
       if name notin dependencies:
         debug name, "-->", $package.url
         dependencies.add name, package
-      else:
-        debug "(dupe)", name, "-->", $package.url
     for name, package in resolved.pairs:
       if projects.hasProjectIn(name):
         var
