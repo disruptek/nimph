@@ -104,7 +104,7 @@ proc nimph*(args: seq[string]; dry_run = false; log_level = logLevel): int =
         fatal &"👍{project.nimble.package} version {project.version} lookin' good"
       else:
         warn "run `nimph doctor` to fix this stuff"
-  of "doctor":
+  of "doctor", "fix":
     prepareForTheWorst:
       if project.doctor(dry = dry_run):
         fatal &"👍{project.nimble.package} version {project.version} lookin' good"
