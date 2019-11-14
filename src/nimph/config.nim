@@ -8,6 +8,7 @@ import compiler/idents
 import compiler/nimconf
 import compiler/options as compileropts
 import compiler/pathutils
+import compiler/condsyms
 
 export compileropts
 export nimconf
@@ -35,6 +36,23 @@ proc loadProjectCfg*(path: string): Option[ConfigRef] =
     config = newConfigRef()
   if readConfigFile(filename.AbsoluteFile, cache, config):
     result = config.some
+
+proc loadAllCfgs*(): ConfigRef =
+  ## use the compiler to parse all the usual nim.cfgs
+  result = newConfigRef()
+
+  # define symbols such as, say, nimbabel;
+  # this allows us to correctly parse conditions in nim.cfg(s)
+  initDefines(result.symbols)
+
+  # stuff the prefixDir so we load the compiler's config/nim.cfg
+  # just like the compiler would if we were to invoke it directly
+  let compiler = getCurrentCompilerExe()
+  result.prefixDir = AbsoluteDir splitPath(compiler.parentDir).head
+
+  # now follow the compiler process of loading the configs
+  var cache = newIdentCache()
+  loadConfigs(NimCfg.RelativeFile, cache, result)
 
 proc appendConfig*(path: Target; config: string): bool =
   # make a temp file in an appropriate spot, with a significant name

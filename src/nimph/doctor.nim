@@ -95,6 +95,14 @@ proc doctor*(project: var Project; dry = true): bool =
       else:
         debug &"a naive parse of {nimcfg} was fine"
 
+    # try to parse all nim configuration files
+    try:
+      let
+        global = loadAllCfgs()
+      debug "parsing global nim configuration worked fine"
+    except Exception as e:
+      error "unable to parse nim configuration: " & e.msg
+
   # see if we can find a github token
   block github:
     let
