@@ -142,9 +142,6 @@ proc `$`*(tag: GitTag): string =
   if name != nil:
     result = $name
 
-proc message*(tag: GitTag): string =
-  result = $git_tag_message(tag)
-
 proc oid*(got: GitReference): GitOid =
   result = git_reference_target(got)
 
@@ -178,6 +175,14 @@ proc `$`*(thing: GitThing): string =
 #  case thing.kind:
 #  of goTag:
 #  else:
+
+proc message*(tag: GitTag): string =
+  result = $git_tag_message(tag)
+
+proc message*(thing: GitThing): string =
+  if thing.kind != goTag:
+    raise newException(ValueError, "not a tag: " & $thing)
+  result = cast[GitTag](thing.o).message
 
 proc free*(table: GitTagTable) =
   for tag, obj in table.pairs:
@@ -297,13 +302,11 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): int =
     let
       thing = newThing(obj)
     if thing.kind == goTag:
-      let tag = cast[GitTag](thing.o)
-      debug "msg:", tag.message.strip
       result = thing.target(target)
+      free(thing)
       if result != 0:
         warn "target lookup fail"
         return
     else:
       target = thing
-    debug name, "=>", $target
     tags.add name, target
