@@ -150,7 +150,7 @@ proc doctor*(project: var Project; dry = true): bool =
           result = false
       if packs.ok:
         let packages {.used.} = packs.packages
-        info &"loaded {packages.len} packages from nimble"
+        debug &"loaded {packages.len} packages from nimble"
       break
 
   # check dependencies and maybe install some
