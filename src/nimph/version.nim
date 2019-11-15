@@ -401,8 +401,8 @@ proc newRequirement*(id: string; operator: Operator; spec: string): Requirement 
   ## parse a requirement
   when defined(debug):
     if id != id.strip:
+      warn &"whitespace around requirement identity: `{id}`"
       result.identity = id
-    warn &"whitespace around requirement identity: `{id}`"
   result.identity = id.strip
   result.release = newRelease(spec, operator = operator)
   # if it parsed as Caret, Tilde, or Wild, then paint the requirement as such
