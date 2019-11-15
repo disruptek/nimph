@@ -161,7 +161,7 @@ proc doctor*(project: var Project; dry = true): bool =
       var
         group = newPackageGroup()
       if project.resolveDependencies(group):
-        info &"all dependencies resolved for {project}"
+        debug &"all dependencies resolved for {project}"
       else:
         notice &"unable to resolve all dependencies for {project}"
       for name, package in group.pairs:
