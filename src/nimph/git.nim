@@ -47,7 +47,7 @@ else:
 
 type
   GitHeapGits = git_repository | git_reference | git_remote | git_tag |
-                git_strarray | git_object
+                git_strarray | git_object | git_commit
   NimHeapGits = git_clone_options
   GitOid* = ptr git_oid
   GitRemote* = ptr git_remote
@@ -55,6 +55,7 @@ type
   GitRepository* = ptr git_repository
   GitStrArray* = ptr git_strarray
   GitTag* = ptr git_tag
+  GitCommit* = ptr git_commit
   GitClone* = object
     url*: cstring
     directory*: cstring
@@ -115,6 +116,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
       git_strarray_free(point)
     elif T is git_tag:
       git_tag_free(point)
+    elif T is git_commit:
+      git_commit_free(point)
     elif T is git_object:
       git_object_free(point)
     else:
@@ -133,6 +136,15 @@ proc free*(opened: GitOpen) =
 
 proc free*(thing: GitThing) =
   free(thing.o)
+
+proc short*(oid: GitOid; size: int): string =
+  var
+    output: cstring
+  output = cast[cstring](alloc(size + 1))
+  output[size] = '\0'
+  git_oid_nfmt(output, size.uint, oid)
+  result = $output
+  dealloc(output)
 
 proc `$`*(got: GitOid): string =
   result = $git_oid_tostr_s(got)
@@ -177,14 +189,34 @@ proc `$`*(thing: GitThing): string =
 #  case thing.kind:
 #  of goTag:
 #  else:
+#
+proc message*(commit: GitCommit): string =
+  result = $git_commit_message(commit)
 
 proc message*(tag: GitTag): string =
   result = $git_tag_message(tag)
 
 proc message*(thing: GitThing): string =
-  if thing.kind != goTag:
-    raise newException(ValueError, "not a tag: " & $thing)
-  result = cast[GitTag](thing.o).message
+  case thing.kind:
+  of goTag:
+    result = cast[GitTag](thing.o).message
+  of goCommit:
+    result = cast[GitCommit](thing.o).message
+  else:
+    raise newException(ValueError, "dunno how to get a message: " & $thing)
+
+proc summary*(commit: GitCommit): string =
+  result = $git_commit_summary(commit)
+
+proc summary*(thing: GitThing): string =
+  case thing.kind:
+  of goTag:
+    result = cast[GitTag](thing.o).message
+  of goCommit:
+    result = cast[GitCommit](thing.o).summary
+  else:
+    raise newException(ValueError, "dunno how to get a summary: " & $thing)
+  result = result.strip
 
 proc free*(table: GitTagTable) =
   for tag, obj in table.pairs:
@@ -281,6 +313,14 @@ proc tagList*(repo: GitRepository; tags: var seq[string]): int =
     tags = cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
   git_strarray_free(addr list)
 
+proc lookupThing*(thing: var GitThing; repo: GitRepository; name: string): int =
+  var
+    obj: GitObject
+  result = git_revparse_single(addr obj, repo, name)
+  if result != 0:
+    return
+  thing = newThing(obj)
+
 proc tagTable*(repo: GitRepository; tags: var GitTagTable): int =
   ## compose a table of tags and their associated references
   var
@@ -294,20 +334,15 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): int =
 
   for name in names.items:
     var
-      obj: GitObject
-      target: GitThing
-    result = git_revparse_single(addr obj, repo, name)
+      thing, target: GitThing
+    result = lookupThing(thing, repo, name)
     if result != 0:
-      warn "tag lookup fail"
       return
 
-    let
-      thing = newThing(obj)
     if thing.kind == goTag:
       result = thing.target(target)
       free(thing)
       if result != 0:
-        warn "target lookup fail"
         return
     else:
       target = thing

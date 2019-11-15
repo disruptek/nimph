@@ -234,6 +234,45 @@ proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
       return
     project.tags = result
 
+proc releaseSummary(project: Project): string =
+  if not project.hasGit:
+    return "    (not in git repo)"
+  if not project.release.isValid:
+    return "    (invalid release)"
+  if project.release.kind != Tag:
+    return "    (not tagged)"
+  withGit:
+    var
+      thing: GitThing
+      opened: GitOpen
+    gitTrap opened, openRepository(opened, project.repo):
+      let path {.used.} = project.repo # template reasons
+      warn &"error opening repository {path}"
+      return
+    gitTrap thing, lookupThing(thing, opened.repo, project.release.reference):
+      warn &"error reading reference `{project.release.reference}`"
+      return
+    result = thing.summary
+
+proc cuteRelease(project: Project): string =
+  if project.hasGit and project.release.isValid:
+    let
+      head = project.getHeadOid
+    if project.tags == nil:
+      error "unable to determine tags without fetching them from git"
+      result = head.short(6)
+    else:
+      block search:
+        for tag, target in project.tags.pairs:
+          if target.oid == head:
+            result = $tag
+            break search
+        result = head.short(6)
+  elif project.version.isValid:
+    result = $project.version
+  else:
+    result = "???"
+
 proc findCurrentTag*(project: Project): Release =
   let
     head = project.getHeadOid
@@ -247,7 +286,6 @@ proc findCurrentTag*(project: Project): Release =
       for tag, target in project.tags.pairs:
         if target.oid == head:
           name = $tag
-          info &"{project.name} positioned at {name}"
           break search
       name = $head
   result = newRelease(name, operator = Tag)
@@ -502,7 +540,7 @@ proc symbolicMatch(project: Project; req: Requirement): bool =
     result = symbolicMatch(req, project.release, $project.getHeadOid,
                            tags = project.tags)
   else:
-    warn &"without a git repo for {project.name}, i cannot determine tags"
+    debug &"without a git repo for {project.name}, i cannot determine tags"
     result = symbolicMatch(req, project.release)
 
 proc isSatisfiedBy(req: Requirement; project: Project): bool =
@@ -568,6 +606,12 @@ proc resolveDependencies*(project: var Project;
                           projects: var ProjectGroup;
                           packages: PackageGroup;
                           dependencies: var PackageGroup): bool =
+  ## resolve a project's dependencies recursively; store result in dependencies
+  if project.hasGit:
+    info &"{project.cuteRelease:>8} {project.name:>12}   {project.releaseSummary}"
+  else:
+    warn &"{project.cuteRelease:>8} {project.name:>12}   {project.releaseSummary}"
+
   result = true
 
   let
@@ -580,7 +624,6 @@ proc resolveDependencies*(project: var Project;
     requires = findReqs.get
   for requirement in requires.values:
     if requirement.isVirtual:
-      debug "ignoring virtual dependency:", requirement
       continue
     let resolved = project.resolveDependency(projects, packages, requirement)
     case resolved.len:
@@ -600,14 +643,12 @@ proc resolveDependencies*(project: var Project;
         count.inc
     for name, package in resolved.pairs:
       if name notin dependencies:
-        debug name, "-->", $package.url
+        if projects.hasProjectIn(name):
+          var
+            recurse = projects.mgetProjectIn(name)
+          result = result and recurse.resolveDependencies(projects, packages,
+                                                          dependencies)
         dependencies.add name, package
-    for name, package in resolved.pairs:
-      if projects.hasProjectIn(name):
-        var
-          recurse = projects.mgetProjectIn(name)
-        result = result and recurse.resolveDependencies(projects, packages,
-                                                        dependencies)
 
 proc resolveDependencies*(project: var Project;
                           dependencies: var PackageGroup): bool =
@@ -623,6 +664,7 @@ proc resolveDependencies*(project: var Project;
     packages = findPacks.packages
 
   result = project.resolveDependencies(projects, packages, dependencies)
+
 
 proc clone*(project: var Project; url: Uri; name: string): bool =
   ## clone a package into the project's nimbleDir
