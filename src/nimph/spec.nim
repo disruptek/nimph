@@ -25,6 +25,9 @@ const
   hubTime* = initTimeFormat "yyyy-MM-dd\'T\'HH:mm:ss\'Z\'"
   shortDate* = initTimeFormat "yyyy-MM-dd"
 
+  # when true, try to clamp analysis to project-local directories
+  WhatHappensInVegas* = false
+
 template withinDirectory*(path: string; body: untyped): untyped =
   if not path.dirExists:
     raise newException(ValueError, path & " is not a directory")

@@ -50,11 +50,14 @@ type
     dist*: DistMethod
     release*: Release
     dump*: StringTableRef
+    # unused yet
     config*: NimphConfig
     cfg*: ConfigRef
-    deps*: PackageGroup
+    # unused yet
+    #deps*: PackageGroup
     tags*: GitTagTable
-    refs*: Releases
+    # unused yet
+    #refs*: Releases
     meta*: NimbleMeta
     url*: Uri
     parent*: Project
@@ -78,12 +81,24 @@ template hasNimph*(project: Project): bool = fileExists(project.nimphConfig)
 
 proc nimbleDir*(project: Project): string =
   ## the path to the project's dependencies
+  var
+    localdeps = project.repo / DepDir / ""
+    globaldeps = getHomeDir() / dotNimble / ""
+
+  # if we instantiated this project from another, the implication is that we
+  # want to point at whatever that parent project is using as its nimbleDir.
   if project.parent != nil:
     result = project.parent.nimbleDir
+
+  # otherwise, if we have configuration data, we should use it to determine
+  # what the user might be using as a package directory -- local or elsewise
+  elif project.cfg != nil:
+    result = project.cfg.suggestNimbleDir(project.repo,
+                                          local = localdeps,
+                                          global = globaldeps)
+
+  # otherwise, we'll just presume some configuration-free defaults
   else:
-    var
-      localdeps = project.repo / DepDir
-      globaldeps = getHomeDir() / dotNimble
     if dirExists(localdeps):
       result = localdeps
     else:
@@ -173,7 +188,6 @@ proc newProject*(nimble: Target): Project =
   result.nimble = (repo: splat.dir, package: splat.name, ext: splat.ext)
   result.name = splat.name
   result.config = newNimphConfig(splat.dir / configFile)
-  result.refs = newTable[string, Release]()
 
 proc getHeadOid(path: string): GitOid =
   var
@@ -365,7 +379,8 @@ proc findProject*(project: var Project; dir = "."): bool =
     return
   result = true
 
-template packageDirectory*(project: Project): string = project.nimbleDir / PkgDir
+template packageDirectory*(project: Project): string =
+  project.nimbleDir / PkgDir
 
 iterator packageDirectories(project: Project): string =
   let

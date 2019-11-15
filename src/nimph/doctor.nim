@@ -18,6 +18,54 @@ proc doctor*(project: var Project; dry = true): bool =
   ## perform some sanity tests against the project and
   ## try to fix any issues we find unless `dry` is true
 
+  block configuration:
+    let
+      nimcfg = project.nimCfg
+    # try a compiler parse of nim.cfg
+    if not fileExists($nimcfg):
+      warn &"there wasn't a {NimCfg} in {project.nimble.repo}"
+      if not dry:
+        if nimcfg.appendConfig("--clearNimblePath"):
+          info "i created a new one"
+        else:
+          error "and i wasn't able to make a new one"
+    else:
+      let
+        parsed = loadProjectCfg($nimcfg)
+      if parsed.isNone:
+        error &"i had some issues trying to parse {nimcfg}"
+        result = false
+      else:
+        debug &"the compiler parsed {nimcfg} without incident"
+
+    # try a naive parse of nim.cfg
+    if fileExists($project.nimCfg):
+      let
+        nimcfg = project.nimCfg
+        parsed = parseProjectCfg(project.nimCfg)
+      if not parsed.ok:
+        error &"i had some issues trying to parse {nimcfg}:"
+        error parsed.why
+        result = false
+      else:
+        debug &"a naive parse of {nimcfg} was fine"
+
+    # try to parse all nim configuration files
+    block globalconfig:
+      try:
+        project.cfg = loadAllCfgs()
+        debug "parsing global nim configuration worked fine"
+      except Exception as e:
+        error "unable to parse nim configuration: " & e.msg
+        result = false
+        break globalconfig
+
+      when defined(debug):
+        for path in project.cfg.likelySearch(project.repo):
+          debug &"\tsearch: {path}"
+        for path in project.cfg.likelyLazy(project.repo):
+          debug &"\t  lazy: {path}"
+
   block whoami:
     # check our project version
     let
@@ -64,56 +112,6 @@ proc doctor*(project: var Project; dry = true): bool =
     else:
       project.dump = damp.table
 
-  block configuration:
-    let
-      nimcfg = project.nimCfg
-    # try a compiler parse of nim.cfg
-    if not fileExists($nimcfg):
-      warn &"there wasn't a {NimCfg} in {project.nimble.repo}"
-      if not dry:
-        if nimcfg.appendConfig("--clearNimblePath"):
-          info "i created a new one"
-        else:
-          error "and i wasn't able to make a new one"
-    else:
-      let
-        parsed = loadProjectCfg($nimcfg)
-      if parsed.isNone:
-        error &"i had some issues trying to parse {nimcfg}"
-        result = false
-      else:
-        debug &"the compiler parsed {nimcfg} without incident"
-
-    # try a naive parse of nim.cfg
-    if fileExists($project.nimCfg):
-      let
-        nimcfg = project.nimCfg
-        parsed = parseProjectCfg(project.nimCfg)
-      if not parsed.ok:
-        error &"i had some issues trying to parse {nimcfg}:"
-        error parsed.why
-        result = false
-      else:
-        debug &"a naive parse of {nimcfg} was fine"
-
-    # try to parse all nim configuration files
-    block globalconfig:
-      var
-        global: ConfigRef
-      try:
-        global = loadAllCfgs()
-        debug "parsing global nim configuration worked fine"
-      except Exception as e:
-        error "unable to parse nim configuration: " & e.msg
-        result = false
-        break globalconfig
-
-      when defined(debug):
-        for path in global.searchPaths.items:
-          debug &"\tsearch: {path.string}"
-        for path in global.lazyPaths.items:
-          debug &"\t  lazy: {path.string}"
-
   # see if we can find a github token
   block github:
     let
@@ -147,9 +145,9 @@ proc doctor*(project: var Project; dry = true): bool =
             notice &"couldn't get nimble's package list from {project.nimbleDir}"
           elif packs.packages.ageInDays > stalePackages:
             notice &"the nimble package list in {project.nimbleDir} is stale"
-          elif packs.packages.ageInDays > 0:
+          elif packs.packages.ageInDays > 1:
             info "the nimble package list is " &
-                   &"{packs.packages.ageInDays} days old"
+                 &"{packs.packages.ageInDays} days old"
             break skiprefresh
           else:
             break skiprefresh

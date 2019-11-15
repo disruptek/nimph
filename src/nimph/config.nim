@@ -3,6 +3,8 @@ import std/tables
 import std/os
 import std/options
 import std/strutils
+import std/sequtils
+import std/algorithm
 
 import compiler/idents
 import compiler/nimconf
@@ -161,3 +163,90 @@ proc newNimphConfig*(path: string): NimphConfig =
     result.toml = newTNull()
   else:
     result.toml = parseFile(path)
+
+iterator likelySearch*(config: ConfigRef; repo: string): string =
+  ## yield /-terminated directory paths likely added via --path
+  when defined(debug):
+    if repo != absolutePath(repo).normalizedPath:
+      error &"repo {repo} wasn't normalized"
+
+  for search in config.searchPaths.items:
+    let search = search.string / "" # cast from AbsoluteDir
+    # we don't care about library paths
+    if search.startsWith(config.libpath.string / ""):
+      continue
+
+    # limit ourselves to the repo?
+    when WhatHappensInVegas:
+      if search.startsWith(repo):
+        yield search
+    else:
+      yield search
+
+iterator likelyLazy*(config: ConfigRef; repo: string): string =
+  ## yield /-terminated directory paths likely added via --nimblePath
+  when defined(debug):
+    if repo != absolutePath(repo).normalizedPath:
+      error &"repo {repo} wasn't normalized"
+
+  # build a table of sightings of directories
+  var popular = newCountTable[string]()
+  for search in config.lazyPaths.items:
+    let
+      search = search.string / ""      # cast from AbsoluteDir
+      parent = search.parentDir / ""   # ensure a trailing /
+    popular.inc search
+    if search != parent:               # silly: elide /
+      popular.inc parent
+
+  # sort the table in descending order
+  popular.sort
+
+  # yield the directories that exist
+  for search in popular.keys:
+    # if the directory doesn't exist, ignore it
+    if not dirExists(search):
+      continue
+
+    # limit ourselves to the repo?
+    when WhatHappensInVegas:
+      if search.startsWith(repo):
+        yield search
+    else:
+      yield search
+
+proc suggestNimbleDir*(config: ConfigRef; repo: string;
+                       local = ""; global = ""): string =
+  ## come up with a useful nimbleDir based upon what we find in the
+  ## current configuration, the location of the project, and the provided
+  ## suggestions for local or global package directories
+  var
+    local = local
+    global = global
+
+  block either:
+    # if a local directory is suggested, see if we can confirm its use
+    if local != "":
+      assert local.endsWith(DirSep)
+      for search in config.likelySearch(repo):
+        if search.startsWith(local):
+          result = local
+          break either
+
+    # otherwise, try to pick a global .nimble directory based upon lazy paths
+    for search in config.likelyLazy(repo):
+      #
+      # FIXME: maybe we should look for some nimble debris?
+      #
+      if search.endsWith(PkgDir & DirSep):
+        result = search.parentDir  # ie. the parent of pkgs
+      else:
+        result = search            # doesn't look like pkgs... just use it
+      break either
+
+    # otherwise, try to make one up using the suggestion
+    if global == "":
+      raise newException(IOError, "unable to guess global {dotNimble} directory")
+    assert global.endsWith(DirSep)
+    result = global
+    break either
