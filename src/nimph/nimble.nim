@@ -40,14 +40,16 @@ proc runNimble*(args: seq[string]; options: set[ProcessOption]): RunNimbleOutput
     opts.incl poInteractive
     opts.incl poParentStreams
     # the user wants interactivity
-    debug command, args.join(" ")
+    when defined(debug):
+      debug command, args.join(" ")
     let
       process = startProcess(command, args = args, options = opts)
     result = (output: "", ok: process.waitForExit == 0)
   else:
     # the user wants to capture output
     command &= " " & quoteShellCommand(args)
-    debug command
+    when defined(debug):
+      debug command
     let
       (output, code) = execCmdEx(command, opts)
     result = (output: output, ok: code == 0)
