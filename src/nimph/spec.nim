@@ -1,3 +1,4 @@
+import std/uri
 import std/os
 import std/times
 
@@ -32,3 +33,5 @@ template withinDirectory*(path: string; body: untyped): untyped =
   defer:
     setCurrentDir(cwd)
   body
+
+template isValid*(url: Uri): bool = url.scheme.len != 0

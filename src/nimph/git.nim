@@ -347,3 +347,11 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): int =
     else:
       target = thing
     tags.add name, target
+
+proc getHeadOid*(repository: GitRepository): GitOid =
+  var
+    head: GitReference
+  gitTrap head, repositoryHead(head, repository):
+    warn "error fetching repo head"
+    return
+  result = head.oid

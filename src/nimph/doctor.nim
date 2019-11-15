@@ -11,6 +11,7 @@ import nimph/nimble
 import nimph/config
 import nimph/thehub
 import nimph/package
+import nimph/dependency
 import nimph/git as git
 
 proc doctor*(project: var Project; dry = true): bool =
@@ -96,12 +97,22 @@ proc doctor*(project: var Project; dry = true): bool =
         debug &"a naive parse of {nimcfg} was fine"
 
     # try to parse all nim configuration files
-    try:
-      let
+    block globalconfig:
+      var
+        global: ConfigRef
+      try:
         global = loadAllCfgs()
-      debug "parsing global nim configuration worked fine"
-    except Exception as e:
-      error "unable to parse nim configuration: " & e.msg
+        debug "parsing global nim configuration worked fine"
+      except Exception as e:
+        error "unable to parse nim configuration: " & e.msg
+        result = false
+        break globalconfig
+
+      when defined(debug):
+        for path in global.searchPaths.items:
+          debug &"\tsearch: {path.string}"
+        for path in global.lazyPaths.items:
+          debug &"\t  lazy: {path.string}"
 
   # see if we can find a github token
   block github:
