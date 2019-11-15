@@ -147,7 +147,8 @@ proc knowVersion*(project: var Project): Version =
         debug "parsed a version from `nimble dump`"
         result = parsed.get
       else:
-        raise newException(IOError, &"dump yielded unparsable version `{text}`")
+        raise newException(IOError,
+                           &"unparsable version `{text}` in {project.name}")
       return
   result = project.guessVersion
   if result.isValid:
@@ -357,7 +358,7 @@ proc findProject*(project: var Project; dir = "."): bool =
     return
   # this is a hack but i wanna keep my eye on this for now...
   elif target.message.startsWith("followed"):
-    warn target.message
+    debug target.message
   project = newProject(target.found.get)
   project.meta = fetchNimbleMeta(repo(project))
   project.dist = project.guessDist
@@ -635,36 +636,35 @@ proc resolveDependencies*(project: var Project;
       discard
     else:
       warn &"found {resolved.len} options for {requirement} dependency:"
-      var
-        count = 1
+      var count = 1
       for name, package in resolved.pairs:
         warn &"{count}\t{name}"
-        warn &"\t{package.url}\n"
+        warn &"\t{package.url}"
+        fatal ""
         count.inc
     for name, package in resolved.pairs:
       if name notin dependencies:
         if projects.hasProjectIn(name):
-          var
-            recurse = projects.mgetProjectIn(name)
+          var recurse = projects.mgetProjectIn(name)
           result = result and recurse.resolveDependencies(projects, packages,
                                                           dependencies)
         dependencies.add name, package
 
 proc resolveDependencies*(project: var Project;
                           dependencies: var PackageGroup): bool =
-  let
-    findPacks = getOfficialPackages(project.nimbleDir)
+  ## entrance to the recursive dependency resolution
   var
     packages: PackageGroup
     projects = project.childProjects
 
+  let
+    findPacks = getOfficialPackages(project.nimbleDir)
   if not findPacks.ok:
     packages = newPackageGroup()
   else:
     packages = findPacks.packages
 
   result = project.resolveDependencies(projects, packages, dependencies)
-
 
 proc clone*(project: var Project; url: Uri; name: string): bool =
   ## clone a package into the project's nimbleDir
