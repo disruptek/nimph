@@ -513,16 +513,27 @@ proc asPackage(project: Project): Package =
 
 proc releaseSymbols(release: Release; head = "";
                     tags: GitTagTable = nil): HashSet[Hash] =
-  if release.kind != Tag:
-    raise newException(Defect, &"why are you calling this on {release.kind}?")
-  if release.reference.toLowerAscii == "head":
-    if head != "":
-      result.incl head.hash
+  if release.kind == Tag:
+    if release.reference.toLowerAscii == "head":
+      if head != "":
+        result.incl head.hash
+    else:
+      result.incl release.reference.hash
+    if tags != nil:
+      if tags.hasKey(release.reference):
+        result.incl hash($tags[release.reference].oid)
   else:
-    result.incl release.reference.hash
-  if tags != nil:
-    if tags.hasKey(release.reference):
-      result.incl hash($tags[release.reference].oid)
+    if not release.isSpecific:
+      return
+
+    # stuff some version strings into
+    # the hash that might match a tag
+    var version = release.specifically
+    result.incl hash(       $version)
+    result.incl hash("v"  & $version)
+    result.incl hash("V"  & $version)
+    result.incl hash("v." & $version)
+    result.incl hash("V." & $version)
 
 proc symbolicMatch(req: Requirement; release: Release; head = "";
                    tags: GitTagTable = nil): bool =
@@ -558,14 +569,16 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
         result = true
   # if it does, check that the version matches
   if result:
-    result = project.release in req
-    # if we want #head, see if the current position is also #head
-    if project.symbolicMatch(req):
-      result = true
-    # else, if we have a version number and the requirement isn't for
-    # a particular tag, then accept a matching version release
-    elif project.version.isValid and req.operator != Tag:
-      result = result or newRelease(project.version) in req
+    if req.operator == Tag:
+      # compare tags, head, and versions
+      result = project.symbolicMatch(req)
+    else:
+      # try to use our release
+      if project.release.isSpecific:
+        result = newRelease(project.release.specifically) in req
+      # fallback to the version indicated by nimble
+      elif project.version.isValid:
+        result = newRelease(project.version) in req
 
 proc resolveDependency*(project: Project;
                         projects: ProjectGroup;

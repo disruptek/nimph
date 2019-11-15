@@ -215,6 +215,23 @@ iterator pairs*[T: Version | VersionMask](version: T): auto =
   for i in VersionIndex.low .. VersionIndex.high:
     yield (index: i, field: version.at(i))
 
+proc isSpecific*(release: Release): bool =
+  ## if the version/match specifies a full X.Y.Z version
+  result = release.kind in {Equal, AtLeast, NotMore} and release.isValid
+  result = result or (release.kind in Wildlings and release.accepts.patch.isSome)
+
+proc specifically*(release: Release): Version =
+  ## a full X.Y.Z version the release will match
+  if release.isSpecific:
+    if release.kind in Wildlings:
+      result = (major: release.accepts.major.get,
+                minor: release.accepts.minor.get,
+                patch: release.accepts.patch.get)
+    else:
+      result = release.version
+  else:
+    raise newException(ValueError, &"release {release} is not specific")
+
 proc contains(requirement: Requirement; version: Version): bool =
   ## true if the version satisfies the requirement
   let
@@ -272,7 +289,7 @@ proc contains*(req: Requirement; spec: Release): bool =
     if req.release.accepts.major.isNone:
       result = true
     # otherwise, we have to compare it to a version
-    elif spec.kind in {Equal}:
+    elif spec.isSpecific:
       result = spec.version in req
     else:
       raise newException(Defect, &"unimplemented for {spec.kind} release")
