@@ -45,7 +45,7 @@ proc asPackage*(project: Project): Package =
 
 proc childProjects*(project: Project): ProjectGroup =
   ## convenience
-  result = availableProjects(packageDirectory(project))
+  result = project.availableProjects
   for child in result.mvalues:
     child.parent = project
 

@@ -1,9 +1,9 @@
+import std/strtabs
 import std/strformat
 import std/tables
 import std/os
 import std/options
 import std/strutils
-import std/sequtils
 import std/algorithm
 
 import compiler/idents
@@ -164,6 +164,24 @@ proc newNimphConfig*(path: string): NimphConfig =
   else:
     result.toml = parseFile(path)
 
+iterator packagePaths*(config: ConfigRef): string =
+  ## yield extant package paths from the configuration as /-terminated strings
+  let
+    lib = config.libpath.string / ""
+  var
+    dedupe = newStringTable(modeStyleInsensitive)
+  for path in config.searchPaths:
+    let path = path.string / ""
+    if path.startsWith(lib):
+      continue
+    dedupe[path] = ""
+  for path in config.lazyPaths:
+    let path = path.string / ""
+    dedupe[path] = ""
+  for path in dedupe.keys:
+    if path.dirExists:
+      yield path
+
 iterator likelySearch*(config: ConfigRef; repo: string): string =
   ## yield /-terminated directory paths likely added via --path
   when defined(debug):
@@ -183,7 +201,7 @@ iterator likelySearch*(config: ConfigRef; repo: string): string =
     else:
       yield search
 
-iterator likelyLazy*(config: ConfigRef; repo: string): string =
+iterator likelyLazy*(config: ConfigRef; repo: string; least = 0): string =
   ## yield /-terminated directory paths likely added via --nimblePath
   when defined(debug):
     if repo != absolutePath(repo).normalizedPath:
@@ -197,15 +215,21 @@ iterator likelyLazy*(config: ConfigRef; repo: string): string =
       parent = search.parentDir / ""   # ensure a trailing /
     popular.inc search
     if search != parent:               # silly: elide /
-      popular.inc parent
+      if parent in popular:            # the parent has to have been added
+        popular.inc parent
 
   # sort the table in descending order
   popular.sort
 
   # yield the directories that exist
-  for search in popular.keys:
-    # if the directory doesn't exist, ignore it
-    if not dirExists(search):
+  for search, count in popular.pairs:
+    when false:
+      # if the directory doesn't exist, ignore it
+      if not dirExists(search):
+        continue
+
+    # maybe we can ignore unpopular paths
+    if least > count:
       continue
 
     # limit ourselves to the repo?

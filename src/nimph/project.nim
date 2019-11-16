@@ -159,7 +159,8 @@ proc knowVersion*(project: var Project): Version =
         text {.used.} = project.dump["version"]
         parsed = parseVersion(&"""version = "{text}"""")
       if parsed.isSome:
-        debug "parsed a version from `nimble dump`"
+        when defined(debug):
+          debug "parsed a version from `nimble dump`"
         result = parsed.get
       else:
         raise newException(IOError,
@@ -167,7 +168,8 @@ proc knowVersion*(project: var Project): Version =
       return
   result = project.guessVersion
   if result.isValid:
-    debug &"parsed a version from {project.nimble}"
+    when defined(debug):
+      debug &"parsed a version from {project.nimble}"
     return
   if project.fetchDump():
     result = project.knowVersion
@@ -373,23 +375,21 @@ proc findProject*(project: var Project; dir = "."): bool =
   project.version = project.knowVersion
   project.inventRelease
   if project.release.isValid:
-    debug &"{project} release {project.release}"
+    debug &"{project} version {project.version}"
   else:
     error &"unable to determine reference for {project}"
     return
   result = true
 
-template packageDirectory*(project: Project): string =
+template packageDirectory*(project: Project): string {.deprecated.}=
   project.nimbleDir / PkgDir
 
 iterator packageDirectories(project: Project): string =
-  let
-    pkgs = packageDirectory(project)
-  if dirExists(pkgs):
-    for component, directory in walkDir(pkgs):
-      if component notin {pcDir, pcLinkToDir}:
-        continue
-      yield directory
+  ## yield directories according to the project's path configuration
+  if project.parent != nil or project.cfg == nil:
+    raise newException(Defect, "nonsensical outside root project")
+  for directory in project.cfg.packagePaths:
+    yield directory
 
 proc add(group: ProjectGroup; name: string; project: Project) =
   group.table.add name, project
@@ -400,6 +400,9 @@ proc newProjectGroup(): ProjectGroup =
 
 proc pathToImport(path: string): string =
   result = path.extractFilename.split("-")[0]
+
+proc contains*(group: ProjectGroup; name: string): bool =
+  result = name in group.table
 
 iterator pairs*(group: ProjectGroup): tuple[name: string; project: Project] =
   for directory, project in group.table.pairs:
@@ -422,19 +425,17 @@ proc getProjectIn*(group: ProjectGroup; directory: string): Project =
 proc mgetProjectIn*(group: var ProjectGroup; directory: string): var Project =
   result = group.table[directory]
 
-proc availableProjects*(path: string): ProjectGroup =
+proc availableProjects*(project: Project): ProjectGroup =
   ## find packages locally available to a project; note that
   ## this can include the project itself -- perfectly fine
   result = newProjectGroup()
-  for component, directory in walkDir(path):
-    if component notin {pcDir, pcLinkToDir}:
-      continue
-    var
-      package: Project
+  for directory in project.packageDirectories:
+    var package: Project
     if findProject(package, directory):
-      result.add directory, package
+      if package.repo notin result:
+        result.add package.repo, package
     else:
-      warn &"unable to identify package in {directory}"
+      debug &"no package found in {directory}"
 
 proc `==`*(a, b: Project): bool =
   ## a dirty (if safe) way to compare equality of projects

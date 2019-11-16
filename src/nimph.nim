@@ -64,7 +64,11 @@ proc nimph*(args: seq[string]; dry_run = false; log_level = logLevel): int =
 
   if not findProject(project):
     crash &"unable to find a project; try `nimble init`?"
-  project.version = project.guessVersion
+
+  try:
+    project.cfg = loadAllCfgs()
+  except Exception as e:
+    crash "unable to parse nim configuration: " & e.msg
 
   case sub:
   of "search":
@@ -92,6 +96,7 @@ proc nimph*(args: seq[string]; dry_run = false; log_level = logLevel): int =
         crash &"unable to find a package matching `{query}`"
       if not project.clone(repository.git, repository.name):
         crash &"unable to clone {repository.git}"
+      fatal &"👍cloned {repository.git}"
   of "install", "uninstall", "test", "path", "build", "tasks", "dump", "list",
      "refresh", "c", "cc", "cpp", "js":
     let

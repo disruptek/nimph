@@ -24,7 +24,8 @@ proc doctor*(project: var Project; dry = true): bool =
     # try a compiler parse of nim.cfg
     if not fileExists($nimcfg):
       warn &"there wasn't a {NimCfg} in {project.nimble.repo}"
-      if not dry:
+      # at the moment, we support any combination of local/user/global deps
+      if false:
         if nimcfg.appendConfig("--clearNimblePath"):
           info "i created a new one"
         else:
@@ -52,19 +53,13 @@ proc doctor*(project: var Project; dry = true): bool =
 
     # try to parse all nim configuration files
     block globalconfig:
-      try:
-        project.cfg = loadAllCfgs()
-        debug "parsing global nim configuration worked fine"
-      except Exception as e:
-        error "unable to parse nim configuration: " & e.msg
-        result = false
-        break globalconfig
-
       when defined(debug):
         for path in project.cfg.likelySearch(project.repo):
           debug &"\tsearch: {path}"
         for path in project.cfg.likelyLazy(project.repo):
           debug &"\t  lazy: {path}"
+      else:
+        ## this space intentionally left blank
 
   block whoami:
     # check our project version
@@ -167,11 +162,14 @@ proc doctor*(project: var Project; dry = true): bool =
     var
       tryAgain = false
     for iteration in 0 .. 1:
+      # we need to reload the config each repeat through this loop so that we
+      # can correctly identify new search paths after adding new packages
+      if iteration > 0:
+        project.cfg = loadAllCfgs()
+
       var
         group = newPackageGroup()
-      if project.resolveDependencies(group):
-        debug &"all dependencies resolved for {project}"
-      else:
+      if not project.resolveDependencies(group):
         notice &"unable to resolve all dependencies for {project}"
       for name, package in group.pairs:
         # a hackish solution for now: the keys are set to the repo path...
@@ -191,3 +189,19 @@ proc doctor*(project: var Project; dry = true): bool =
           result = false
       if not tryAgain:
         break
+
+  # warn if the user appears to have multiple --nimblePaths
+  block nimblepaths:
+    var
+      inRepo, outRepo: int
+      found: seq[string]
+    for path in likelyLazy(project.cfg, project.repo, least = 2):
+      found.add path
+      if path.startsWith(project.repo):
+        inRepo.inc
+      else:
+        outRepo.inc
+    if inRepo + outRepo > 1:
+      warn "it looks like you have multiple --nimblePaths defined:"
+      for count, path in found.pairs:
+        warn &"\t{count + 1}\t{path}"
