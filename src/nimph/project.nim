@@ -71,6 +71,11 @@ type
 
   Releases* = TableRef[string, Release]
 
+  LinkedSearchResult* = ref object
+    via: LinkedSearchResult
+    source: string
+    search: SearchResult
+
 template repo*(project: Project): string = project.nimble.repo
 template gitDir*(project: Project): string = project.repo / dotGit
 template hasGit*(project: Project): bool = dirExists(project.gitDir)
@@ -340,34 +345,55 @@ proc guessDist(project: Project): DistMethod =
   else:
     result = Local
 
-proc followFoundTarget(dir: string): SearchResult =
+proc parseNimbleLink(path: string): tuple[nimble: string; source: string] =
+  let
+    lines = readFile(path).splitLines
+  if lines.len != 2:
+    raise newException(ValueError, &"malformed {path}")
+  result = (nimble: lines[0], source: lines[1])
+
+proc linkedFindTarget(dir: string; target = ""): LinkedSearchResult =
   ## recurse through .nimble-link files to find the .nimble
-  result = findTarget(dir, extensions = @[dotNimble, dotNimbleLink])
-  if result.found.isNone:
+  result = LinkedSearchResult()
+  result.search = findTarget(dir, extensions = @[dotNimble, dotNimbleLink],
+                             target = target)
+
+  let found = result.search.found
+  if found.isNone or found.get.ext == dotNimble:
     return
-  let found = result.found.get
-  if found.ext == dotNimble:
+
+  try:
+    let parsed = parseNimbleLink($found.get)
+    if fileExists(parsed.nimble):
+      result.source = parsed.source
+    # specify the path to the .nimble and the .nimble filename itself
+    var recursed = linkedFindTarget(parsed.nimble.parentDir,
+                                    target = parsed.nimble.extractFilename)
+    recursed.via = result
+    result = recursed
+  except ValueError as e:
+    result.search.message = e.msg
     return
-  for line in lines($found):
-    if fileExists(line):
-      result.message = &"followed {found}"
-      result.found = newTarget(line).some
-      return
-  result.message = &"{found} didn't lead to a {dotNimble}"
-  result.found = none(Target)
+
+  result.search.message = &"{found} didn't lead to a {dotNimble}"
+  result.search.found = none(Target)
 
 proc findProject*(project: var Project; dir = "."): bool =
   ## locate a project starting from `dir`
   let
-    target = followFoundTarget(dir)
-  if target.found.isNone:
-    if target.message != "":
-      error target.message
+    target = linkedFindTarget(dir)
+  if target.search.found.isNone:
+    if target.search.message != "":
+      error target.search.message
     return
-  # this is a hack but i wanna keep my eye on this for now...
-  elif target.message.startsWith("followed"):
-    debug target.message
-  project = newProject(target.found.get)
+  elif target.via != nil:
+    var
+      target = target  # shadow linked search result
+    while target.via != nil:
+      debug &"--> via {target.via.search.found.get}"
+      target = target.via
+
+  project = newProject(target.search.found.get)
   project.meta = fetchNimbleMeta(project.repo)
   project.dist = project.guessDist
   if project.meta.hasUrl:
