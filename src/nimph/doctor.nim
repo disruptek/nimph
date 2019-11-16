@@ -173,7 +173,7 @@ proc doctor*(project: var Project; dry = true): bool =
         notice &"unable to resolve all dependencies for {project}"
       for name, package in group.pairs:
         # a hackish solution for now: the keys are set to the repo path...
-        if name.startsWith("/"):
+        if package.local:
           continue
         if dry:
           notice &"{name} missing"
@@ -202,6 +202,7 @@ proc doctor*(project: var Project; dry = true): bool =
       else:
         outRepo.inc
     if inRepo + outRepo > 1:
-      warn "it looks like you have multiple --nimblePaths defined:"
+      fatal "❔it looks like you have multiple --nimblePaths defined:"
       for count, path in found.pairs:
-        warn &"\t{count + 1}\t{path}"
+        fatal &"❔\t{count + 1}\t{path}"
+      fatal "❔nim and nimph support this, but humans may find it confusing 😏"

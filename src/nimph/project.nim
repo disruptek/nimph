@@ -250,11 +250,11 @@ proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
 
 proc releaseSummary*(project: Project): string =
   if project.dist != Git:
-    return "    (not in git repo)"
+    return "⚠️(not in git repository)"
   if not project.release.isValid:
-    return "    (invalid release)"
+    return "⚠️(invalid release)"
   if project.release.kind != Tag:
-    return "    (not tagged)"
+    return "⚠️(not tagged)"
   withGit:
     var
       thing: GitThing
@@ -423,9 +423,6 @@ proc add(group: ProjectGroup; name: string; project: Project) =
 proc newProjectGroup(): ProjectGroup =
   result = ProjectGroup()
   result.table = newTable[string, Project]()
-
-proc pathToImport(path: string): string =
-  result = path.extractFilename.split("-")[0]
 
 proc contains*(group: ProjectGroup; name: string): bool =
   result = name in group.table

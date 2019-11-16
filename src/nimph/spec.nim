@@ -1,3 +1,5 @@
+import std/strutils
+import std/hashes
 import std/uri
 import std/os
 import std/times
@@ -38,3 +40,17 @@ template withinDirectory*(path: string; body: untyped): untyped =
   body
 
 template isValid*(url: Uri): bool = url.scheme.len != 0
+
+proc hash*(url: Uri): Hash =
+  ## help hash URLs
+  var h: Hash = 0
+  for field in url.fields:
+    when field is string:
+      h = h !& field.hash
+    elif field is bool:
+      h = h !& field.hash
+  result = !$h
+
+proc pathToImport*(path: string): string =
+  ## calculate how a path will be imported by the compiler
+  result = path.extractFilename.split("-")[0]

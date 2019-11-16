@@ -15,9 +15,36 @@ import nimph/project
 import nimph/version
 import nimph/git
 
-proc createUrl(project: Project; dist: DistMethod): Uri =
+proc reportMultipleResolutions(project: Project;
+                               requirement: Requirement; resolved: PackageGroup) =
+  ## output some useful warnings depending upon the nature of the dupes
+
+  var
+    urls: HashSet[Hash]
+  for url in resolved.urls:
+    urls.incl url.hash
+
+  if urls.len == 1:
+    warn &"{project.name} has {resolved.len} " &
+         &"options for {requirement} dependency, all via"
+    for url in resolved.urls:
+      warn &"\t{url}"
+      break
+  else:
+    warn &"{project.name} has {resolved.len} " &
+         &"options for {requirement} dependency:"
+  var count = 1
+  for name, package in resolved.pairs:
+    warn &"{count}\t{name}"
+    if urls.len != 1:
+      warn &"\t{package.url}"
+      fatal ""
+    count.inc
+
+proc createUrl(project: Project): Uri =
   ## determine the source url for a project which may be local
-  assert dist == project.dist
+  let
+    dist = project.dist
   if project.url.isValid:
     result = project.url
   else:
@@ -36,12 +63,8 @@ proc createUrl(project: Project; dist: DistMethod): Uri =
 
 proc asPackage*(project: Project): Package =
   ## cast a project to a package
-  let
-    dist = project.dist
-
-  result = newPackage(name = project.name,
-                      dist = dist,
-                      url = project.createUrl(dist))
+  result = newPackage(name = project.name, path = project.repo,
+                      dist = project.dist, url = project.createUrl())
 
 proc childProjects*(project: Project): ProjectGroup =
   ## convenience
@@ -146,7 +169,7 @@ proc resolveDependency*(project: Project;
     # test that the project name matches its directory name
     if name != available.name:
       warn &"package `{available.name}` may be imported as `{name}`"
-    result.add repo(available), available.asPackage
+    result.add name, available.asPackage
 
   # seems like we found some viable deps info locally
   if result.len > 0:
@@ -173,10 +196,7 @@ proc resolveDependencies*(project: var Project;
                           packages: PackageGroup;
                           dependencies: var PackageGroup): bool =
   ## resolve a project's dependencies recursively; store result in dependencies
-  if project.dist == Git:
-    info &"{project.cuteRelease:>8} {project.name:>12}   {project.releaseSummary}"
-  else:
-    warn &"{project.cuteRelease:>8} {project.name:>12}   {project.releaseSummary}"
+  info &"{project.cuteRelease:>8} {project.name:>12}   {project.releaseSummary}"
 
   result = true
 
@@ -200,20 +220,15 @@ proc resolveDependencies*(project: var Project;
     of 1:
       discard
     else:
-      warn &"found {resolved.len} options for {requirement} dependency:"
-      var count = 1
-      for name, package in resolved.pairs:
-        warn &"{count}\t{name}"
-        warn &"\t{package.url}"
-        fatal ""
-        count.inc
+      project.reportMultipleResolutions(requirement, resolved)
     for name, package in resolved.pairs:
-      if name notin dependencies:
-        if projects.hasProjectIn(name):
-          var recurse = projects.mgetProjectIn(name)
-          result = result and recurse.resolveDependencies(projects, packages,
-                                                          dependencies)
-        dependencies.add name, package
+      if name in dependencies:
+        continue
+      dependencies.add name, package
+      if package.local and projects.hasProjectIn(package.path):
+        var recurse = projects.mgetProjectIn(package.path)
+        result = result and recurse.resolveDependencies(projects, packages,
+                                                        dependencies)
 
 proc resolveDependencies*(project: var Project;
                           dependencies: var PackageGroup): bool =

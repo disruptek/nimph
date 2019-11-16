@@ -32,6 +32,8 @@ type
     license*: string
     web*: Uri
     naive*: bool
+    local*: bool
+    path*: string
 
   PackageGroup* = ref object
     table*: TableRef[string, Package]
@@ -41,6 +43,12 @@ type
     ok: bool
     why: string
     packages: PackageGroup
+
+proc newPackage*(name: string; path: string; dist: DistMethod;
+                 url: Uri): Package =
+  ## create a new package that probably points to a local repo
+  result = Package(name: name, dist: dist, url: url,
+                   path: path, local: path.dirExists)
 
 proc newPackage*(name: string; dist: DistMethod; url: Uri): Package =
   ## create a new package
@@ -105,9 +113,7 @@ proc aimAt*(package: Package; req: Requirement): Package =
     else:
       discard
 
-  result = newPackage(name = package.name,
-                      dist = package.dist,
-                      url = aim)
+  result = newPackage(name = package.name, dist = package.dist, url = aim)
   result.license = package.license
   result.description = package.description
   result.tags = package.tags
@@ -223,6 +229,10 @@ iterator pairs*(group: PackageGroup): tuple[name: string; package: Package] =
   for name, package in group.table.pairs:
     yield (name: name, package: package)
 
+iterator values*(group: PackageGroup): Package =
+  for package in group.table.values:
+    yield package
+
 proc bareUrlsAreEqual*(a, b: Uri): bool =
   ## compare two urls without regard to their anchors
   if a.scheme.len != 0 and b.scheme.len != 0:
@@ -253,3 +263,7 @@ proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
         result.add name, package.aimAt(req)
         when defined(debug):
           debug "matched the package by name"
+
+iterator urls*(group: PackageGroup): Uri =
+  for package in group.values:
+    yield package.url
