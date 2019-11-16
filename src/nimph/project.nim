@@ -369,13 +369,12 @@ proc linkedFindTarget(dir: string; target = ""): LinkedSearchResult =
     # specify the path to the .nimble and the .nimble filename itself
     var recursed = linkedFindTarget(parsed.nimble.parentDir,
                                     target = parsed.nimble.extractFilename)
-    recursed.via = result
-    result = recursed
+    if recursed.search.found.isSome:
+      recursed.via = result
+      return recursed
+    result.search.message = &"{found.get} didn't lead to a {dotNimble}"
   except ValueError as e:
     result.search.message = e.msg
-    return
-
-  result.search.message = &"{found} didn't lead to a {dotNimble}"
   result.search.found = none(Target)
 
 proc findProject*(project: var Project; dir = "."): bool =
