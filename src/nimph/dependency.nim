@@ -35,7 +35,10 @@ proc reportMultipleResolutions(project: Project;
          &"options for {requirement} dependency:"
   var count = 1
   for name, package in resolved.pairs:
-    warn &"{count}\t{name}"
+    if package.local:
+      warn &"\t{count}\t{name} in {package.path}"
+    elif package.web.isValid:
+      warn &"\t{count}\t{name} at {package.web}"
     if urls.len != 1:
       warn &"\t{package.url}"
       fatal ""
