@@ -245,9 +245,11 @@ proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
     for name, package in group.pairs:
       if bareUrlsAreEqual(package.url, findurl.get):
         result.add name, package.aimAt(req)
-        debug "matched the url in packages", $package.url
+        when defined(debug):
+          debug "matched the url in packages", $package.url
   else:
     for name, package in group.pairs:
       if name == req.identity:
         result.add name, package.aimAt(req)
-        debug "matched the package by name"
+        when defined(debug):
+          debug "matched the package by name"
