@@ -35,7 +35,7 @@ proc loadProjectCfg*(path: string): Option[ConfigRef] =
   ## use the compiler to parse a nim.cfg
   var
     cache = newIdentCache()
-    filename = path.absolutePath.normalizedPath
+    filename = path.absolutePath
     config = newConfigRef()
   if readConfigFile(filename.AbsoluteFile, cache, config):
     result = config.some
@@ -188,7 +188,7 @@ iterator packagePaths*(config: ConfigRef; exists = true): string =
 iterator likelySearch*(config: ConfigRef; repo: string): string =
   ## yield /-terminated directory paths likely added via --path
   when defined(debug):
-    if repo != absolutePath(repo).normalizedPath:
+    if repo != repo.absolutePath:
       error &"repo {repo} wasn't normalized"
 
   for search in config.searchPaths.items:
@@ -207,7 +207,7 @@ iterator likelySearch*(config: ConfigRef; repo: string): string =
 iterator likelyLazy*(config: ConfigRef; repo: string; least = 0): string =
   ## yield /-terminated directory paths likely added via --nimblePath
   when defined(debug):
-    if repo != absolutePath(repo).normalizedPath:
+    if repo != repo.absolutePath:
       error &"repo {repo} wasn't normalized"
 
   # build a table of sightings of directories
@@ -290,11 +290,11 @@ proc removeSearchPath*(nimcfg: Target; path: string): bool =
     cfg = fn.loadProjectCfg
     parsed = nimcfg.parseProjectCfg
   if cfg.isNone:
-    error &"unable to parse {nimcfg}"
+    error &"the compiler couldn't parse {nimcfg}"
     return
 
   if not parsed.ok:
-    error &"i had some issues trying to parse {nimcfg}:"
+    error &"i couldn't parse {nimcfg}:"
     error parsed.why
     return
   for key, value in parsed.table.pairs:

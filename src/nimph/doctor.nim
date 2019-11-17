@@ -162,6 +162,8 @@ proc doctor*(project: var Project; dry = true): bool =
       # we need to reload the config each repeat through this loop so that we
       # can correctly identify new search paths after adding new packages
       if iteration > 0:
+        fatal ""
+        fatal "👍environment changed; re-examining dependencies..."
         project.cfg = loadAllCfgs()
 
       var
@@ -188,7 +190,7 @@ proc doctor*(project: var Project; dry = true): bool =
 
   # remove missing paths from nim.cfg if possible
   block missingpaths:
-    # search paths
+    # search paths that are missing should be removed/excluded
     for path in likelySearch(project.cfg, project.repo):
       if dirExists(path):
         continue
@@ -201,7 +203,7 @@ proc doctor*(project: var Project; dry = true): bool =
       else:
         warn &"unable to remove search path {path}"
 
-    # lazy paths
+    # lazy paths that are missing can be explicitly removed/ignored
     for path in likelyLazy(project.cfg, project.repo, least = 0):
       if dirExists(path):
         continue
@@ -213,6 +215,31 @@ proc doctor*(project: var Project; dry = true): bool =
         info &"excluded missing nimblePath {path}"
       else:
         warn &"unable to remove nimblePath {path}"
+
+  # if dependencies are available via --nimblePath, then warn of any
+  # dependencies that aren't recorded as part of the dependency graph;
+  # this might be usefully toggled in spec.  this should only issue a
+  # warning if local deps exist or multiple nimblePaths are found
+  block extradeps:
+    {.warning: "extra deps needs implementing".}
+
+  # if a dependency (local or otherwise) is shadowed by another dependency
+  # in one of the nimblePaths, then we should warn that a removal of one
+  # dep will default to the other
+  #
+  # if a dependency is shadowed with a manual path specification, we should
+  # call that a proper error and offer to remove the weakest member
+  #
+  # we should calculate shadowing by name and version according to the way
+  # the compiler compares versions
+  block shadoweddeps:
+    {.warning: "shadowed deps needs implementing".}
+
+  # if a package exists and is local to the project and picked up by the
+  # config (search paths or lazy paths) and it isn't listed in the
+  # requirements, then we should warn about it
+  block unspecifiedrequirement:
+    {.warning: "unspecified requirements needs implementing".}
 
   # warn if the user appears to have multiple --nimblePaths in use
   block nimblepaths:

@@ -53,6 +53,7 @@ type
     # unused yet
     config*: NimphConfig
     cfg*: ConfigRef
+    mycfg*: ConfigRef
     # unused yet
     #deps*: PackageGroup
     tags*: GitTagTable
@@ -61,6 +62,7 @@ type
     meta*: NimbleMeta
     url*: Uri
     parent*: Project
+    develop*: LinkedSearchResult
 
   ProjectGroup* = ref object
     table*: TableRef[string, Project]
@@ -393,8 +395,13 @@ proc findProject*(project: var Project; dir = "."): bool =
       target = target.via
 
   project = newProject(target.search.found.get)
+  project.develop = target.via
   project.meta = fetchNimbleMeta(project.repo)
   project.dist = project.guessDist
+  let
+    mycfg = loadProjectCfg($project.nimCfg)
+  if mycfg.isSome:
+    project.mycfg = mycfg.get
   if project.meta.hasUrl:
     project.url = project.meta.url
   project.version = project.knowVersion
@@ -511,9 +518,9 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
       if tag == "":
         directory &= "-#head"
       else:
-        # FIXME: not sure how we want to handle this; all refs should be treated
-        # the same, but for nimble-compat reasons, we may want to strip the #
-        # prefix from a version tag...
+        # we have to strip the # from a version tag for the compiler's benefit
+        #
+        # FIXME: this should work for v.X.Y.Z versions, too
         let
           isVersion = parseVersion(&"""version = "{tag}"""")
         if isVersion.isSome:

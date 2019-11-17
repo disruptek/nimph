@@ -69,11 +69,17 @@ proc asPackage*(project: Project): Package =
   result = newPackage(name = project.name, path = project.repo,
                       dist = project.dist, url = project.createUrl())
 
+proc adopt*(parent: Project; child: var Project) =
+  ## associate a child project with the parent project of which the
+  ## child is a requirement, member of local dependencies, or otherwise
+  ## available to the compiler's search paths
+  child.parent = parent
+
 proc childProjects*(project: Project): ProjectGroup =
-  ## convenience
+  ## compose a group of possible dependencies of the project
   result = project.availableProjects
   for child in result.mvalues:
-    child.parent = project
+    project.adopt(child)
 
 proc determineDeps*(project: Project): Option[Requires] =
   if project.dump == nil:
@@ -239,6 +245,9 @@ proc resolveDependencies*(project: var Project;
         result = result and recurse.resolveDependencies(projects, packages,
                                                         dependencies)
 
+proc getOfficialPackages(project: Project): PackagesResult =
+  result = getOfficialPackages(project.nimbleDir)
+
 proc resolveDependencies*(project: var Project;
                           dependencies: var PackageGroup): bool =
   ## entrance to the recursive dependency resolution
@@ -247,7 +256,7 @@ proc resolveDependencies*(project: var Project;
     projects = project.childProjects
 
   let
-    findPacks = getOfficialPackages(project.nimbleDir)
+    findPacks = project.getOfficialPackages
   if not findPacks.ok:
     packages = newPackageGroup()
   else:
