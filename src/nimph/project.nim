@@ -433,9 +433,32 @@ proc newProjectGroup(): ProjectGroup =
 proc contains*(group: ProjectGroup; name: string): bool =
   result = name in group.table
 
+proc importName(target: Target): string =
+  result = target.repo.pathToImport
+
+proc importName(linked: LinkedSearchResult): string =
+  if linked.via != nil:
+    result = linked.via.importName
+  else:
+    # if found isn't populated, we SHOULD crash here
+    result = linked.search.found.get.importName
+
+proc importName*(project: Project): string =
+  ##
+  ## FIXME
+  ##
+  ## this needs to be fixed to look at install dirs,
+  ## rewrite src directories, and so on...  it should
+  ## probably produce a strtable of symbols and paths
+  ##
+  if project.develop != nil:
+    result = project.develop.importName
+  else:
+    result = project.nimble.importName
+
 iterator pairs*(group: ProjectGroup): tuple[name: string; project: Project] =
   for directory, project in group.table.pairs:
-    yield (name: directory.pathToImport, project: project)
+    yield (name: directory, project: project)
 
 iterator values*(group: ProjectGroup): Project =
   for project in group.table.values:

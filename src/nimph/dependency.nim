@@ -171,14 +171,11 @@ proc resolveDependency*(project: Project;
 
   result = newPackageGroup()
   # 1. is it a directory?
-  for name, available in projects.pairs:
+  for directory, available in projects.pairs:
     if not requirement.isSatisfiedBy(available):
       continue
     debug &"{available} satisfies {requirement}"
-    # test that the project name matches its directory name
-    if name != available.name:
-      warn &"package `{available.name}` may be imported as `{name}`"
-    result.add name, available.asPackage
+    result.add directory, available.asPackage
 
   # seems like we found some viable deps info locally
   if result.len > 0:
