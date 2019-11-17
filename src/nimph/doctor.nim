@@ -23,9 +23,10 @@ proc doctor*(project: var Project; dry = true): bool =
       nimcfg = project.nimCfg
     # try a compiler parse of nim.cfg
     if not fileExists($nimcfg):
-      warn &"there wasn't a {NimCfg} in {project.nimble.repo}"
       # at the moment, we support any combination of local/user/global deps
       if false:
+        # strictly speaking, this isn't a problem
+        warn &"there wasn't a {NimCfg} in {project.nimble.repo}"
         if nimcfg.appendConfig("--clearNimblePath"):
           info "i created a new one"
         else:
@@ -36,8 +37,6 @@ proc doctor*(project: var Project; dry = true): bool =
       if parsed.isNone:
         error &"i had some issues trying to parse {nimcfg}"
         result = false
-      else:
-        debug &"the compiler parsed {nimcfg} without incident"
 
     # try a naive parse of nim.cfg
     if fileExists($project.nimCfg):
@@ -198,7 +197,7 @@ proc doctor*(project: var Project; dry = true): bool =
         warn &"search path {path} does not exist"
       elif project.removeSearchPath(path):
         info &"removed missing search path {path}"
-      elif project.excludeSearchPath(path):
+      elif excludeMissingPaths and project.excludeSearchPath(path):
         info &"excluded missing search path {path}"
       else:
         warn &"unable to remove search path {path}"
@@ -211,7 +210,7 @@ proc doctor*(project: var Project; dry = true): bool =
         warn &"nimblePath {path} does not exist"
       elif project.removeSearchPath(path):
         info &"removed missing nimblePath {path}"
-      elif project.excludeSearchPath(path):
+      elif excludeMissingPaths and project.excludeSearchPath(path):
         info &"excluded missing nimblePath {path}"
       else:
         warn &"unable to remove nimblePath {path}"
