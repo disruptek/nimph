@@ -130,7 +130,7 @@ proc symbolicMatch(project: Project; req: Requirement): bool =
     result = symbolicMatch(req, project.release, $project.getHeadOid,
                            tags = project.tags)
   else:
-    debug &"without a git repo for {project.name}, i cannot determine tags"
+    debug &"without a repo for {project.name}, i cannot match {req}"
     result = symbolicMatch(req, project.release)
 
 proc isSatisfiedBy(req: Requirement; project: Project): bool =
@@ -225,7 +225,13 @@ proc resolveDependencies*(project: var Project;
     else:
       project.reportMultipleResolutions(requirement, resolved)
     for name, package in resolved.pairs:
+      #
+      # FIXME: this needs to be solved properly
+      #
       if name in dependencies:
+        if not dependencies[name].local and package.local:
+          dependencies.del name
+          dependencies.add name, package
         continue
       dependencies.add name, package
       if package.local and projects.hasProjectIn(package.path):

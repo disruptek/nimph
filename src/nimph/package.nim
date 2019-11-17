@@ -93,11 +93,17 @@ proc contains*(group: PackageGroup; name: string): bool =
 proc `[]`*(group: PackageGroup; name: string): Package =
   result = group.table[name]
 
+proc del*(group: PackageGroup; name: string) =
+  #
+  # FIXME: ideally, name is style-insensitive and normalized
+  #
+  group.table.del name
+
 proc add*(group: PackageGroup; name: string; package: Package) =
-  if name.len == 0:
-    warn "btw, i didn't add a package with an empty name"
-  else:
-    group.table.add name, package
+  #
+  # FIXME: ideally, name is style-insensitive and normalized
+  #
+  group.table.add name, package
 
 proc aimAt*(package: Package; req: Requirement): Package =
   ## produce a refined package which might meet the requirement

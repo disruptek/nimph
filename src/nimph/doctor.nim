@@ -172,7 +172,6 @@ proc doctor*(project: var Project; dry = true): bool =
       if not project.resolveDependencies(group):
         notice &"unable to resolve all dependencies for {project}"
       for name, package in group.pairs:
-        # a hackish solution for now: the keys are set to the repo path...
         if package.local:
           continue
         if dry:
