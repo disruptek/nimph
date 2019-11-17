@@ -96,7 +96,7 @@ proc nimph*(args: seq[string]; dry_run = false; log_level = logLevel): int =
         crash &"unable to find a package matching `{query}`"
       if not project.clone(repository.git, repository.name):
         crash &"unable to clone {repository.git}"
-      fatal &"👍cloned {repository.git}"
+      fatal &"👌cloned {repository.git}"
   of "install", "uninstall", "test", "path", "build", "tasks", "dump", "list",
      "refresh", "c", "cc", "cpp", "js":
     let
@@ -106,13 +106,13 @@ proc nimph*(args: seq[string]; dry_run = false; log_level = logLevel): int =
   of "":
     prepareForTheWorst:
       if project.doctor(dry = true):
-        fatal &"👍{project.nimble.package} version {project.version} lookin' good"
+        fatal &"👌{project.nimble.package} version {project.version} lookin' good"
       else:
         warn "run `nimph doctor` to fix this stuff"
   of "doctor", "fix":
     prepareForTheWorst:
       if project.doctor(dry = dry_run):
-        fatal &"👍{project.nimble.package} version {project.version} lookin' good"
+        fatal &"👌{project.nimble.package} version {project.version} lookin' good"
       elif not dry_run:
         crash &"the doctor wasn't able to fix everything"
 
