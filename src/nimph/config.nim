@@ -1,3 +1,4 @@
+import std/nre
 import std/strtabs
 import std/strformat
 import std/tables
@@ -164,8 +165,9 @@ proc newNimphConfig*(path: string): NimphConfig =
   else:
     result.toml = parseFile(path)
 
-iterator packagePaths*(config: ConfigRef): string =
-  ## yield extant package paths from the configuration as /-terminated strings
+iterator packagePaths*(config: ConfigRef; exists = true): string =
+  ## yield package paths from the configuration as /-terminated strings;
+  ## if the exists flag is passed, then the path must also exist
   let
     lib = config.libpath.string / ""
   var
@@ -179,8 +181,9 @@ iterator packagePaths*(config: ConfigRef): string =
     let path = path.string / ""
     dedupe[path] = ""
   for path in dedupe.keys:
-    if path.dirExists:
-      yield path
+    if exists and not path.dirExists:
+      continue
+    yield path
 
 iterator likelySearch*(config: ConfigRef; repo: string): string =
   ## yield /-terminated directory paths likely added via --path
@@ -274,3 +277,34 @@ proc suggestNimbleDir*(config: ConfigRef; repo: string;
     assert global.endsWith(DirSep)
     result = global
     break either
+
+proc removeSearchPath*(nimcfg: Target; path: string): bool =
+  ## try to remove a path from a nim.cfg; true if it was
+  ## successful and false if any error prevented success
+  let
+    fn = $nimcfg
+  if not fn.fileExists:
+    return
+  let
+    content = fn.readFile
+    cfg = fn.loadProjectCfg
+    parsed = nimcfg.parseProjectCfg
+  if cfg.isNone:
+    error &"unable to parse {nimcfg}"
+    return
+
+  if not parsed.ok:
+    error &"i had some issues trying to parse {nimcfg}:"
+    error parsed.why
+    return
+  for key, value in parsed.table.pairs:
+    if key.toLowerAscii notin ["p", "path"]:
+      continue
+    if value.absolutePath / "" != path.absolutePath:
+      continue
+    let
+      regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}(p|path)[:=]" & value & ")\\s*")
+      swapped = content.replace(regexp, "")
+    if swapped != content:
+      fn.writeFile(swapped)
+      result = true

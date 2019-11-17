@@ -48,8 +48,6 @@ proc doctor*(project: var Project; dry = true): bool =
         error &"i had some issues trying to parse {nimcfg}:"
         error parsed.why
         result = false
-      else:
-        debug &"a naive parse of {nimcfg} was fine"
 
     # try to parse all nim configuration files
     block globalconfig:
@@ -90,7 +88,6 @@ proc doctor*(project: var Project; dry = true): bool =
         result = false
       else:
         info "your $NIMBLE_DIR is set, but it's set correctly"
-
 
   block checknimble:
     # make sure nimble is a thing
@@ -188,6 +185,18 @@ proc doctor*(project: var Project; dry = true): bool =
           result = false
       if not tryAgain:
         break
+
+  # remove missing paths from nim.cfg if possible
+  block missingpaths:
+    for path in packagePaths(project.cfg, exists = false):
+      if dirExists(path):
+        continue
+      if dry:
+        warn &"search path {path} does not exist"
+      elif project.removeSearchPath(path):
+        info &"removed missing search path {path}"
+      else:
+        warn &"unable to remove search path {path}"
 
   # warn if the user appears to have multiple --nimblePaths
   block nimblepaths:

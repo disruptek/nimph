@@ -539,3 +539,7 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
       error "couldn't make sense of the project i just cloned"
 
     result = true
+
+proc removeSearchPath*(project: Project; path: string): bool =
+  ## remove a search path from the project's nim.cfg
+  result = removeSearchPath(project.nimCfg, path)
