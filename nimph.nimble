@@ -1,6 +1,6 @@
 version = "0.0.4"
 author = "disruptek"
-description = "a nim package hierarchy manager from the future"
+description = "nim package handler from the future"
 license = "MIT"
 requires "nim >= 1.1.1"
 requires "compiler >= 1.1.1"
