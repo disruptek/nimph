@@ -303,7 +303,8 @@ proc removeSearchPath*(nimcfg: Target; path: string): bool =
     if value.absolutePath / "" != path.absolutePath:
       continue
     let
-      regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}(p|path)[:=]" & value & ")\\s*")
+      regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}(p|path)[:=]\"?" &
+                  value & "\"?)\\s*")
       swapped = content.replace(regexp, "")
     if swapped != content:
       fn.writeFile(swapped)

@@ -188,7 +188,7 @@ proc doctor*(project: var Project; dry = true): bool =
 
   # remove missing paths from nim.cfg if possible
   block missingpaths:
-    for path in packagePaths(project.cfg, exists = false):
+    for path in likelySearch(project.cfg, project.repo):
       if dirExists(path):
         continue
       if dry:
