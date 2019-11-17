@@ -188,6 +188,7 @@ proc doctor*(project: var Project; dry = true): bool =
 
   # remove missing paths from nim.cfg if possible
   block missingpaths:
+    # search paths
     for path in likelySearch(project.cfg, project.repo):
       if dirExists(path):
         continue
@@ -195,10 +196,25 @@ proc doctor*(project: var Project; dry = true): bool =
         warn &"search path {path} does not exist"
       elif project.removeSearchPath(path):
         info &"removed missing search path {path}"
+      elif project.excludeSearchPath(path):
+        info &"excluded missing search path {path}"
       else:
         warn &"unable to remove search path {path}"
 
-  # warn if the user appears to have multiple --nimblePaths
+    # lazy paths
+    for path in likelyLazy(project.cfg, project.repo, least = 0):
+      if dirExists(path):
+        continue
+      if dry:
+        warn &"nimblePath {path} does not exist"
+      elif project.removeSearchPath(path):
+        info &"removed missing nimblePath {path}"
+      elif project.excludeSearchPath(path):
+        info &"excluded missing nimblePath {path}"
+      else:
+        warn &"unable to remove nimblePath {path}"
+
+  # warn if the user appears to have multiple --nimblePaths in use
   block nimblepaths:
     var
       inRepo, outRepo: int

@@ -543,3 +543,7 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
 proc removeSearchPath*(project: Project; path: string): bool =
   ## remove a search path from the project's nim.cfg
   result = removeSearchPath(project.nimCfg, path)
+
+proc excludeSearchPath*(project: Project; path: string): bool =
+  ## exclude a search path from the project's nim.cfg
+  result = excludeSearchPath(project.nimCfg, path)

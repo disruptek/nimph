@@ -298,14 +298,17 @@ proc removeSearchPath*(nimcfg: Target; path: string): bool =
     error parsed.why
     return
   for key, value in parsed.table.pairs:
-    if key.toLowerAscii notin ["p", "path"]:
+    if key.toLowerAscii notin ["p", "path", "nimblepath"]:
       continue
     if value.absolutePath / "" != path.absolutePath:
       continue
     let
-      regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}(p|path)[:=]\"?" &
+      regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key & "[:=]\"?" &
                   value & "\"?)\\s*")
       swapped = content.replace(regexp, "")
     if swapped != content:
       fn.writeFile(swapped)
       result = true
+
+proc excludeSearchPath*(nimcfg: Target; path: string): bool =
+  result = appendConfig(nimcfg, &"""--excludePath="{path}"""")
