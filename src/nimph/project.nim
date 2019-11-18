@@ -212,17 +212,37 @@ proc getHeadOid*(project: Project): GitOid =
     raise newException(Defect, &"{project} lacks a git repository to load")
   result = getHeadOid(project.gitDir)
 
-proc relocateDependency(project: Project; package: var Project) =
-  ## try to rename a package to more accurately reflect tag or version
+proc parseVersionFromTag(tag: string): Version =
+  # FIXME: need to parse v. prefixes out of this
+  let isVersion = parseVersion(&"""version = "{tag}"""")
+  if isVersion.isSome:
+    result = isVersion.get
+
+proc nameMyRepo(project: Project; head: string): string =
+  result = project.name & "-" & $project.release
+  if project.release in {Tag}:
+    let tag = project.release.reference
+    # use the nimble style of project-#head when appropriate
+    if head == project.release.reference:
+      result = project.name & "-" & "#head"
+    else:
+      # try to use a version number if it matches our tag
+      let version = parseVersionFromTag(tag)
+      if version.isValid:
+        result = project.name & "-" & $version
+      else:
+        result = project.name & "-#" & tag
+  elif project.version.isValid:
+    result = project.name & "-" & $project.version
+  else:
+    result = project.name
+
+proc relocateDependency(project: var Project; head: string) =
+  ## try to rename a project to more accurately reflect tag or version
   let
-    repository = repo(package)
+    repository = project.repo
     current = repository.lastPathPart
-  var
-    name = package.name & "-" & $package.release
-  if package.release in {Tag}:
-    # use the nimble style of package-#head when appropriate
-    if $package.getHeadOid == package.release.reference:
-      name = package.name & "-" & "#head"
+    name = project.nameMyRepo(head)
   if current == name:
     return
   let
@@ -232,6 +252,8 @@ proc relocateDependency(project: Project; package: var Project) =
     warn &"cannot rename `{current}` to `{name}` -- already exists"
   else:
     moveDir(repository, future)
+  let nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
+  project.nimble = newTarget(nimble)
 
 proc hasReleaseTag(project: Project): bool =
   result = project.release.kind == Tag
@@ -522,53 +544,51 @@ proc findRepositoryUrl*(path: string): Option[Uri] =
 
 proc clone*(project: var Project; url: Uri; name: string): bool =
   ## clone a package into the project's nimbleDir
-  withGit:
-    var
-      bare = url
-      tag: string
-      directory = project.nimbleDir / PkgDir / name
+  var
+    bare = url
+    tag: string
+    directory = project.nimbleDir / PkgDir
+    oid: string
 
-    if bare.anchor != "":
-      tag = bare.anchor
-    bare.anchor = ""
+  if bare.anchor != "":
+    tag = bare.anchor
+  bare.anchor = ""
 
-    when false:
-      discard
-      # FIXME: we should probably clone into a temporary directory that we
-      # can confirm does not exist; then investigate the contents and consider
-      # renaming it to match its commit hash or tag.
+  when false:
+    discard
+    # FIXME: we should probably clone into a temporary directory that we
+    # can confirm does not exist; then investigate the contents and consider
+    # renaming it to match its commit hash or tag.
+  else:
+    # we have to strip the # from a version tag for the compiler's benefit
+    #
+    let version = parseVersionFromTag(tag)
+    if version.isValid:
+      directory = directory / name & "-" & $version
     else:
-      if tag == "":
-        directory &= "-#head"
-      else:
-        # we have to strip the # from a version tag for the compiler's benefit
-        #
-        # FIXME: this should work for v.X.Y.Z versions, too
-        let
-          isVersion = parseVersion(&"""version = "{tag}"""")
-        if isVersion.isSome:
-          directory &= "-" & tag
-        else:
-          directory &= "-#" & tag
+      directory = directory / name & "-#" & tag
 
-    info &"cloning {bare} ..."
-    info &"... into {directory}"
+  info &"cloning {bare} ..."
+  info &"... into {directory}"
 
+  withGit:
     var
       got: GitClone
     gitTrap got, clone(got, bare, directory):
       return
 
-    var
-      proj: Project
-    if findProject(proj, directory):
-      if not writeNimbleMeta(directory, bare, $getHeadOid(got.repo)):
-        warn &"unable to write {nimbleMeta} in {directory}"
-      project.relocateDependency(proj)
-    else:
-      error "couldn't make sense of the project i just cloned"
+    oid = $getHeadOid(got.repo)
 
-    result = true
+  var
+    proj: Project
+  if findProject(proj, directory) and proj.repo == directory:
+    if not writeNimbleMeta(directory, bare, oid):
+      warn &"unable to write {nimbleMeta} in {directory}"
+    proj.relocateDependency(oid)
+  else:
+    error "couldn't make sense of the project i just cloned"
+
+  result = true
 
 proc removeSearchPath*(project: Project; path: string): bool =
   ## remove a search path from the project's nim.cfg
