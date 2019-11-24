@@ -224,7 +224,7 @@ when isMainModule:
   else:
     # if we couldn't parse it, try passing it to nimble
     warn &"unrecognized subcommand `{first}`; passing it to Nimble..."
-    quit runnimble(cmdline = params)
+    sub = scNimble
 
   # take action according to the subcommand
   try:
@@ -232,6 +232,9 @@ when isMainModule:
     of scSearch, scDoctor, scClone:
       # invoke the appropriate dispatcher
       quit dispatchers[sub](cmdline = params[1..^1])
+    of scNimble:
+      # invoke nimble with the original parameters
+      quit runnimble(cmdline = params)
     of scVersion:
       # report the version
       echo clCfg.version
@@ -250,10 +253,6 @@ when isMainModule:
       # produce help for nimble subcommands
       discard runnimble(cmdline = @["--help"], prefix = "    ",
                          usage = nimbleUse)
-    else:
-      # arrival here reflects a lack of subcommand implementation
-      echo "huh?  do you need `--help`?  i received " & $params
-      quit 1
   except HelpOnly:
     discard
   quit 0
