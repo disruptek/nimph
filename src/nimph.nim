@@ -59,7 +59,9 @@ template setupLocalProject(project: var Project) =
     crash "unable to parse nim configuration: " & e.msg
 
 proc searcher*(args: seq[string]; log_level = logLevel): int =
+  # user's choice, our default
   setLogFilter(log_level)
+
   if args.len == 0:
     crash &"a search was requested but no query parameters were provided"
   let
@@ -70,11 +72,10 @@ proc searcher*(args: seq[string]; log_level = logLevel): int =
     fatal "\n" & repo.renderShortly
 
 proc fixer*(dry_run = false; log_level = logLevel): int =
-  var
-    project: Project
   # user's choice, our default
   setLogFilter(log_level)
 
+  var project: Project
   setupLocalProject(project)
 
   prepareForTheWorst:
@@ -86,9 +87,10 @@ proc fixer*(dry_run = false; log_level = logLevel): int =
       warn "run `nimph doctor` to fix this stuff"
 
 proc nimbler*(args: seq[string]; log_level = logLevel): int =
-  var
-    project: Project
+  # user's choice, our default
+  setLogFilter(log_level)
 
+  var project: Project
   setupLocalProject(project)
 
   let
@@ -97,6 +99,9 @@ proc nimbler*(args: seq[string]; log_level = logLevel): int =
     crash &"nimble didn't like that"
 
 proc cloner*(args: seq[string]; log_level = logLevel): int =
+  # user's choice, our default
+  setLogFilter(log_level)
+
   var
     url: Uri
     name: string
@@ -113,9 +118,7 @@ proc cloner*(args: seq[string]; log_level = logLevel): int =
     except:
       discard
 
-  var
-    project: Project
-
+  var project: Project
   setupLocalProject(project)
 
   if not url.isValid:
