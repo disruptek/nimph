@@ -65,7 +65,7 @@ proc searcher*(args: seq[string]; log_level = logLevel): int =
   if args.len == 0:
     crash &"a search was requested but no query parameters were provided"
   let
-    group = waitfor searchHub(args[1..args.high])
+    group = waitfor searchHub(args)
   if group.isNone:
     crash &"unable to retrieve search results from github"
   for repo in group.get.reversed:
