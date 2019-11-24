@@ -565,8 +565,10 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
     let version = parseVersionFromTag(tag)
     if version.isValid:
       directory = directory / name & "-" & $version
-    else:
+    elif tag.len != 0:
       directory = directory / name & "-#" & tag
+    else:
+      directory = directory / name & "-#head"
 
   info &"cloning {bare} ..."
   info &"... into {directory}"
