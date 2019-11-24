@@ -17,7 +17,7 @@ _so far in the future, in fact, that it's only now starting to become visible...
 - nimgit2 _builds libgit2 and its bindings_
 - nimterop _in order to build nimgit2_
 - compiler _ie. the compiler as a library_
-- nim >= 1.1.1 _for --clearNimblePath and --define:key=value syntax_
+- nim >= 1.0.4 _for --clearNimblePath and --define:key=value syntax_
 
 ## License
 MIT
