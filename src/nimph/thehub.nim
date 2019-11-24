@@ -26,6 +26,7 @@ type
     created*: DateTime
     updated*: DateTime
     pushed*: DateTime
+    size*: int
     stars*: int
     watchers*: int
     forks*: int
@@ -63,7 +64,7 @@ iterator values*(group: HubGroup): HubRepo =
 proc renderShortly*(r: HubRepo): string =
   result = &"""
 {r.web:<65} pushed {r.pushed.shortly}
- {r.issues:>4} {"issues":<10} {r.watchers:>4} {"watchers":<10} {r.stars:>4} {"stars":<10} {r.forks:>4} {"forks":<10} created {r.created.shortly}
+{r.size:>5} {"kb":<10} {r.issues:>4} {"issues":<10} {r.stars:>4} {"stars":<10} {r.forks:>4} {"forks":<10} created {r.created.shortly}
   {r.description}
   """
   result = result.strip
@@ -107,6 +108,7 @@ proc newHubRepo(js: JsonNode): HubRepo =
     created: js["created_at"].getStr.parse(hubTime, zone = tz),
     updated: js["updated_at"].getStr.parse(hubTime, zone = tz),
     pushed: js["pushed_at"].getStr.parse(hubTime, zone = tz),
+    size: js["size"].getInt,
     stars: js["stargazers_count"].getInt,
     watchers: js["watchers_count"].getInt,
     forks: js["forks_count"].getInt,
