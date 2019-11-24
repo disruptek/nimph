@@ -74,11 +74,7 @@ proc doctor*(project: var Project; dry = true): bool =
       #absolutePath(project.nimble.repo / DepDir).normalizedPath
       envDir = getEnv("NIMBLE_DIR", "")
     if not dirExists(depsDir):
-      if dry:
-        info &"you don't have a local dependencies directory: {depsDir}"
-      else:
-        createDir(depsDir)
-        info &"created directory for local dependencies: {depsDir}"
+      info &"if you create {depsDir}, i'll use it for local dependencies"
 
     # $NIMBLE_DIR could screw with our head
     if envDir != "":
