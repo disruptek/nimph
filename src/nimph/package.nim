@@ -15,6 +15,7 @@ import bump
 
 import nimph/spec
 import nimph/version
+import nimph/sanitize
 
 type
   DistMethod* = enum
@@ -44,6 +45,19 @@ type
     why: string
     packages: PackageGroup
 
+proc packageName*(name: string): string =
+  ## return a string that is plausible as a module name
+  let
+    sane = name.sanitizeIdentifier(capsOkay = false)
+  if sane.isSome:
+    result = sane.get.toLowerAscii
+  else:
+    raise newException(ValueError, "unable to sanitize " & name)
+
+proc packageName*(url: Uri): string =
+  ## guess the import name of a package from a url
+  result = packageName(url.path.extractFilename.changeFileExt("").split("-")[^1])
+
 proc newPackage*(name: string; path: string; dist: DistMethod;
                  url: Uri): Package =
   ## create a new package that probably points to a local repo
@@ -54,13 +68,9 @@ proc newPackage*(name: string; dist: DistMethod; url: Uri): Package =
   ## create a new package
   result = Package(name: name, dist: dist, url: url)
 
-proc naiveName*(path: string): string =
-  ## guess the import name of a package from a url path
-  result = path.extractFilename.changeFileExt("").split("-")[^1]
-
 proc newPackage*(url: Uri): Package =
   ## create a new package with only a url
-  result = newPackage(name = naiveName(url.path), dist = Git, url = url)
+  result = newPackage(name = url.packageName, dist = Git, url = url)
   # flag this package as not necessarily named correctly;
   # we had to guess at what the final name might be...
   result.naive = true
@@ -87,23 +97,30 @@ proc newPackageGroup(filename: string): PackageGroup =
 proc len*(group: PackageGroup): int =
   result = group.table.len
 
-proc contains*(group: PackageGroup; name: string): bool =
-  result = name in group.table
-
 proc `[]`*(group: PackageGroup; name: string): Package =
   result = group.table[name]
 
+proc contains*(group: PackageGroup; name: string): bool =
+  result = name.packageName in group.table
+
+proc contains*(group: PackageGroup; url: Uri): bool =
+  for package in group.table.values:
+    result = bareUrlsAreEqual(url, package.url)
+    if result:
+      break
+
+when false:
+  proc contains*(group: PackageGroup; package: Package): bool =
+    {.error: "do not implement this ambiguous `contains`".}
+
 proc del*(group: PackageGroup; name: string) =
-  #
-  # FIXME: ideally, name is style-insensitive and normalized
-  #
-  group.table.del name
+  group.table.del name.packageName
 
 proc add*(group: PackageGroup; name: string; package: Package) =
-  #
-  # FIXME: ideally, name is style-insensitive and normalized
-  #
-  group.table.add name, package
+  group.table.add name.packageName, package
+
+proc add*(group: PackageGroup; url: Uri; package: Package) =
+  group.table.add $url.bare, package
 
 proc aimAt*(package: Package; req: Requirement): Package =
   ## produce a refined package which might meet the requirement
@@ -238,16 +255,6 @@ iterator pairs*(group: PackageGroup): tuple[name: string; package: Package] =
 iterator values*(group: PackageGroup): Package =
   for package in group.table.values:
     yield package
-
-proc bareUrlsAreEqual*(a, b: Uri): bool =
-  ## compare two urls without regard to their anchors
-  if a.scheme.len != 0 and b.scheme.len != 0:
-    var
-      x = a
-      y = b
-    x.anchor = ""
-    y.anchor = ""
-    result = $x == $y
 
 proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
   ## select a subgroup of packages that appear to match the requirement

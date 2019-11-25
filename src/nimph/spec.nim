@@ -52,6 +52,18 @@ proc hash*(url: Uri): Hash =
       h = h !& field.hash
   result = !$h
 
+proc bare*(url: Uri): Uri =
+  result = url
+  result.anchor = ""
+
+proc bareUrlsAreEqual*(a, b: Uri): bool =
+  ## compare two urls without regard to their anchors
+  if a.isValid and b.isValid:
+    var
+      x = a.bare
+      y = b.bare
+    result = $x == $y
+
 proc pathToImport*(path: string): string =
   ## calculate how a path will be imported by the compiler
   result = path.extractFilename.split("-")[0]
