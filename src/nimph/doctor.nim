@@ -153,6 +153,7 @@ proc doctor*(project: var Project; dry = true): bool =
   block dependencies:
     var
       tryAgain = false
+      group = newDependencyGroup()
     for iteration in 0 .. 1:
       # we need to reload the config each repeat through this loop so that we
       # can correctly identify new search paths after adding new packages
@@ -160,23 +161,25 @@ proc doctor*(project: var Project; dry = true): bool =
         fatal ""
         fatal "👍environment changed; re-examining dependencies..."
         project.cfg = loadAllCfgs()
+        group = newDependencyGroup()
 
-      var
-        group = newPackageGroup()
       if not project.resolveDependencies(group):
         notice &"unable to resolve all dependencies for {project}"
-      for name, package in group.pairs:
-        if package.local:
+      for requirement, dependency in group.pairs:
+        if dependency.isHappy:
           continue
+        let name = dependency.names.join("|")
         if dry:
           notice &"{name} missing"
           result = false
         elif iteration == 0:
-          if project.clone(package.url, package.name):
-            tryAgain = true
-          else:
-            error &"error cloning {package}"
-            result = false
+          for package in dependency.packages.values:
+            if project.clone(package.url, package.name):
+              tryAgain = true
+              break
+            else:
+              error &"error cloning {package}"
+              result = false
         else:
           error &"missing {name} package"
           result = false
@@ -236,6 +239,11 @@ proc doctor*(project: var Project; dry = true): bool =
   block unspecifiedrequirement:
     {.warning: "unspecified requirements needs implementing".}
 
+  # if a required packaged has a srcDir defined in the .nimble, then it needs to
+  # be specified in the search paths
+  block unspecifiedsearchpath:
+    {.warning: "unspecified search path needs implementing".}
+
   # warn if the user appears to have multiple --nimblePaths in use
   block nimblepaths:
     var
@@ -247,6 +255,7 @@ proc doctor*(project: var Project; dry = true): bool =
         inRepo.inc
       else:
         outRepo.inc
+    # don't distinguish between local or user lazy paths (yet)
     if inRepo + outRepo > 1:
       fatal "❔it looks like you have multiple --nimblePaths defined:"
       for count, path in found.pairs:

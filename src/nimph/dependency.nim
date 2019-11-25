@@ -15,6 +15,36 @@ import nimph/project
 import nimph/version
 import nimph/git
 
+type
+  Dependency* = ref object
+    names*: seq[string]
+    requirement*: Requirement
+    packages*: PackageGroup
+    projects*: ProjectGroup
+
+  DependencyGroup* = ref object
+    table*: TableRef[Requirement, Dependency]
+
+proc newDependency*(requirement: Requirement): Dependency =
+  result = Dependency(requirement: requirement)
+  result.projects = newProjectGroup()
+  result.packages = newPackageGroup()
+
+proc newDependencyGroup*(): DependencyGroup =
+  result = DependencyGroup()
+  result.table = newTable[Requirement, Dependency]()
+
+iterator pairs*(dependencies: DependencyGroup):
+  tuple[requirement: Requirement; dependency: Dependency] =
+  for requirement, dependency in dependencies.table.pairs:
+    yield (requirement: requirement, dependency: dependency)
+
+proc contains*(dependencies: DependencyGroup; package: Package): bool =
+  for name, dependency in dependencies.pairs:
+    result = package.url in dependency.packages
+    if result:
+      break
+
 proc reportMultipleResolutions(project: Project;
                                requirement: Requirement; resolved: PackageGroup) =
   ## output some useful warnings depending upon the nature of the dupes
@@ -164,44 +194,105 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
       elif project.version.isValid:
         result = newRelease(project.version) in req
 
+proc addName(dependency: var Dependency; name: string) =
+  let
+    package = name.packageName
+  if package notin dependency.names:
+    dependency.names.add package
+
+proc add(dependency: var Dependency; package: Package) =
+  let key = $package.url.bare
+  if key notin dependency.packages:
+    dependency.packages.add key, package
+  dependency.addName package.name
+
+proc add(dependency: var Dependency; url: Uri) =
+  dependency.add newPackage(url = url)
+
+proc add(dependency: var Dependency; packages: PackageGroup) =
+  for package in packages.values:
+    dependency.add package
+
+proc add(dependency: var Dependency; directory: string; project: Project) =
+  ## add a local project in the given directory to an existing dependency
+  dependency.projects.add directory, project
+  dependency.addName project.name
+  # this'll help anyone sniffing around thinking packages precede projects
+  dependency.add project.asPackage
+
+proc add(dependencies: DependencyGroup; dependency: Dependency) =
+  dependencies.table[dependency.requirement] = dependency
+
+proc contains*(dependencies: DependencyGroup; req: Requirement): bool =
+  result = req in dependencies.table
+
+proc contains*(dependencies: DependencyGroup; dep: Dependency): bool =
+  result = dep.requirement in dependencies
+
+proc `[]`*(dependencies: DependencyGroup; req: Requirement): Dependency =
+  result = dependencies.table[req]
+
+proc addsRequirements(dependencies: DependencyGroup;
+                      dependency: Dependency): bool =
+  if dependency.requirement notin dependencies:
+    dependencies.add dependency
+    return true
+  var
+    existing = dependencies[dependency.requirement]
+  # adding the packages as a group will work
+  existing.add dependency.packages
+  # add projects according to their repo
+  for project in dependency.projects.values:
+    existing.add project.repo, project
+
+proc isHappy*(dependency: Dependency): bool =
+  result = dependency.projects.len > 0
+
 proc resolveDependency*(project: Project;
                         projects: ProjectGroup;
                         packages: PackageGroup;
-                        requirement: Requirement): PackageGroup =
+                        requirement: Requirement): Dependency =
 
-  result = newPackageGroup()
-  # 1. is it a directory?
-  for directory, available in projects.pairs:
-    if not requirement.isSatisfiedBy(available):
-      continue
-    debug &"{available} satisfies {requirement}"
-    result.add directory, available.asPackage
+  result = newDependency(requirement)
+  block success:
 
-  # seems like we found some viable deps info locally
-  if result.len > 0:
-    return
+    # 1. is it a directory?
+    for directory, available in projects.pairs:
+      if not requirement.isSatisfiedBy(available):
+        continue
+      debug &"{available} satisfies {requirement}"
+      result.add directory, available
 
-  # 2. is it in packages?
-  result = packages.matching(requirement)
-  if result.len > 0:
-    return
+    # seems like we found some viable deps info locally
+    if result.isHappy:
+      break success
 
-  # unavailable and all we have is a url
-  if requirement.isUrl:
-    let findurl = requirement.toUrl(packages)
-    if findurl.isSome:
-      # if it's a url but we couldn't match it, add it to the result anyway
-      let package = newPackage(url = findurl.get)
-      result.add $package.url, package
-      return
+    # 2. is it in packages?
+    let matches = packages.matching(requirement)
+    result.add(matches)
+    if matches.len > 0:
+      break success
 
-  raise newException(ValueError, &"dunno where to get requirement {requirement}")
+    # 3. all we have is a url
+    if requirement.isUrl:
+      let findurl = requirement.toUrl(packages)
+      if findurl.isSome:
+        # if it's a url but we couldn't match it, add it to the result anyway
+        result.add findurl.get
+        break success
+
+    raise newException(ValueError, &"dunno where to get requirement {requirement}")
 
 proc resolveDependencies*(project: var Project;
                           projects: var ProjectGroup;
                           packages: PackageGroup;
-                          dependencies: var PackageGroup): bool =
-  ## resolve a project's dependencies recursively; store result in dependencies
+                          dependencies: var DependencyGroup): bool =
+  ## resolve a project's dependencies recursively;
+  ## store result in dependencies
+
+  # assert a usable config
+  discard project.fetchConfig
+
   info &"{project.cuteRelease:>8} {project.name:>12}   {project.releaseSummary}"
 
   result = true
@@ -217,8 +308,8 @@ proc resolveDependencies*(project: var Project;
   for requirement in requires.values:
     if requirement.isVirtual:
       continue
-    let resolved = project.resolveDependency(projects, packages, requirement)
-    case resolved.len:
+    var resolved = project.resolveDependency(projects, packages, requirement)
+    case resolved.packages.len:
     of 0:
       warn &"unable to resolve requirement `{requirement}`"
       result = false
@@ -226,27 +317,24 @@ proc resolveDependencies*(project: var Project;
     of 1:
       discard
     else:
-      project.reportMultipleResolutions(requirement, resolved)
-    for name, package in resolved.pairs:
-      #
-      # FIXME: this needs to be solved properly
-      #
-      if name in dependencies:
-        if not dependencies[name].local and package.local:
-          dependencies.del name
-          dependencies.add name, package
-        continue
-      dependencies.add name, package
-      if package.local and projects.hasProjectIn(package.path):
-        var recurse = projects.mgetProjectIn(package.path)
-        result = result and recurse.resolveDependencies(projects, packages,
-                                                        dependencies)
+      project.reportMultipleResolutions(requirement, resolved.packages)
+
+    # if the addition of the resolution is not novel, move along
+    if not dependencies.addsRequirements(resolved):
+      continue
+
+    # else, we'll resolve dependencies introduced in any new projects
+    #
+    # note: we're using project.cfg and project.repo as a kind of scope
+    for recurse in resolved.projects.asFoundVia(project.cfg, project.repo):
+      result = result and recurse.resolveDependencies(projects, packages,
+                                                      dependencies)
 
 proc getOfficialPackages(project: Project): PackagesResult =
   result = getOfficialPackages(project.nimbleDir)
 
 proc resolveDependencies*(project: var Project;
-                          dependencies: var PackageGroup): bool =
+                          dependencies: var DependencyGroup): bool =
   ## entrance to the recursive dependency resolution
   var
     packages: PackageGroup
