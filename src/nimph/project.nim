@@ -21,6 +21,7 @@ some outstanding issues:
 
 ]#
 
+import std/math
 import std/hashes
 import std/sets
 import std/strutils
@@ -602,3 +603,28 @@ proc removeSearchPath*(project: Project; path: string): bool =
 proc excludeSearchPath*(project: Project; path: string): bool =
   ## exclude a search path from the project's nim.cfg
   result = excludeSearchPath(project.nimCfg, path)
+
+iterator asFoundVia*(group: ProjectGroup; config: ConfigRef;
+                     repo: string): var Project =
+  ## yield projects from the group in the same order that they may be
+  ## resolved by the compiler, if at all, given a particular configuration
+  var
+    dedupe = newTable[Target, Project](nextPowerOfTwo(group.len))
+
+  for path in config.extantSearchPaths(repo):
+    let
+      target = linkedFindTarget(path.string, ascend = false)
+      found = target.search.found
+    if found.isNone or found.get in dedupe:
+      continue
+    for project in group.mvalues:
+      if found.get == project.nimble:
+        dedupe.add found.get, project
+        yield project
+        break
+
+proc fetchConfig*(project: var Project): bool =
+  ## ensure we've got a valid configuration to work with
+  if project.cfg == nil:
+    project.cfg = loadAllCfgs(dir = project.repo)
+    result = true
