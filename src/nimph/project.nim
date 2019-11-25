@@ -23,7 +23,6 @@ some outstanding issues:
 
 import std/math
 import std/hashes
-import std/sets
 import std/strutils
 import std/tables
 import std/uri
@@ -614,7 +613,7 @@ iterator asFoundVia*(group: ProjectGroup; config: ConfigRef;
 
   for path in config.extantSearchPaths(repo):
     let
-      target = linkedFindTarget(path.string, ascend = false)
+      target = linkedFindTarget(path, ascend = false)
       found = target.search.found
     if found.isNone or found.get in dedupe:
       continue

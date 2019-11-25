@@ -1,7 +1,6 @@
 import std/strutils
 import std/hashes
 import std/tables
-import std/strformat
 import std/uri
 
 import nimgit2
