@@ -445,7 +445,10 @@ iterator packageDirectories(project: Project): string =
   for directory in project.cfg.packagePaths:
     yield directory
 
-proc add(group: ProjectGroup; name: string; project: Project) =
+proc len*(group: ProjectGroup): int =
+  result = group.table.len
+
+proc add*(group: ProjectGroup; name: string; project: Project) =
   group.table.add name, project
 
 proc newProjectGroup(): ProjectGroup =
