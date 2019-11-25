@@ -451,7 +451,7 @@ proc len*(group: ProjectGroup): int =
 proc add*(group: ProjectGroup; name: string; project: Project) =
   group.table.add name, project
 
-proc newProjectGroup(): ProjectGroup =
+proc newProjectGroup*(): ProjectGroup =
   result = ProjectGroup()
   result.table = newTable[string, Project]()
 
