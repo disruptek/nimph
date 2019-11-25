@@ -319,3 +319,19 @@ proc removeSearchPath*(nimcfg: Target; path: string): bool =
 
 proc excludeSearchPath*(nimcfg: Target; path: string): bool =
   result = appendConfig(nimcfg, &"""--excludePath="{path}"""")
+
+when false:
+  iterator extantSearchPaths*(config: ConfigRef; repo: string; least = 0): string =
+    if config == nil:
+      raise newException(Defect, "attempt to load search paths from nil config")
+    for path in config.likelySearch(repo):
+      if dirExists(path):
+        yield path
+    for path in config.likelyLazy(repo, least = least):
+      if dirExists(path):
+        yield path
+else:
+  iterator extantSearchPaths*(config: ConfigRef;
+                              repo: string; least = 0): string =
+    for path in config.packagePaths(exists = true):
+      yield path
