@@ -12,6 +12,7 @@ import compiler/nimconf
 import compiler/options as compileropts
 import compiler/pathutils
 import compiler/condsyms
+import compiler/lineinfos
 
 export compileropts
 export nimconf
@@ -52,6 +53,10 @@ proc loadAllCfgs*(dir = ""): ConfigRef =
   # define symbols such as, say, nimbabel;
   # this allows us to correctly parse conditions in nim.cfg(s)
   initDefines(result.symbols)
+
+  # maybe we should turn off configuration hints for these reads
+  when not defined(debug):
+    result.notes.excl hintConf
 
   # stuff the prefixDir so we load the compiler's config/nim.cfg
   # just like the compiler would if we were to invoke it directly
