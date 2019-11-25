@@ -37,7 +37,7 @@ type
     path*: string
 
   PackageGroup* = ref object
-    table*: TableRef[string, Package]
+    table*: OrderedTableRef[string, Package]
     info*: FileInfo  ## sloppy support for aging the nimble package list
 
   PackagesResult* = tuple
@@ -87,7 +87,7 @@ proc `$`*(package: Package): string =
 proc newPackageGroup*(): PackageGroup =
   ## instantiate a new package group for collecting a list of packages
   result = PackageGroup()
-  result.table = newTable[string, Package]()
+  result.table = newOrderedTable[string, Package]()
 
 proc newPackageGroup(filename: string): PackageGroup =
   ## instantiate a new package group using a package list from nimble
