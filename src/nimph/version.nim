@@ -385,7 +385,7 @@ proc hash(release: Release): Hash =
     h = h !& release.version.hash
   result = !$h
 
-proc hash(req: Requirement): Hash =
+proc hash*(req: Requirement): Hash =
   ## uniquely identify a requirement
   var h: Hash = 0
   h = h !& req.identity.hash
