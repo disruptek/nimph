@@ -5,6 +5,11 @@ import std/strutils
 const
   elideUnderscoresInIdentifiers {.booldefine.} = false
 
+when nimvm:
+  discard
+else:
+  import cutelog
+
 proc isValidNimIdentifier*(s: string): bool =
   ## true for strings that are valid identifier names
   if s.len > 0 and s[0] in IdentStartChars:
@@ -54,13 +59,19 @@ proc sanitizeIdentifier*(name: string; capsOkay=false): Option[string] =
       id[i] = id[i].toLowerAscii
   # ensure we're not, for example, starting with a digit
   if id[0] notin IdentStartChars:
-    warning "identifiers cannot start with `" & id[0] & "`"
+    when nimvm:
+      warning "identifiers cannot start with `" & id[0] & "`"
+    else:
+      warn "identifiers cannot start with `" & id[0] & "`"
     return
   when elideUnderscoresInIdentifiers:
     if id.len > 1:
       while "_" in id:
         id = id.replace("_", "")
   if not id.isValidNimIdentifier:
-    warning "bad identifier: " & id
+    when nimvm:
+      warning "bad identifier: " & id
+    else:
+      warn "bad identifier: " & id
     return
   result = some(id)
