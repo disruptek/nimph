@@ -377,11 +377,12 @@ proc parseNimbleLink(path: string): tuple[nimble: string; source: string] =
     raise newException(ValueError, &"malformed {path}")
   result = (nimble: lines[0], source: lines[1])
 
-proc linkedFindTarget(dir: string; target = ""): LinkedSearchResult =
+proc linkedFindTarget(dir: string; target = "";
+                      ascend = true): LinkedSearchResult =
   ## recurse through .nimble-link files to find the .nimble
   result = LinkedSearchResult()
   result.search = findTarget(dir, extensions = @[dotNimble, dotNimbleLink],
-                             target = target)
+                             target = target, ascend = false)
 
   let found = result.search.found
   if found.isNone or found.get.ext == dotNimble:
