@@ -40,8 +40,13 @@ proc loadProjectCfg*(path: string): Option[ConfigRef] =
   if readConfigFile(filename.AbsoluteFile, cache, config):
     result = config.some
 
-proc loadAllCfgs*(): ConfigRef =
-  ## use the compiler to parse all the usual nim.cfgs
+proc loadAllCfgs*(dir = ""): ConfigRef =
+  ## use the compiler to parse all the usual nim.cfgs;
+  ## optionally change to the given (project?) directory first
+
+  if dir != "":
+    setCurrentDir(dir)
+
   result = newConfigRef()
 
   # define symbols such as, say, nimbabel;
