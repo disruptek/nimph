@@ -173,6 +173,8 @@ proc newNimphConfig*(path: string): NimphConfig =
 iterator packagePaths*(config: ConfigRef; exists = true): string =
   ## yield package paths from the configuration as /-terminated strings;
   ## if the exists flag is passed, then the path must also exist
+  if config == nil:
+    raise newException(Defect, "attempt to load search paths from nil config")
   let
     lib = config.libpath.string / ""
   var
