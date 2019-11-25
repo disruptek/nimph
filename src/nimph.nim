@@ -54,7 +54,7 @@ template setupLocalProject(project: var Project) =
   if not findProject(project):
     crash &"unable to find a project; try `nimble init`?"
   try:
-    project.cfg = loadAllCfgs()
+    project.cfg = loadAllCfgs(dir = project.repo)
   except Exception as e:
     crash "unable to parse nim configuration: " & e.msg
 
@@ -114,7 +114,7 @@ proc cloner*(args: seq[string]; log_level = logLevel): int =
         uri = parseUri(args[0])
       if uri.isValid:
         url = uri
-        name = url.path.naiveName
+        name = packageName(url.path.lastPathPart)
     except:
       discard
 
