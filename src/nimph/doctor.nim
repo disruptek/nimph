@@ -161,7 +161,7 @@ proc doctor*(project: var Project; dry = true): bool =
       if iteration > 0:
         fatal ""
         fatal "👍environment changed; re-examining dependencies..."
-        project.cfg = loadAllCfgs()
+        project.cfg = loadAllCfgs(project.repo)
         group = newDependencyGroup()
 
       if not project.resolveDependencies(group):
