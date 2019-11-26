@@ -575,7 +575,7 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
   bare.anchor = ""
 
   when false:
-    discard
+    {.warning: "clone into a temporary directory".}
     # FIXME: we should probably clone into a temporary directory that we
     # can confirm does not exist; then investigate the contents and consider
     # renaming it to match its commit hash or tag.
@@ -620,22 +620,43 @@ proc excludeSearchPath*(project: Project; path: string): bool =
   ## exclude a search path from the project's nim.cfg
   result = excludeSearchPath(project.nimCfg, path)
 
+proc allImportTargets*(config: ConfigRef; repo: string):
+  OrderedTableRef[Target, LinkedSearchResult] =
+  ## yield projects from the group in the same order that they may be
+  ## resolved by the compiler, if at all, given a particular configuration
+  ##
+  ## FIXME: is it safe to assume that searchPaths are searched in the same
+  ## order that they appear in the parsed configuration?  need test for this
+  result = newOrderedTable[Target, LinkedSearchResult]()
+
+  for path in config.extantSearchPaths(repo):
+    let
+      target = linkedFindTarget(path, target = path.importName,
+                                nimToo = true, ascend = false)
+      found = target.search.found
+    if found.isNone:
+      continue
+    result.add found.get, target
+
 iterator asFoundVia*(group: ProjectGroup; config: ConfigRef;
                      repo: string): var Project =
   ## yield projects from the group in the same order that they may be
   ## resolved by the compiler, if at all, given a particular configuration
+  ##
+  ## FIXME: is it safe to assume that searchPaths are searched in the same
+  ## order that they appear in the parsed configuration?  need test for this
   var
-    dedupe = newTable[Target, Project](nextPowerOfTwo(group.len))
+    dedupe = newTable[string, Project](nextPowerOfTwo(group.len))
 
   for path in config.extantSearchPaths(repo):
     let
       target = linkedFindTarget(path, ascend = false)
       found = target.search.found
-    if found.isNone or found.get in dedupe:
+    if found.isNone or target.importName in dedupe:
       continue
     for project in group.mvalues:
       if found.get == project.nimble:
-        dedupe.add found.get, project
+        dedupe.add target.importName, project
         yield project
         break
 

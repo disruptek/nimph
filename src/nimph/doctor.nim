@@ -1,3 +1,4 @@
+import std/tables
 import std/strutils
 import std/options
 import std/os
@@ -186,6 +187,19 @@ proc doctor*(project: var Project; dry = true): bool =
       if not tryAgain:
         break
 
+    # if dependencies are available via --nimblePath, then warn of any
+    # dependencies that aren't recorded as part of the dependency graph;
+    # this might be usefully toggled in spec.  this should only issue a
+    # warning if local deps exist or multiple nimblePaths are found
+    block extradeps:
+      if project.hasLocalDeps or project.numberOfNimblePaths > 1:
+        let imports = project.cfg.allImportTargets(project.repo)
+        for target, linked in imports.pairs:
+          let name = target.importName
+          if group.isUsing(target):
+            continue
+          warn &"seems like we're not using import `{name}` from {target.repo}"
+
   # remove missing paths from nim.cfg if possible
   block missingpaths:
     # search paths that are missing should be removed/excluded
@@ -213,13 +227,6 @@ proc doctor*(project: var Project; dry = true): bool =
         info &"excluded missing nimblePath {path}"
       else:
         warn &"unable to remove nimblePath {path}"
-
-  # if dependencies are available via --nimblePath, then warn of any
-  # dependencies that aren't recorded as part of the dependency graph;
-  # this might be usefully toggled in spec.  this should only issue a
-  # warning if local deps exist or multiple nimblePaths are found
-  block extradeps:
-    {.warning: "extra deps needs implementing".}
 
   # if a dependency (local or otherwise) is shadowed by another dependency
   # in one of the nimblePaths, then we should warn that a removal of one
