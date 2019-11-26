@@ -217,7 +217,7 @@ proc summary*(thing: GitThing): string =
     raise newException(ValueError, "dunno how to get a summary: " & $thing)
   result = result.strip
 
-proc free*(table: GitTagTable) =
+proc free*(table: var GitTagTable) =
   for tag, obj in table.pairs:
     when tag is GitTag:
       tag.free
@@ -308,7 +308,7 @@ proc tagList*(repo: GitRepository; tags: var seq[string]): int =
   var
     list: git_strarray
   result = git_tag_list(addr list, repo)
-  if list.count > 0:
+  if list.count > 0'u:
     tags = cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
   git_strarray_free(addr list)
 

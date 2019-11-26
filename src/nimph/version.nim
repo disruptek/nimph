@@ -179,7 +179,7 @@ proc acceptable*(mask: VersionMaskField; op: Operator;
     result = mask.isNone or value == mask.get
   of Caret:
     result = mask.isNone
-    result = result or (value >= mask.get and mask.get > 0)
+    result = result or (value >= mask.get and mask.get > 0'u)
     result = result or (value == 0 and mask.get == 0)
   of Tilde:
     result = mask.isNone or value >= mask.get
