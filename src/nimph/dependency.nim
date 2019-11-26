@@ -283,6 +283,20 @@ proc resolveDependency*(project: Project;
 
     raise newException(ValueError, &"dunno where to get requirement {requirement}")
 
+proc isUsing*(dependencies: DependencyGroup; target: Target;
+              outside: Dependency = nil): bool =
+  ## true if the target points to a repo we're importing
+  block found:
+    for requirement, dependency in dependencies.pairs:
+      if dependency == outside:
+        continue
+      for directory, project in dependency.projects.pairs:
+
+        if directory == target.repo:
+          result = true
+          break found
+  debug &"is using {target.repo}: {result}"
+
 proc resolveDependencies*(project: var Project;
                           projects: var ProjectGroup;
                           packages: PackageGroup;
@@ -308,6 +322,8 @@ proc resolveDependencies*(project: var Project;
   for requirement in requires.values:
     if requirement.isVirtual:
       continue
+    if requirement in dependencies:
+      continue
     var resolved = project.resolveDependency(projects, packages, requirement)
     case resolved.packages.len:
     of 0:
@@ -327,6 +343,8 @@ proc resolveDependencies*(project: var Project;
     #
     # note: we're using project.cfg and project.repo as a kind of scope
     for recurse in resolved.projects.asFoundVia(project.cfg, project.repo):
+      if dependencies.isUsing(recurse.nimble, outside = resolved):
+        continue
       result = result and recurse.resolveDependencies(projects, packages,
                                                       dependencies)
 
@@ -348,12 +366,3 @@ proc resolveDependencies*(project: var Project;
     packages = findPacks.packages
 
   result = project.resolveDependencies(projects, packages, dependencies)
-
-proc isUsing*(dependencies: DependencyGroup; target: Target): bool =
-  ## true if the target points to a repo we're importing
-  block found:
-    for requirement, dependency in dependencies.pairs:
-      for directory, project in dependency.projects.pairs:
-        if directory == target.repo:
-          result = true
-          break found
