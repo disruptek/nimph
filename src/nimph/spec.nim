@@ -66,4 +66,6 @@ proc bareUrlsAreEqual*(a, b: Uri): bool =
 
 proc pathToImport*(path: string): string =
   ## calculate how a path will be imported by the compiler
-  result = path.extractFilename.split("-")[0]
+  assert path.len > 0
+  result = path.lastPathPart.split("-")[0]
+  assert result.len > 0
