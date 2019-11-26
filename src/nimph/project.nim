@@ -389,7 +389,7 @@ proc linkedFindTarget(dir: string; target = ""; nimToo = false;
 
   result = LinkedSearchResult()
   result.search = findTarget(dir, extensions = extensions,
-                             target = target, ascend = false)
+                             target = target, ascend = ascend)
 
   let found = result.search.found
   if found.isNone or found.get.ext != dotNimbleLink:
