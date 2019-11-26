@@ -631,3 +631,22 @@ proc fetchConfig*(project: var Project): bool =
   if project.cfg == nil:
     project.cfg = loadAllCfgs(dir = project.repo)
     result = true
+
+proc countNimblePaths*(project: Project):
+  tuple[local: int; global: int; paths: seq[string]] =
+  ## try to count the effective number of --nimblePaths
+  let
+    repository = project.repo
+  for iteration in countDown(2, 0):
+    for path in likelyLazy(project.cfg, repository, least = iteration):
+      if path.startsWith(repository):
+        result.local.inc
+      else:
+        result.global.inc
+      result.paths.add path
+    if result.local + result.global != 0:
+      break
+
+proc numberOfNimblePaths*(project: Project): int =
+  ## simpler count of effective --nimblePaths
+  result = project.countNimblePaths.paths.len
