@@ -216,7 +216,7 @@ proc getHeadOid*(project: Project): GitOid =
   result = getHeadOid(project.gitDir)
 
 proc parseVersionFromTag(tag: string): Version =
-  # FIXME: need to parse v. prefixes out of this
+  {.warning: "need to parse v. prefixes out of this".}
   let isVersion = parseVersion(&"""version = "{tag}"""")
   if isVersion.isSome:
     result = isVersion.get
@@ -379,15 +379,20 @@ proc parseNimbleLink(path: string): tuple[nimble: string; source: string] =
     raise newException(ValueError, &"malformed {path}")
   result = (nimble: lines[0], source: lines[1])
 
-proc linkedFindTarget(dir: string; target = "";
+proc linkedFindTarget(dir: string; target = ""; nimToo = false;
                       ascend = true): LinkedSearchResult =
   ## recurse through .nimble-link files to find the .nimble
+  var
+    extensions = @[dotNimble, dotNimbleLink]
+  if nimToo:
+    extensions = @["".addFileExt("nim")] & extensions
+
   result = LinkedSearchResult()
-  result.search = findTarget(dir, extensions = @[dotNimble, dotNimbleLink],
+  result.search = findTarget(dir, extensions = extensions,
                              target = target, ascend = false)
 
   let found = result.search.found
-  if found.isNone or found.get.ext == dotNimble:
+  if found.isNone or found.get.ext != dotNimbleLink:
     return
 
   try:
@@ -395,8 +400,9 @@ proc linkedFindTarget(dir: string; target = "";
     if fileExists(parsed.nimble):
       result.source = parsed.source
     # specify the path to the .nimble and the .nimble filename itself
-    var recursed = linkedFindTarget(parsed.nimble.parentDir,
-                                    target = parsed.nimble.extractFilename)
+    var recursed = linkedFindTarget(parsed.nimble.parentDir, nimToo = nimToo,
+                                    target = parsed.nimble.extractFilename,
+                                    ascend = ascend)
     if recursed.search.found.isSome:
       recursed.via = result
       return recursed
