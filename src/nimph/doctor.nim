@@ -246,18 +246,11 @@ proc doctor*(project: var Project; dry = true): bool =
 
   # warn if the user appears to have multiple --nimblePaths in use
   block nimblepaths:
-    var
-      inRepo, outRepo: int
-      found: seq[string]
-    for path in likelyLazy(project.cfg, project.repo, least = 2):
-      found.add path
-      if path.startsWith(project.repo):
-        inRepo.inc
-      else:
-        outRepo.inc
+    let
+      found = project.countNimblePaths
     # don't distinguish between local or user lazy paths (yet)
-    if inRepo + outRepo > 1:
+    if found.local + found.global > 1:
       fatal "❔it looks like you have multiple --nimblePaths defined:"
-      for count, path in found.pairs:
-        fatal &"❔\t{count + 1}\t{path}"
+      for index, path in found.paths.pairs:
+        fatal &"❔\t{index + 1}\t{path}"
       fatal "❔nim and nimph support this, but humans may find it confusing 😏"
