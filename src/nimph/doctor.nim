@@ -171,7 +171,7 @@ proc doctor*(project: var Project; dry = true): bool =
           continue
         let name = dependency.names.join("|")
         if dry:
-          notice &"{name} missing"
+          notice &"{requirement} missing"
           result = false
         elif iteration == 0:
           for package in dependency.packages.values:
