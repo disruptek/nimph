@@ -462,10 +462,18 @@ proc newProjectGroup*(): ProjectGroup =
 proc contains*(group: ProjectGroup; name: string): bool =
   result = name in group.table
 
-proc importName(target: Target): string =
-  result = target.repo.pathToImport
+proc importName*(path: string): string =
+  ## a uniform name usable in code for imports
+  assert path.len > 0
+  result = path.pathToImport.packageName
 
-proc importName(linked: LinkedSearchResult): string =
+proc importName*(target: Target): string =
+  ## a uniform name usable in code for imports
+  assert target.repo.len > 0
+  result = target.repo.importName
+
+proc importName*(linked: LinkedSearchResult): string =
+  ## a uniform name usable in code for imports
   if linked.via != nil:
     result = linked.via.importName
   else:
@@ -473,8 +481,7 @@ proc importName(linked: LinkedSearchResult): string =
     result = linked.search.found.get.importName
 
 proc importName*(project: Project): string =
-  ##
-  ## FIXME
+  {.warning: "fix importName".}
   ##
   ## this needs to be fixed to look at install dirs,
   ## rewrite src directories, and so on...  it should
