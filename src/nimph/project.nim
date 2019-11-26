@@ -85,11 +85,14 @@ template hgDir*(project: Project): string = project.repo / dotHg
 template hasHg*(project: Project): bool = dirExists(project.hgDir)
 template nimphConfig*(project: Project): string = project.repo / configFile
 template hasNimph*(project: Project): bool = fileExists(project.nimphConfig)
+template localDeps*(project: Project): string = project.repo / DepDir / ""
+
+proc hasLocalDeps*(project: Project): bool =
+  result = dirExists(project.localDeps)
 
 proc nimbleDir*(project: Project): string =
   ## the path to the project's dependencies
   var
-    localdeps = project.repo / DepDir / ""
     globaldeps = getHomeDir() / dotNimble / ""
 
   # if we instantiated this project from another, the implication is that we
@@ -101,13 +104,13 @@ proc nimbleDir*(project: Project): string =
   # what the user might be using as a package directory -- local or elsewise
   elif project.cfg != nil:
     result = project.cfg.suggestNimbleDir(project.repo,
-                                          local = localdeps,
+                                          local = project.localDeps,
                                           global = globaldeps)
 
   # otherwise, we'll just presume some configuration-free defaults
   else:
-    if dirExists(localdeps):
-      result = localdeps
+    if project.hasLocalDeps:
+      result = project.localDeps
     else:
       result = globaldeps
     result = absolutePath(result).normalizedPath
