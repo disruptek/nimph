@@ -151,21 +151,17 @@ proc guessVersion*(project: Project): Version =
     if not result.isValid:
       error &"the version in {project.nimble} seems to be invalid"
 
-proc fetchDump*(project: var Project; package: string;
-               refresh = false): bool =
+proc fetchDump*(project: var Project; package: string; refresh = false): bool =
   ## make sure the nimble dump is available
   if project.dump == nil or refresh:
     let
       dumped = fetchNimbleDump(package)
-    if not dumped.ok:
-      result = false
+    result = dumped.ok
+    if not result:
       # puke on this for now...
       raise newException(IOError, dumped.why)
-    else:
-      # try to prevent a bug when the above changes
-      result = true
-      project.dump = dumped.table
-      return
+    # try to prevent a bug when the above changes
+    project.dump = dumped.table
   else:
     result = true
 
@@ -611,10 +607,10 @@ iterator missingSearchPaths*(project: Project; target: Project): string =
   ## one (or more?) path to the target package which are
   ## apparently missing from the project's search paths
   let
-    path = target.determineSearchPath
+    path = target.determineSearchPath / ""
   block found:
     for search in project.cfg.packagePaths(exists = false):
-      if search / "" == path / "":
+      if search / "" == path:
         break found
     yield path
 
@@ -622,7 +618,9 @@ iterator missingSearchPaths*(project: Project; target: var Project): string =
   ## one (or more?) path to the target package which are apparently missing from
   ## the project's search paths; this will resolve up the parent tree to find
   ## the highest project in which to modify a configuration
-  target.fetchDump
+  if not target.fetchDump:
+    warn &"unable to fetch dump for {target}; this won't end well"
+
   let
     readonly = target
   var
