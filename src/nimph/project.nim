@@ -560,12 +560,13 @@ proc findRepositoryUrl*(path: string): Option[Uri] =
   var
     remote: GitRemote
     open: GitOpen
+    name = defaultRemote
 
   withGit:
     gitTrap openRepository(open, path):
       warn &"error opening repository {path}"
       return
-    gitTrap remote, remoteLookup(remote, open.repo, defaultRemote):
+    gitTrap remote, remoteLookup(remote, open.repo, name):
       warn &"unable to fetch remote `{name}` from repo in {path}"
       result = parseUri("file://" & path.absolutePath / "").some
       return
