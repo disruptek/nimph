@@ -112,12 +112,14 @@ proc childProjects*(project: Project): ProjectGroup =
     project.adopt(child)
 
 proc determineDeps*(project: Project): Option[Requires] =
+  ## try to parse requirements of a project
   if project.dump == nil:
     error "unable to determine deps without issuing a dump"
     return
   result = parseRequires(project.dump["requires"])
 
 proc determineDeps*(project: var Project): Option[Requires] =
+  ## try to parse requirements of a (mutable) project
   if not project.fetchDump():
     debug "nimble dump failed, so computing deps is impossible"
     return
@@ -127,6 +129,8 @@ proc determineDeps*(project: var Project): Option[Requires] =
 
 proc releaseSymbols(release: Release; head = "";
                     tags: GitTagTable = nil): HashSet[Hash] =
+  ## compute a set of hashes that could match this release; ie.
+  ## tags, oids, version numbers, etc.
   if release.kind == Tag:
     if release.reference.toLowerAscii == "head":
       if head != "":
@@ -151,6 +155,8 @@ proc releaseSymbols(release: Release; head = "";
 
 proc symbolicMatch(req: Requirement; release: Release; head = "";
                    tags: GitTagTable = nil): bool =
+  ## see if a requirement's symbolic need is met by a release's
+  ## symbolic value
   if req.operator notin {Equal, Tag} or release.kind != Tag:
     return
 
@@ -160,6 +166,7 @@ proc symbolicMatch(req: Requirement; release: Release; head = "";
   result = len(required * provided) > 0
 
 proc symbolicMatch(project: Project; req: Requirement): bool =
+  ## see if a project can match a given requirement symbolically
   if project.dist == Git:
     if project.tags == nil:
       warn &"i wanted to examine tags for {project} but they were empty"
@@ -170,6 +177,7 @@ proc symbolicMatch(project: Project; req: Requirement): bool =
     result = symbolicMatch(req, project.release)
 
 proc isSatisfiedBy(req: Requirement; project: Project): bool =
+  ## true if a requirement is satisfied by the given project
   # first, check that the identity matches
   if project.name == req.identity:
     result = true
@@ -195,21 +203,25 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
         result = newRelease(project.version) in req
 
 proc addName(dependency: var Dependency; name: string) =
+  ## add an import name to the dependency, as might be used in code
   let
     package = name.packageName
   if package notin dependency.names:
     dependency.names.add package
 
 proc add(dependency: var Dependency; package: Package) =
+  ## add a package to the dependency
   let key = $package.url.bare
   if key notin dependency.packages:
     dependency.packages.add key, package
   dependency.addName package.name
 
 proc add(dependency: var Dependency; url: Uri) =
+  ## add a url (as a package) to the dependency
   dependency.add newPackage(url = url)
 
 proc add(dependency: var Dependency; packages: PackageGroup) =
+  ## add a group of packages to the dependency
   for package in packages.values:
     dependency.add package
 
@@ -221,6 +233,7 @@ proc add(dependency: var Dependency; directory: string; project: Project) =
   dependency.add project.asPackage
 
 proc add(dependencies: DependencyGroup; dependency: Dependency) =
+  ## add a single dependency to the dependency group
   dependencies.table[dependency.requirement] = dependency
 
 proc contains*(dependencies: DependencyGroup; req: Requirement): bool =
@@ -234,6 +247,8 @@ proc `[]`*(dependencies: DependencyGroup; req: Requirement): Dependency =
 
 proc addsRequirements(dependencies: DependencyGroup;
                       dependency: Dependency): bool =
+  ## true if the addition of a dependency will add new requirements to
+  ## the dependency group
   if dependency.requirement notin dependencies:
     dependencies.add dependency
     return true
@@ -246,13 +261,15 @@ proc addsRequirements(dependencies: DependencyGroup;
     existing.add project.repo, project
 
 proc isHappy*(dependency: Dependency): bool =
+  ## true if the dependency is being met successfully
   result = dependency.projects.len > 0
 
 proc resolveDependency*(project: Project;
                         projects: ProjectGroup;
                         packages: PackageGroup;
                         requirement: Requirement): Dependency =
-
+  ## filter all we know about the environment, a requirement, and the
+  ## means by which we may satisfy it, into a single object
   result = newDependency(requirement)
   block success:
 
