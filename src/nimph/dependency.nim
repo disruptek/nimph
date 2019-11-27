@@ -295,7 +295,8 @@ proc isUsing*(dependencies: DependencyGroup; target: Target;
         if directory == target.repo:
           result = true
           break found
-  debug &"is using {target.repo}: {result}"
+  when defined(debug):
+    debug &"is using {target.repo}: {result}"
 
 proc resolveDependencies*(project: var Project;
                           projects: var ProjectGroup;
