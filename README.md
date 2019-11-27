@@ -1,7 +1,7 @@
 # nimph
 nim package handler from the future
 
-_so far in the future, in fact, that it's only now starting to become visible..._
+or: _How I Learned to Stop Worrying and Love the Search Path_
 
 ## Features
 - truly path-agnostic dependencies
