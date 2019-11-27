@@ -186,7 +186,7 @@ when isMainModule:
     dispatchees = [runsearch, runclone, rundoctor]
 
     # these are nimble subcommands that we don't need to warn about
-    passthrough = ["install", "uninstall", "build", "test", "doc",
+    passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
                    "path", "doc", "doc2", "refresh", "list", "tasks"]
 
   var
