@@ -121,7 +121,11 @@ proc `$`*(project: Project): string =
 proc runNimble*(project: Project; args: seq[string]): RunNimbleOutput =
   ## run nimble against a particular project
   var
-    arguments = concat(@["--nimbleDir=" & project.nimbleDir], args)
+    arguments = @["--nimbleDir=" & project.nimbleDir].concat args
+  when defined(debug):
+    arguments = @["--verbose"].concat arguments
+  when defined(debugNimble):
+    arguments = @["--debug"].concat arguments
   # the ol' belt-and-suspenders approach to specifying nimbleDir
   putEnv("NIMBLE_DIR", project.nimbleDir)
   result = runNimble(arguments, {poParentStreams})
