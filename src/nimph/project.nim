@@ -582,7 +582,7 @@ proc addSearchPath*(project: Project; path: string): bool =
     if exists == path:
       return
   if project.cfg == nil:
-    raise newException(Defect, "nonsensical")
+    raise newException(Defect, "load a configuration first")
   result = project.cfg.addSearchPath(project.nimCfg, path)
 
 proc determineSearchPath(project: Project): string =
@@ -597,23 +597,25 @@ proc determineSearchPath(project: Project): string =
         break
     result = project.repo
 
-proc assertSearchPath*(project: Project; target: Project) =
-  if project.parent != nil:
-    project.parent.assertSearchPath(target)
-  else:
-    let
-      path = target.determineSearchPath
-    block found:
-      for search in project.cfg.packagePaths(exists = false):
-        if search / "" == path / "":
-          break found
-      discard project.addSearchPath(path)
+iterator missingSearchPaths*(project: Project; target: Project): string =
+  let
+    path = target.determineSearchPath
+  block found:
+    for search in project.cfg.packagePaths(exists = false):
+      if search / "" == path / "":
+        break found
+    yield path
 
-proc assertSearchPath*(project: Project; target: var Project) =
+iterator missingSearchPaths*(project: Project; target: var Project): string =
   target.fetchDump
   let
     readonly = target
-  project.assertSearchPath(readonly)
+  var
+    parent = project
+  while project.parent != nil:
+    parent = project.parent
+  for path in parent.missingSearchPaths(readonly):
+    yield path
 
 proc clone*(project: var Project; url: Uri; name: string): bool =
   ## clone a package into the project's nimbleDir
@@ -662,7 +664,11 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
     proj.relocateDependency(oid)
     # reload the project's config to see if we capture a new search path
     project.cfg = loadAllCfgs(project.repo)
-    project.assertSearchPath(proj)
+    for path in project.missingSearchPaths(proj):
+      if project.addSearchPath(path):
+        info &"added path `{path}` to `{project.nimcfg}`"
+      else:
+        warn &"couldn't add path `{path}` to `{project.nimcfg}`"
   else:
     error "couldn't make sense of the project i just cloned"
 

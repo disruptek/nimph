@@ -168,6 +168,16 @@ proc doctor*(project: var Project; dry = true): bool =
         notice &"unable to resolve all dependencies for {project}"
       for requirement, dependency in group.pairs:
         if dependency.isHappy:
+          for proj in dependency.projects.values:
+            for path in project.missingSearchPaths(proj):
+              if dry:
+                notice &"missing path `{path}` in `{project.nimcfg}`"
+              elif project.addSearchPath(path):
+                info &"added path `{path}` to `{project.nimcfg}`"
+                # yay, we get to reload again
+                project.cfg = loadAllCfgs(project.repo)
+              else:
+                warn &"couldn't add path `{path}` to `{project.nimcfg}`"
           continue
         let name = dependency.names.join("|")
         if dry:
