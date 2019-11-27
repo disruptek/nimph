@@ -63,6 +63,10 @@ proc loadAllCfgs*(dir = ""): ConfigRef =
   let compiler = getCurrentCompilerExe()
   result.prefixDir = AbsoluteDir splitPath(compiler.parentDir).head
 
+  # stuff the current directory as the project path; this seems okay
+  # for a loadAllCfgs call...
+  result.projectPath = AbsoluteDir getCurrentDir()
+
   # now follow the compiler process of loading the configs
   var cache = newIdentCache()
   loadConfigs(NimCfg.RelativeFile, cache, result)
@@ -290,6 +294,35 @@ proc suggestNimbleDir*(config: ConfigRef; repo: string;
     result = global
     break either
 
+iterator pathSubstitutions(config: ConfigRef; path: string;
+                           conf: string): string =
+  ## compute the possible path substitions, including the original path
+  const
+    substitutions = ["nimcache", "config", "projectpath", "lib", "nim", "home"]
+  var
+    matchedPath = false
+  for sub in substitutions.items:
+    let attempt = config.pathSubs(&"${sub}", conf) / ""
+    # ignore any empty substitutions
+    if attempt == "/":
+      continue
+    # note if any substitution matches the path
+    if path / "" == attempt:
+      matchedPath = true
+    if path.startsWith(attempt):
+      yield path.replace(attempt, &"${sub}" / "")
+  # if a substitution matches the path, don't yield it at the end
+  if not matchedPath:
+    yield path
+
+proc bestPathSubstitution(config: ConfigRef; path: string; conf: string): string =
+  ## compute the best path substitution, if any
+  block found:
+    for sub in config.pathSubstitutions(path, conf):
+      result = sub
+      break found
+    result = path
+
 proc removeSearchPath*(nimcfg: Target; path: string): bool =
   ## try to remove a path from a nim.cfg; true if it was
   ## successful and false if any error prevented success
@@ -298,7 +331,6 @@ proc removeSearchPath*(nimcfg: Target; path: string): bool =
   if not fn.fileExists:
     return
   let
-    content = fn.readFile
     cfg = fn.loadProjectCfg
     parsed = nimcfg.parseProjectCfg
   if cfg.isNone:
@@ -309,18 +341,29 @@ proc removeSearchPath*(nimcfg: Target; path: string): bool =
     error &"i couldn't parse {nimcfg}:"
     error parsed.why
     return
+  var
+    content = fn.readFile
   for key, value in parsed.table.pairs:
     if key.toLowerAscii notin ["p", "path", "nimblepath"]:
       continue
-    if value.absolutePath / "" != path.absolutePath:
-      continue
-    let
-      regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key & "[:=]\"?" &
-                  value & "\"?)\\s*")
-      swapped = content.replace(regexp, "")
-    if swapped != content:
-      fn.writeFile(swapped)
-      result = true
+    for sub in cfg.get.pathSubstitutions(path, fn):
+      debug &"compare `{value.absolutePath}` to `{path.absolutePath}`"
+      if value.absolutePath / "" != path.absolutePath:
+        continue
+      let
+        regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key & "[:=]\"?" &
+                    value & "\"?)\\s*")
+        swapped = content.replace(regexp, "")
+      if swapped != content:
+        # make sure we search the new content next time through the loop
+        content = swapped
+        fn.writeFile(content)
+        result = true
+
+proc addSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
+  let
+    best = config.bestPathSubstitution(path, $nimcfg.repo)
+  result = appendConfig(nimcfg, &"""--path="{best}"""")
 
 proc excludeSearchPath*(nimcfg: Target; path: string): bool =
   result = appendConfig(nimcfg, &"""--excludePath="{path}"""")

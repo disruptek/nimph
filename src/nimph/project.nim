@@ -537,14 +537,17 @@ proc availableProjects*(project: Project): ProjectGroup =
 
 proc `==`*(a, b: Project): bool =
   ## a dirty (if safe) way to compare equality of projects
-  let
-    apath = $a.nimble
-    bpath = $b.nimble
-  if apath == bpath:
-    result = true
+  if a.isNil or b.isNil:
+    result = a.isNil == b.isNil
   else:
-    debug "had to use samefile to compare {apath} to {bpath}"
-    result = sameFile(apath, bpath)
+    let
+      apath = $a.nimble
+      bpath = $b.nimble
+    if apath == bpath:
+      result = true
+    else:
+      debug "had to use samefile to compare {apath} to {bpath}"
+      result = sameFile(apath, bpath)
 
 proc findRepositoryUrl*(path: string): Option[Uri] =
   var
@@ -565,6 +568,52 @@ proc findRepositoryUrl*(path: string): Option[Uri] =
         result = remote.url.some
     except:
       warn &"unable to parse url from remote `{name}` from repo in {path}"
+
+proc removeSearchPath*(project: Project; path: string): bool =
+  ## remove a search path from the project's nim.cfg
+  result = removeSearchPath(project.nimCfg, path)
+
+proc excludeSearchPath*(project: Project; path: string): bool =
+  ## exclude a search path from the project's nim.cfg
+  result = excludeSearchPath(project.nimCfg, path)
+
+proc addSearchPath*(project: Project; path: string): bool =
+  for exists in project.packageDirectories:
+    if exists == path:
+      return
+  if project.cfg == nil:
+    raise newException(Defect, "nonsensical")
+  result = project.cfg.addSearchPath(project.nimCfg, path)
+
+proc determineSearchPath(project: Project): string =
+  if project.dump == nil:
+    raise newException(Defect, "no dump available")
+  block found:
+    if "srcDir" in project.dump:
+      let srcDir = project.dump["srcDir"]
+      if srcDir != "":
+        setCurrentDir(project.repo)
+        result = srcDir.absolutePath
+        break
+    result = project.repo
+
+proc assertSearchPath*(project: Project; target: Project) =
+  if project.parent != nil:
+    project.parent.assertSearchPath(target)
+  else:
+    let
+      path = target.determineSearchPath
+    block found:
+      for search in project.cfg.packagePaths(exists = false):
+        if search / "" == path / "":
+          break found
+      discard project.addSearchPath(path)
+
+proc assertSearchPath*(project: Project; target: var Project) =
+  target.fetchDump
+  let
+    readonly = target
+  project.assertSearchPath(readonly)
 
 proc clone*(project: var Project; url: Uri; name: string): bool =
   ## clone a package into the project's nimbleDir
@@ -594,7 +643,7 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
     else:
       directory = directory / name & "-#head"
 
-  info &"cloning {bare} ..."
+  fatal &"👭cloning {bare}..."
   info &"... into {directory}"
 
   withGit:
@@ -611,18 +660,13 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
     if not writeNimbleMeta(directory, bare, oid):
       warn &"unable to write {nimbleMeta} in {directory}"
     proj.relocateDependency(oid)
+    # reload the project's config to see if we capture a new search path
+    project.cfg = loadAllCfgs(project.repo)
+    project.assertSearchPath(proj)
   else:
     error "couldn't make sense of the project i just cloned"
 
   result = true
-
-proc removeSearchPath*(project: Project; path: string): bool =
-  ## remove a search path from the project's nim.cfg
-  result = removeSearchPath(project.nimCfg, path)
-
-proc excludeSearchPath*(project: Project; path: string): bool =
-  ## exclude a search path from the project's nim.cfg
-  result = excludeSearchPath(project.nimCfg, path)
 
 proc allImportTargets*(config: ConfigRef; repo: string):
   OrderedTableRef[Target, LinkedSearchResult] =
