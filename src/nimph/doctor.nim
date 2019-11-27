@@ -168,7 +168,7 @@ proc doctor*(project: var Project; dry = true): bool =
         notice &"unable to resolve all dependencies for {project}"
       for requirement, dependency in group.pairs:
         if dependency.isHappy:
-          for proj in dependency.projects.values:
+          for proj in dependency.projects.mvalues:
             for path in project.missingSearchPaths(proj):
               if dry:
                 notice &"missing path `{path}` in `{project.nimcfg}`"
