@@ -86,9 +86,17 @@ template hasHg*(project: Project): bool = dirExists(project.hgDir)
 template nimphConfig*(project: Project): string = project.repo / configFile
 template hasNimph*(project: Project): bool = fileExists(project.nimphConfig)
 template localDeps*(project: Project): string = project.repo / DepDir / ""
+template packageDirectory*(project: Project): string {.deprecated.}=
+  project.nimbleDir / PkgDir
 
-proc hasLocalDeps*(project: Project): bool =
-  result = dirExists(project.localDeps)
+template hasReleaseTag(project: Project): bool =
+  project.release.kind == Tag
+
+template nimCfg*(project: Project): Target =
+  newTarget(project.nimble.repo / NimCfg)
+
+template hasLocalDeps*(project: Project): bool =
+  dirExists(project.localDeps)
 
 proc nimbleDir*(project: Project): string =
   ## the path to the project's dependencies
@@ -190,9 +198,6 @@ proc knowVersion*(project: var Project): Version =
     return
   raise newException(IOError, "unable to determine {project.package} version")
 
-proc nimCfg*(project: Project): Target =
-  result = newTarget(project.nimble.repo / NimCfg)
-
 proc newProject*(nimble: Target): Project =
   ## instantiate a new project from the given .nimble
   new result
@@ -206,6 +211,7 @@ proc newProject*(nimble: Target): Project =
   result.config = newNimphConfig(splat.dir / configFile)
 
 proc getHeadOid(path: string): GitOid =
+  ## retrieve the #head oid from a repository at the given path
   var
     open: GitOpen
   withGit:
@@ -215,6 +221,7 @@ proc getHeadOid(path: string): GitOid =
     result = open.repo.getHeadOid
 
 proc getHeadOid*(project: Project): GitOid =
+  ## retrieve the #head oid from the project's repository
   if project.dist != Git:
     raise newException(Defect, &"{project} lacks a git repository to load")
   result = getHeadOid(project.gitDir)
@@ -226,6 +233,7 @@ proc parseVersionFromTag(tag: string): Version =
     result = isVersion.get
 
 proc nameMyRepo(project: Project; head: string): string =
+  ## name a repository directory in such a way that the compiler can grok it
   result = project.name & "-" & $project.release
   if project.release in {Tag}:
     let tag = project.release.reference
@@ -262,10 +270,8 @@ proc relocateDependency(project: var Project; head: string) =
   let nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
   project.nimble = newTarget(nimble)
 
-proc hasReleaseTag(project: Project): bool =
-  result = project.release.kind == Tag
-
 proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
+  ## retrieve the tags for a project from its git repository
   var
     opened: GitOpen
   withGit:
@@ -280,6 +286,7 @@ proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
     project.tags = result
 
 proc releaseSummary*(project: Project): string =
+  ## summarize a project's tree using whatever we can
   if project.dist != Git:
     return "⚠️(not in git repository)"
   if not project.release.isValid:
@@ -300,6 +307,7 @@ proc releaseSummary*(project: Project): string =
     result = thing.summary
 
 proc cuteRelease*(project: Project): string =
+  ## a very short summary of a release; ie. a git commit or version
   if project.dist == Git and project.release.isValid:
     let
       head = project.getHeadOid
@@ -319,6 +327,7 @@ proc cuteRelease*(project: Project): string =
     result = "???"
 
 proc findCurrentTag*(project: Project): Release =
+  ## find the current release tag of a project
   let
     head = project.getHeadOid
   var
@@ -336,6 +345,7 @@ proc findCurrentTag*(project: Project): Release =
   result = newRelease(name, operator = Tag)
 
 proc findCurrentTag*(project: var Project): Release =
+  ## find the current release tag of a project
   let
     readonly = project
   if project.tags == nil:
@@ -377,6 +387,7 @@ proc guessDist(project: Project): DistMethod =
     result = Local
 
 proc parseNimbleLink(path: string): tuple[nimble: string; source: string] =
+  ## parse a dotNimbleLink file into its constituent components
   let
     lines = readFile(path).splitLines
   if lines.len != 2:
@@ -449,9 +460,6 @@ proc findProject*(project: var Project; dir = "."): bool =
     return
   result = true
 
-template packageDirectory*(project: Project): string {.deprecated.}=
-  project.nimbleDir / PkgDir
-
 iterator packageDirectories(project: Project): string =
   ## yield directories according to the project's path configuration
   if project.parent != nil or project.cfg == nil:
@@ -491,12 +499,7 @@ proc importName*(linked: LinkedSearchResult): string =
     result = linked.search.found.get.importName
 
 proc importName*(project: Project): string =
-  {.warning: "fix importName".}
-  ##
-  ## this needs to be fixed to look at install dirs,
-  ## rewrite src directories, and so on...  it should
-  ## probably produce a strtable of symbols and paths
-  ##
+  ## a uniform name usable in code for imports
   if project.develop != nil:
     result = project.develop.importName
   else:
@@ -515,12 +518,15 @@ iterator mvalues*(group: ProjectGroup): var Project =
     yield project
 
 proc hasProjectIn*(group: ProjectGroup; directory: string): bool =
+  ## true if a project is stored at the given directory
   result = group.table.hasKey(directory)
 
 proc getProjectIn*(group: ProjectGroup; directory: string): Project =
+  ## retrieve a project via its path
   result = group.table[directory]
 
 proc mgetProjectIn*(group: var ProjectGroup; directory: string): var Project =
+  ## retrieve a mutable project via its path
   result = group.table[directory]
 
 proc availableProjects*(project: Project): ProjectGroup =
@@ -550,10 +556,10 @@ proc `==`*(a, b: Project): bool =
       result = sameFile(apath, bpath)
 
 proc findRepositoryUrl*(path: string): Option[Uri] =
+  ## find the (remote?) url to a given local repository
   var
     remote: GitRemote
     open: GitOpen
-    name = defaultRemote
 
   withGit:
     gitTrap openRepository(open, path):
@@ -561,6 +567,7 @@ proc findRepositoryUrl*(path: string): Option[Uri] =
       return
     gitTrap remote, remoteLookup(remote, open.repo, defaultRemote):
       warn &"unable to fetch remote `{name}` from repo in {path}"
+      result = parseUri("file://" & path.absolutePath / "").some
       return
     try:
       let url = remote.url
@@ -578,6 +585,7 @@ proc excludeSearchPath*(project: Project; path: string): bool =
   result = excludeSearchPath(project.nimCfg, path)
 
 proc addSearchPath*(project: Project; path: string): bool =
+  ## add a search path to the given project's configuration
   for exists in project.packageDirectories:
     if exists == path:
       return
@@ -586,6 +594,7 @@ proc addSearchPath*(project: Project; path: string): bool =
   result = project.cfg.addSearchPath(project.nimCfg, path)
 
 proc determineSearchPath(project: Project): string =
+  ## produce the search path to add for a given project
   if project.dump == nil:
     raise newException(Defect, "no dump available")
   block found:
@@ -598,6 +607,8 @@ proc determineSearchPath(project: Project): string =
     result = project.repo
 
 iterator missingSearchPaths*(project: Project; target: Project): string =
+  ## one (or more?) path to the target package which are
+  ## apparently missing from the project's search paths
   let
     path = target.determineSearchPath
   block found:
@@ -607,6 +618,9 @@ iterator missingSearchPaths*(project: Project; target: Project): string =
     yield path
 
 iterator missingSearchPaths*(project: Project; target: var Project): string =
+  ## one (or more?) path to the target package which are apparently missing from
+  ## the project's search paths; this will resolve up the parent tree to find
+  ## the highest project in which to modify a configuration
   target.fetchDump
   let
     readonly = target
