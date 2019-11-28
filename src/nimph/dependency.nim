@@ -71,13 +71,13 @@ proc reportMultipleResolutions(project: Project; requirement: Requirement;
   var count = 1
   for name, package in packages.pairs:
     if package.local:
-      warn &"\t{count}\t{name} in {package.path}"
+      warn &"\t{count}\t{package.path}"
     elif package.web.isValid:
-      warn &"\t{count}\t{name} at {package.web}"
+      warn &"\t{count}\t{package.web}"
     if urls.len != 1:
-      warn &"\t{package.url}"
-      fatal ""
+      warn &"\t{package.url}\n"
     count.inc
+  fatal ""
 
 proc createUrl(project: Project): Uri =
   ## determine the source url for a project which may be local

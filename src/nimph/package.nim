@@ -277,6 +277,15 @@ proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
         when defined(debug):
           debug "matched the package by name"
 
+proc convertToGit(uri: Uri): Uri =
+  result = uri
+  if not result.path.endsWith(".git"):
+    result.path &= ".git"
+  result.scheme = "git"
+
 iterator urls*(group: PackageGroup): Uri =
   for package in group.values:
-    yield package.url
+    yield if package.dist == Git:
+      package.url.convertToGit
+    else:
+      package.url
