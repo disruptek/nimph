@@ -52,7 +52,7 @@ proc doctor*(project: var Project; dry = true): bool =
 
     # try to parse all nim configuration files
     block globalconfig:
-      when defined(debug):
+      when defined(debugPath):
         for path in project.cfg.likelySearch(libsToo = true):
           debug &"\tsearch: {path}"
         for path in project.cfg.likelyLazy:
@@ -227,6 +227,11 @@ proc doctor*(project: var Project; dry = true): bool =
 
   # remove missing paths from nim.cfg if possible
   block missingpaths:
+    when defined(debugPath):
+      for path in project.cfg.searchPaths.items:
+        debug &"\tsearch: {path}"
+      for path in project.cfg.lazyPaths.items:
+        debug &"\t  lazy: {path}"
     # search paths that are missing should be removed/excluded
     for path in likelySearch(project.cfg, libsToo = false):
       if dirExists(path):

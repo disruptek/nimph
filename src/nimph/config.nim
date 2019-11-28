@@ -66,7 +66,7 @@ proc loadAllCfgs*(directory: string): ConfigRef =
   # maybe we should turn off configuration hints for these reads
   when not defined(debug):
     result.notes.excl hintConf
-  when defined(debugPaths):
+  when false and defined(debugPath):
     result.notes.incl hintPath
 
   # stuff the prefixDir so we load the compiler's config/nim.cfg
