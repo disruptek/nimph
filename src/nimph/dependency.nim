@@ -25,6 +25,12 @@ type
   DependencyGroup* = ref object
     table*: TableRef[Requirement, Dependency]
 
+proc name*(dependency: Dependency): string =
+  result = dependency.names.join("|")
+
+proc `$`*(dependency: Dependency): string =
+  result = dependency.name & "->" & $dependency.requirement
+
 proc newDependency*(requirement: Requirement): Dependency =
   result = Dependency(requirement: requirement)
   result.projects = newProjectGroup()
@@ -244,20 +250,22 @@ proc contains*(dependencies: DependencyGroup; dep: Dependency): bool =
 proc `[]`*(dependencies: DependencyGroup; req: Requirement): var Dependency =
   result = dependencies.table[req]
 
-proc addsRequirements(dependencies: DependencyGroup;
-                      dependency: Dependency): bool =
-  ## true if the addition of a dependency will add new requirements to
-  ## the dependency group
-  if dependency.requirement notin dependencies:
-    dependencies.add dependency
-    return true
-  var
-    existing = dependencies[dependency.requirement]
+proc mergeContents(existing: var Dependency; dependency: Dependency) =
   # adding the packages as a group will work
   existing.add dependency.packages
   # add projects according to their repo
   for project in dependency.projects.values:
     existing.add project.repo, project
+
+proc addedRequirements(dependencies: var DependencyGroup;
+                       dependency: Dependency): bool =
+  ## true if the addition of a dependency will add new requirements to
+  ## the dependency group
+  result = dependency.requirement notin dependencies
+  if result:
+    dependencies.add dependency
+  else:
+    dependencies[dependency.requirement].mergeContents dependency
 
 proc isHappy*(dependency: Dependency): bool =
   ## true if the dependency is being met successfully
@@ -307,7 +315,6 @@ proc isUsing*(dependencies: DependencyGroup; target: Target;
       if dependency == outside:
         continue
       for directory, project in dependency.projects.pairs:
-
         if directory == target.repo:
           result = true
           break found
@@ -353,13 +360,17 @@ proc resolveDependencies*(project: var Project;
       project.reportMultipleResolutions(requirement, resolved.packages)
 
     # if the addition of the resolution is not novel, move along
-    if not dependencies.addsRequirements(resolved):
+    if not dependencies.addedRequirements(resolved):
       continue
 
+    # since resolved may have been merged, retrieve it via requirement again
+    resolved = dependencies[resolved.requirement]
     # else, we'll resolve dependencies introduced in any new projects
     #
     # note: we're using project.cfg and project.repo as a kind of scope
     for recurse in resolved.projects.asFoundVia(project.cfg, project.repo):
+      # if one of the existing dependencies is using the same project, then
+      # we won't bother to recurse into it and process its requirements
       if dependencies.isUsing(recurse.nimble, outside = resolved):
         continue
       result = result and recurse.resolveDependencies(projects, packages,
