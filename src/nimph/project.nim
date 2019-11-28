@@ -658,6 +658,15 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
     else:
       directory = directory / name & "-#head"
 
+  # make sure we return to the project's repo after any post-clone machinations
+  defer:
+    setCurrentDir(project.repo)
+
+  # don't clone the compiler when we're debugging nimph
+  when defined(debug):
+    if "github.com/nim-lang/Nim" in $bare:
+      raise newException(Defect, "won't clone the compiler when debugging nimph")
+
   fatal &"👭cloning {bare}..."
   info &"... into {directory}"
 
