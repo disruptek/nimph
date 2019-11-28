@@ -70,6 +70,8 @@ proc searcher*(args: seq[string]; log_level = logLevel): int =
     crash &"unable to retrieve search results from github"
   for repo in group.get.reversed:
     fatal "\n" & repo.renderShortly
+  if group.get.len == 0:
+    fatal &"😢no results"
 
 proc fixer*(dry_run = false; log_level = logLevel): int =
   # user's choice, our default

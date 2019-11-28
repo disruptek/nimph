@@ -127,6 +127,9 @@ proc newHubGroup(): HubGroup =
   result = HubGroup()
   result.repos = newOrderedTable[string, HubRepo]()
 
+proc len*(group: HubGroup): int =
+  result = group.repos.len
+
 iterator reversed*(group: HubGroup): HubRepo =
   ## yield repos in reverse order of entry
   let
