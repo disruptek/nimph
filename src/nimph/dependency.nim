@@ -211,9 +211,8 @@ proc addName(dependency: var Dependency; name: string) =
 
 proc add(dependency: var Dependency; package: Package) =
   ## add a package to the dependency
-  let key = $package.url.bare
-  if key notin dependency.packages:
-    dependency.packages.add key, package
+  if package.url notin dependency.packages:
+    dependency.packages.add package.url, package
   dependency.addName package.name
 
 proc add(dependency: var Dependency; url: Uri) =
