@@ -12,6 +12,7 @@ import nimph/nimble
 import nimph/config
 import nimph/thehub
 import nimph/package
+import nimph/version
 import nimph/dependency
 import nimph/git as git
 
@@ -185,9 +186,8 @@ proc doctor*(project: var Project; dry = true): bool =
                 warn &"couldn't add path `{path}` to `{project.nimcfg}`"
           # dependency is happy and in a search path now
           continue
-        let name = dependency.names.join("|")
         if dry:
-          notice &"{requirement} missing"
+          notice &"{dependency.name} ({requirement}) missing"
           result = false
         # for now, we'll force trying again even though it's a security risk,
         # because it will make users happy sooner, and we love happy users
@@ -203,7 +203,7 @@ proc doctor*(project: var Project; dry = true): bool =
             # no package was successfully cloned
             result = false
         else:
-          error &"missing {name} package"
+          error &"missing {dependency.name} package"
           result = false
       if not tryAgain:
         break
@@ -217,9 +217,9 @@ proc doctor*(project: var Project; dry = true): bool =
       if project.hasLocalDeps or project.numberOfNimblePaths > 1:
         let imports = project.cfg.allImportTargets(project.repo)
         for target, linked in imports.pairs:
-          let name = target.importName
           if group.isUsing(target):
             continue
+          let name = linked.importName
           warn &"seems like we're not using import `{name}` from {target.repo}"
 
   # remove missing paths from nim.cfg if possible
