@@ -53,9 +53,9 @@ proc doctor*(project: var Project; dry = true): bool =
     # try to parse all nim configuration files
     block globalconfig:
       when defined(debug):
-        for path in project.cfg.likelySearch(project.repo):
+        for path in project.cfg.likelySearch(libsToo = true):
           debug &"\tsearch: {path}"
-        for path in project.cfg.likelyLazy(project.repo):
+        for path in project.cfg.likelyLazy:
           debug &"\t  lazy: {path}"
       else:
         ## this space intentionally left blank
@@ -219,13 +219,16 @@ proc doctor*(project: var Project; dry = true): bool =
         for target, linked in imports.pairs:
           if group.isUsing(target):
             continue
+          # ignore standard library targets
+          if project.cfg.isStdLib(target.repo):
+            continue
           let name = linked.importName
           warn &"seems like we're not using import `{name}` from {target.repo}"
 
   # remove missing paths from nim.cfg if possible
   block missingpaths:
     # search paths that are missing should be removed/excluded
-    for path in likelySearch(project.cfg, project.repo):
+    for path in likelySearch(project.cfg, libsToo = false):
       if dirExists(path):
         continue
       if dry:

@@ -461,7 +461,7 @@ iterator packageDirectories(project: Project): string =
   ## yield directories according to the project's path configuration
   if project.parent != nil or project.cfg == nil:
     raise newException(Defect, "nonsensical outside root project")
-  for directory in project.cfg.packagePaths:
+  for directory in project.cfg.packagePaths(exists = true):
     yield directory
 
 proc len*(group: ProjectGroup): int =
@@ -605,13 +605,13 @@ proc determineSearchPath(project: Project): string =
     result = project.repo
 
 iterator missingSearchPaths*(project: Project; target: Project): string =
-  ## one (or more?) path to the target package which are
+  ## one (or more?) paths to the target package which are
   ## apparently missing from the project's search paths
   let
     path = target.determineSearchPath / ""
   block found:
     for search in project.cfg.packagePaths(exists = false):
-      if search / "" == path:
+      if search == path:
         break found
     yield path
 
@@ -706,7 +706,7 @@ proc allImportTargets*(config: ConfigRef; repo: string):
   ## order that they appear in the parsed configuration?  need test for this
   result = newOrderedTable[Target, LinkedSearchResult]()
 
-  for path in config.extantSearchPaths(repo):
+  for path in config.extantSearchPaths:
     let
       target = linkedFindTarget(path, target = path.importName,
                                 nimToo = true, ascend = false)
@@ -719,13 +719,10 @@ iterator asFoundVia*(group: ProjectGroup; config: ConfigRef;
                      repo: string): var Project =
   ## yield projects from the group in the same order that they may be
   ## resolved by the compiler, if at all, given a particular configuration
-  ##
-  ## FIXME: is it safe to assume that searchPaths are searched in the same
-  ## order that they appear in the parsed configuration?  need test for this
   var
     dedupe = newTable[string, Project](nextPowerOfTwo(group.len))
 
-  for path in config.extantSearchPaths(repo):
+  for path in config.packagePaths(exists = true):
     let
       target = linkedFindTarget(path, ascend = false)
       found = target.search.found

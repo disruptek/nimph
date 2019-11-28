@@ -57,6 +57,8 @@ proc loadAllCfgs*(dir = ""): ConfigRef =
   # maybe we should turn off configuration hints for these reads
   when not defined(debug):
     result.notes.excl hintConf
+  when defined(debugPaths):
+    result.notes.incl hintPath
 
   # stuff the prefixDir so we load the compiler's config/nim.cfg
   # just like the compiler would if we were to invoke it directly
@@ -179,40 +181,28 @@ proc newNimphConfig*(path: string): NimphConfig =
   else:
     result.toml = parseFile(path)
 
-iterator packagePaths*(config: ConfigRef; exists = true): string =
-  ## yield package paths from the configuration as /-terminated strings;
-  ## if the exists flag is passed, then the path must also exist
-  if config == nil:
-    raise newException(Defect, "attempt to load search paths from nil config")
-  let
-    lib = config.libpath.string / ""
-  var
-    dedupe = newStringTable(modeStyleInsensitive)
-  for path in config.searchPaths:
-    let path = path.string / ""
-    if path.startsWith(lib):
-      continue
-    dedupe[path] = ""
-  for path in config.lazyPaths:
-    let path = path.string / ""
-    dedupe[path] = ""
-  for path in dedupe.keys:
-    if exists and not path.dirExists:
-      continue
-    yield path
+template isStdLib*(config: ConfigRef; path: string): bool =
+  path.startsWith(config.libpath.string / "")
 
-iterator likelySearch*(config: ConfigRef; repo: string): string =
+template isStdlib*(config: ConfigRef; path: AbsoluteDir): bool =
+  path.string.isStdLib
+
+iterator likelySearch*(config: ConfigRef; libsToo: bool): string =
+  ## yield /-terminated directory paths likely added via --path
+  for search in config.searchPaths.items:
+    let search = search.string / "" # cast from AbsoluteDir
+    # we don't care about library paths
+    if not libsToo and config.isStdLib(search):
+      continue
+    yield search
+
+iterator likelySearch*(config: ConfigRef; repo: string; libsToo: bool): string =
   ## yield /-terminated directory paths likely added via --path
   when defined(debug):
     if repo != repo.absolutePath:
       error &"repo {repo} wasn't normalized"
 
-  for search in config.searchPaths.items:
-    let search = search.string / "" # cast from AbsoluteDir
-    # we don't care about library paths
-    if search.startsWith(config.libpath.string / ""):
-      continue
-
+  for search in config.likelySearch(libsToo = libsToo):
     # limit ourselves to the repo?
     when WhatHappensInVegas:
       if search.startsWith(repo):
@@ -220,12 +210,8 @@ iterator likelySearch*(config: ConfigRef; repo: string): string =
     else:
       yield search
 
-iterator likelyLazy*(config: ConfigRef; repo: string; least = 0): string =
+iterator likelyLazy*(config: ConfigRef; least = 0): string =
   ## yield /-terminated directory paths likely added via --nimblePath
-  when defined(debug):
-    if repo != repo.absolutePath:
-      error &"repo {repo} wasn't normalized"
-
   # build a table of sightings of directories
   var popular = newCountTable[string]()
   for search in config.lazyPaths.items:
@@ -242,21 +228,58 @@ iterator likelyLazy*(config: ConfigRef; repo: string; least = 0): string =
 
   # yield the directories that exist
   for search, count in popular.pairs:
-    when false:
-      # if the directory doesn't exist, ignore it
-      if not dirExists(search):
-        continue
-
     # maybe we can ignore unpopular paths
     if least > count:
       continue
+    yield search
 
+iterator likelyLazy*(config: ConfigRef; repo: string; least = 0): string =
+  ## yield /-terminated directory paths likely added via --nimblePath
+  when defined(debug):
+    if repo != repo.absolutePath:
+      error &"repo {repo} wasn't normalized"
+
+  for search in config.likelyLazy(least = least):
     # limit ourselves to the repo?
     when WhatHappensInVegas:
       if search.startsWith(repo):
         yield search
     else:
       yield search
+
+iterator packagePaths*(config: ConfigRef; exists = true): string =
+  ## yield package paths from the configuration as /-terminated strings;
+  ## if the exists flag is passed, then the path must also exist.
+  ## this should closely mimic the compiler's search
+
+  # the method by which we de-dupe paths
+  const mode =
+    when FilesystemCaseSensitive:
+      modeCaseSensitive
+    else:
+      modeCaseInsensitive
+  var
+    paths: seq[string]
+    dedupe = newStringTable(mode)
+
+  template addOne(p: AbsoluteDir) =
+    let path = path.string / ""
+    if path in dedupe:
+      continue
+    dedupe[path] = ""
+    paths.add path
+
+  if config == nil:
+    raise newException(Defect, "attempt to load search paths from nil config")
+
+  for path in config.searchPaths:
+    addOne(path)
+  for path in config.lazyPaths:
+    addOne(path)
+  for path in paths:
+    if exists and not path.dirExists:
+      continue
+    yield path
 
 proc suggestNimbleDir*(config: ConfigRef; repo: string;
                        local = ""; global = ""): string =
@@ -271,16 +294,15 @@ proc suggestNimbleDir*(config: ConfigRef; repo: string;
     # if a local directory is suggested, see if we can confirm its use
     if local != "":
       assert local.endsWith(DirSep)
-      for search in config.likelySearch(repo):
+      {.warning: "look for a nimble packages file here?".}
+      for search in config.likelySearch(repo, libsToo = false):
         if search.startsWith(local):
           result = local
           break either
 
     # otherwise, try to pick a global .nimble directory based upon lazy paths
     for search in config.likelyLazy(repo):
-      #
-      # FIXME: maybe we should look for some nimble debris?
-      #
+      {.warning: "maybe we should look for some nimble debris?".}
       if search.endsWith(PkgDir & DirSep):
         result = search.parentDir  # ie. the parent of pkgs
       else:
@@ -295,10 +317,12 @@ proc suggestNimbleDir*(config: ConfigRef; repo: string;
     break either
 
 iterator pathSubstitutions(config: ConfigRef; path: string;
-                           conf: string): string =
+                           conf: string; write: bool): string =
   ## compute the possible path substitions, including the original path
   const
-    substitutions = ["nimcache", "config", "projectpath", "lib", "nim", "home"]
+    readSubs = @["nimcache", "config", "nimbledir", "nimblepath",
+                 "projectdir", "projectpath", "lib", "nim", "home"]
+    writeSubs = @["nimcache", "config", "projectdir", "lib", "nim", "home"]
   var
     matchedPath = false
   when defined(debug):
@@ -307,6 +331,8 @@ iterator pathSubstitutions(config: ConfigRef; path: string;
   let
     path = path / ""
     conf = if conf.dirExists: conf else: conf.parentDir
+    substitutions = if write: writeSubs else: readSubs
+
   for sub in substitutions.items:
     let attempt = config.pathSubs(&"${sub}", conf) / ""
     # ignore any empty substitutions
@@ -324,7 +350,7 @@ iterator pathSubstitutions(config: ConfigRef; path: string;
 proc bestPathSubstitution(config: ConfigRef; path: string; conf: string): string =
   ## compute the best path substitution, if any
   block found:
-    for sub in config.pathSubstitutions(path, conf):
+    for sub in config.pathSubstitutions(path, conf, write = true):
       result = sub
       break found
     result = path
@@ -355,7 +381,7 @@ proc removeSearchPath*(nimcfg: Target; path: string): bool =
   for key, value in parsed.table.pairs:
     if key.toLowerAscii notin ["p", "path", "nimblepath"]:
       continue
-    for sub in cfg.get.pathSubstitutions(path, nimcfg.repo):
+    for sub in cfg.get.pathSubstitutions(path, nimcfg.repo, write = false):
       if sub notin [value, value / ""]:
         continue
       let
@@ -377,18 +403,13 @@ proc addSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
 proc excludeSearchPath*(nimcfg: Target; path: string): bool =
   result = appendConfig(nimcfg, &"""--excludePath="{path}"""")
 
-when false:
-  iterator extantSearchPaths*(config: ConfigRef; repo: string; least = 0): string =
-    if config == nil:
-      raise newException(Defect, "attempt to load search paths from nil config")
-    for path in config.likelySearch(repo):
-      if dirExists(path):
-        yield path
-    for path in config.likelyLazy(repo, least = least):
-      if dirExists(path):
-        yield path
-else:
-  iterator extantSearchPaths*(config: ConfigRef;
-                              repo: string; least = 0): string =
-    for path in config.packagePaths(exists = true):
+iterator extantSearchPaths*(config: ConfigRef; least = 0): string =
+  ## yield existing search paths from the configuration as /-terminated strings
+  if config == nil:
+    raise newException(Defect, "attempt to load search paths from nil config")
+  for path in config.likelySearch(libsToo = true):
+    if dirExists(path):
+      yield path
+  for path in config.likelyLazy(least = least):
+    if dirExists(path):
       yield path
