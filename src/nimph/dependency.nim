@@ -51,26 +51,25 @@ proc contains*(dependencies: DependencyGroup; package: Package): bool =
     if result:
       break
 
-proc reportMultipleResolutions(project: Project;
-                               requirement: Requirement; resolved: PackageGroup) =
+proc reportMultipleResolutions(project: Project; requirement: Requirement;
+                               packages: PackageGroup) =
   ## output some useful warnings depending upon the nature of the dupes
-
   var
     urls: HashSet[Hash]
-  for url in resolved.urls:
+  for url in packages.urls:
     urls.incl url.hash
 
   if urls.len == 1:
-    warn &"{project.name} has {resolved.len} " &
+    warn &"{project.name} has {packages.len} " &
          &"options for {requirement} dependency, all via"
-    for url in resolved.urls:
+    for url in packages.urls:
       warn &"\t{url}"
       break
   else:
-    warn &"{project.name} has {resolved.len} " &
+    warn &"{project.name} has {packages.len} " &
          &"options for {requirement} dependency:"
   var count = 1
-  for name, package in resolved.pairs:
+  for name, package in packages.pairs:
     if package.local:
       warn &"\t{count}\t{name} in {package.path}"
     elif package.web.isValid:
@@ -259,7 +258,7 @@ proc mergeContents(existing: var Dependency; dependency: Dependency) =
 
 proc addedRequirements(dependencies: var DependencyGroup;
                        dependency: Dependency): bool =
-  ## true if the addition of a dependency will add new requirements to
+  ## true if the addition of a dependency added new requirements to
   ## the dependency group
   result = dependency.requirement notin dependencies
   if result:
@@ -305,7 +304,8 @@ proc resolveDependency*(project: Project;
         result.add findurl.get
         break success
 
-    raise newException(ValueError, &"dunno where to get requirement {requirement}")
+    let emsg = &"dunno where to get requirement {requirement}" # noqa
+    raise newException(ValueError, emsg)
 
 proc isUsing*(dependencies: DependencyGroup; target: Target;
               outside: Dependency = nil): bool =
