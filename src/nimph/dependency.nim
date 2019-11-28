@@ -231,14 +231,12 @@ proc add(dependency: var Dependency; packages: PackageGroup) =
 
 proc add(dependency: var Dependency; directory: string; project: Project) =
   ## add a local project in the given directory to an existing dependency
+  if directory in dependency.projects:
+    raise newException(Defect, "attempt to duplicate project dependency")
   dependency.projects.add directory, project
   dependency.addName project.name
   # this'll help anyone sniffing around thinking packages precede projects
   dependency.add project.asPackage
-
-proc add(dependencies: DependencyGroup; dependency: Dependency) =
-  ## add a single dependency to the dependency group
-  dependencies.table[dependency.requirement] = dependency
 
 proc contains*(dependencies: DependencyGroup; req: Requirement): bool =
   result = req in dependencies.table
@@ -249,22 +247,50 @@ proc contains*(dependencies: DependencyGroup; dep: Dependency): bool =
 proc `[]`*(dependencies: DependencyGroup; req: Requirement): var Dependency =
   result = dependencies.table[req]
 
-proc mergeContents(existing: var Dependency; dependency: Dependency) =
+proc mergeContents(existing: var Dependency; dependency: Dependency): bool =
+  ## combine two dependencies and yield true if a new project is added
   # adding the packages as a group will work
   existing.add dependency.packages
   # add projects according to their repo
-  for project in dependency.projects.values:
-    existing.add project.repo, project
+  for directory, project in dependency.projects.pairs:
+    if directory in existing.projects:
+      continue
+    existing.projects.add directory, project
+    result = true
 
 proc addedRequirements(dependencies: var DependencyGroup;
-                       dependency: Dependency): bool =
+                       dependency: var Dependency): bool =
   ## true if the addition of a dependency added new requirements to
   ## the dependency group
-  result = dependency.requirement notin dependencies
-  if result:
-    dependencies.add dependency
-  else:
-    dependencies[dependency.requirement].mergeContents dependency
+  let
+    required = dependency.requirement
+  var
+    existing: Dependency
+
+  # look for an existing dependency to merge into
+  block found:
+    # check to see if an existing project will work
+    for req, dep in dependencies.table.mpairs:
+      for directory, project in dep.projects.pairs:
+        if required.isSatisfiedBy(project):
+          existing = dep
+          break found
+    # failing that, check to see if an existing package matches
+    for req, dep in dependencies.table.mpairs:
+      for url, package in dep.packages.pairs:
+        if package.url in dependency.packages:
+          existing = dep
+          break found
+    # found nothing; install the dependency in the group
+    dependencies.table.add required, dependency
+    # we've added requirements we can analyze only if projects exist
+    result = dependency.projects.len > 0
+
+  # if we found a good merge target, then merge our existing dependency
+  if existing != nil:
+    result = existing.mergeContents dependency
+    # point to the merged dependency
+    dependency = existing
 
 proc isHappy*(dependency: Dependency): bool =
   ## true if the dependency is being met successfully
@@ -363,8 +389,6 @@ proc resolveDependencies*(project: var Project;
     if not dependencies.addedRequirements(resolved):
       continue
 
-    # since resolved may have been merged, retrieve it via requirement again
-    resolved = dependencies[resolved.requirement]
     # else, we'll resolve dependencies introduced in any new projects
     #
     # note: we're using project.cfg and project.repo as a kind of scope
