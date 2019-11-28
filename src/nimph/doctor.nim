@@ -241,7 +241,7 @@ proc doctor*(project: var Project; dry = true): bool =
         warn &"unable to remove search path {path}"
 
     # lazy paths that are missing can be explicitly removed/ignored
-    for path in likelyLazy(project.cfg, project.repo, least = 0):
+    for path in likelyLazy(project.cfg, least = 0):
       if dirExists(path):
         continue
       if dry:

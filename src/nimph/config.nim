@@ -321,7 +321,8 @@ iterator pathSubsFor(config: ConfigRef; sub: string; conf: string): string =
     when NimMajor <= 1 and NimMinor < 1:
       # we have to pick the first lazy path because that's what Nimble does
       block found:
-        for search in config.likelyLazy:
+        for search in config.lazyPaths:
+          let search = search.string / ""
           if search.endsWith(PkgDir & DirSep):
             yield search.parentDir / ""
           else:
@@ -377,7 +378,7 @@ proc bestPathSubstitution(config: ConfigRef; path: string; conf: string): string
       break found
     result = path
 
-proc removeSearchPath*(nimcfg: Target; path: string): bool =
+proc removeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
   ## try to remove a path from a nim.cfg; true if it was
   ## successful and false if any error prevented success
   let
@@ -403,12 +404,12 @@ proc removeSearchPath*(nimcfg: Target; path: string): bool =
   for key, value in parsed.table.pairs:
     if key.toLowerAscii notin ["p", "path", "nimblepath"]:
       continue
-    for sub in cfg.get.pathSubstitutions(path, nimcfg.repo, write = false):
+    for sub in config.pathSubstitutions(path, nimcfg.repo, write = false):
       if sub notin [value, value / ""]:
         continue
       let
-        regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key.escapeRe & "[:=]\"?" &
-                    value.escapeRe & "/?\"?)\\s*")
+        regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key.escapeRe &
+                    "[:=]\"?" & value.escapeRe & "/?\"?)\\s*")
         swapped = content.replace(regexp, "")
       if swapped == content:
         continue
@@ -422,8 +423,10 @@ proc addSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
     best = config.bestPathSubstitution(path, $nimcfg.repo)
   result = appendConfig(nimcfg, &"""--path="{best}"""")
 
-proc excludeSearchPath*(nimcfg: Target; path: string): bool =
-  result = appendConfig(nimcfg, &"""--excludePath="{path}"""")
+proc excludeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
+  let
+    best = config.bestPathSubstitution(path, $nimcfg.repo)
+  result = appendConfig(nimcfg, &"""--excludePath="{best}"""")
 
 iterator extantSearchPaths*(config: ConfigRef; least = 0): string =
   ## yield existing search paths from the configuration as /-terminated strings

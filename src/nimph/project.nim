@@ -575,11 +575,11 @@ proc findRepositoryUrl*(path: string): Option[Uri] =
 
 proc removeSearchPath*(project: Project; path: string): bool =
   ## remove a search path from the project's nim.cfg
-  result = removeSearchPath(project.nimCfg, path)
+  result = project.cfg.removeSearchPath(project.nimCfg, path)
 
 proc excludeSearchPath*(project: Project; path: string): bool =
   ## exclude a search path from the project's nim.cfg
-  result = excludeSearchPath(project.nimCfg, path)
+  result = project.cfg.excludeSearchPath(project.nimCfg, path)
 
 proc addSearchPath*(project: Project; path: string): bool =
   ## add a search path to the given project's configuration
