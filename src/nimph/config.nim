@@ -301,13 +301,19 @@ iterator pathSubstitutions(config: ConfigRef; path: string;
     substitutions = ["nimcache", "config", "projectpath", "lib", "nim", "home"]
   var
     matchedPath = false
+  when defined(debug):
+    if not conf.dirExists:
+      raise newException(Defect, "passed a config file and not its path")
+  let
+    path = path / ""
+    conf = if conf.dirExists: conf else: conf.parentDir
   for sub in substitutions.items:
     let attempt = config.pathSubs(&"${sub}", conf) / ""
     # ignore any empty substitutions
     if attempt == "/":
       continue
     # note if any substitution matches the path
-    if path / "" == attempt:
+    if path == attempt:
       matchedPath = true
     if path.startsWith(attempt):
       yield path.replace(attempt, &"${sub}" / "")
@@ -343,22 +349,25 @@ proc removeSearchPath*(nimcfg: Target; path: string): bool =
     return
   var
     content = fn.readFile
+  when defined(debug):
+    if path.absolutePath != path:
+      raise newException(Defect, &"path `{path}` is not absolute")
   for key, value in parsed.table.pairs:
     if key.toLowerAscii notin ["p", "path", "nimblepath"]:
       continue
-    for sub in cfg.get.pathSubstitutions(path, fn):
-      debug &"compare `{value.absolutePath}` to `{path.absolutePath}`"
-      if value.absolutePath / "" != path.absolutePath:
+    for sub in cfg.get.pathSubstitutions(path, nimcfg.repo):
+      if sub notin [value, value / ""]:
         continue
       let
-        regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key & "[:=]\"?" &
-                    value & "\"?)\\s*")
+        regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key.escapeRe & "[:=]\"?" &
+                    value.escapeRe & "/?\"?)\\s*")
         swapped = content.replace(regexp, "")
-      if swapped != content:
-        # make sure we search the new content next time through the loop
-        content = swapped
-        fn.writeFile(content)
-        result = true
+      if swapped == content:
+        continue
+      # make sure we search the new content next time through the loop
+      content = swapped
+      fn.writeFile(content)
+      result = true
 
 proc addSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
   let
