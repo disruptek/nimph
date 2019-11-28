@@ -192,13 +192,16 @@ proc doctor*(project: var Project; dry = true): bool =
         # for now, we'll force trying again even though it's a security risk,
         # because it will make users happy sooner, and we love happy users
         elif true or iteration == 0:
-          for package in dependency.packages.values:
-            if project.clone(package.url, package.name):
-              tryAgain = true
-              break
-            else:
-              error &"error cloning {package}"
-              result = false
+          block cloneokay:
+            for package in dependency.packages.values:
+              if project.clone(package.url, package.name):
+                tryAgain = true
+                break cloneokay
+              else:
+                error &"error cloning {package}"
+                # a subsequent iteration could clone successfully
+            # no package was successfully cloned
+            result = false
         else:
           error &"missing {name} package"
           result = false
