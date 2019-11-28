@@ -54,7 +54,7 @@ template setupLocalProject(project: var Project) =
   if not findProject(project):
     crash &"unable to find a project; try `nimble init`?"
   try:
-    project.cfg = loadAllCfgs(dir = project.repo)
+    project.cfg = loadAllCfgs(project.repo)
   except Exception as e:
     crash "unable to parse nim configuration: " & e.msg
 

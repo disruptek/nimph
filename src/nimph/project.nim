@@ -598,8 +598,8 @@ proc determineSearchPath(project: Project): string =
     if "srcDir" in project.dump:
       let srcDir = project.dump["srcDir"]
       if srcDir != "":
-        setCurrentDir(project.repo)
-        result = srcDir.absolutePath
+        withinDirectory(project.repo):
+          result = srcDir.absolutePath
         break
     result = project.repo
 
@@ -657,10 +657,6 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
       directory = directory / name & "-#" & tag
     else:
       directory = directory / name & "-#head"
-
-  # make sure we return to the project's repo after any post-clone machinations
-  defer:
-    setCurrentDir(project.repo)
 
   # don't clone the compiler when we're debugging nimph
   when defined(debug):
@@ -733,11 +729,18 @@ iterator asFoundVia*(group: ProjectGroup; config: ConfigRef;
         yield project
         break
 
-proc fetchConfig*(project: var Project): bool =
+proc fetchConfig*(project: var Project; force = false): bool =
   ## ensure we've got a valid configuration to work with
-  if project.cfg == nil:
-    project.cfg = loadAllCfgs(dir = project.repo)
-    result = true
+  if project.cfg == nil or force:
+    if project.parent == nil:
+      project.cfg = loadAllCfgs(project.repo)
+      result = true
+    else:
+      project.cfg = project.parent.cfg
+      result = overlayConfig(project.cfg, project.repo)
+      discard project.parent.fetchConfig(force = true)
+      if not result:
+        project.cfg = project.parent.cfg
 
 proc countNimblePaths*(project: Project):
   tuple[local: int; global: int; paths: seq[string]] =

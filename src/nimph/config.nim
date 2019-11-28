@@ -41,12 +41,21 @@ proc loadProjectCfg*(path: string): Option[ConfigRef] =
   if readConfigFile(filename.AbsoluteFile, cache, config):
     result = config.some
 
-proc loadAllCfgs*(dir = ""): ConfigRef =
+proc overlayConfig*(config: var ConfigRef; directory: string): bool =
+  withinDirectory(directory):
+    # stuff the current directory as the project path
+    config.projectPath = AbsoluteDir getCurrentDir()
+    let filename = config.projectPath.string / NimCfg
+    if filename.fileExists:
+      var cache = newIdentCache()
+      result = readConfigFile(filename.AbsoluteFile, cache, config)
+      if not result:
+        let emsg = &"unable to read config in {config.projectPath}" # noqa
+        warn emsg
+
+proc loadAllCfgs*(directory: string): ConfigRef =
   ## use the compiler to parse all the usual nim.cfgs;
   ## optionally change to the given (project?) directory first
-
-  if dir != "":
-    setCurrentDir(dir)
 
   result = newConfigRef()
 
@@ -65,13 +74,13 @@ proc loadAllCfgs*(dir = ""): ConfigRef =
   let compiler = getCurrentCompilerExe()
   result.prefixDir = AbsoluteDir splitPath(compiler.parentDir).head
 
-  # stuff the current directory as the project path; this seems okay
-  # for a loadAllCfgs call...
-  result.projectPath = AbsoluteDir getCurrentDir()
+  withinDirectory(directory):
+    # stuff the current directory as the project path
+    result.projectPath = AbsoluteDir getCurrentDir()
 
-  # now follow the compiler process of loading the configs
-  var cache = newIdentCache()
-  loadConfigs(NimCfg.RelativeFile, cache, result)
+    # now follow the compiler process of loading the configs
+    var cache = newIdentCache()
+    loadConfigs(NimCfg.RelativeFile, cache, result)
 
 proc appendConfig*(path: Target; config: string): bool =
   # make a temp file in an appropriate spot, with a significant name
