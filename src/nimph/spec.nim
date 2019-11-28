@@ -25,6 +25,7 @@ const
   emptyRelease* {.strdefine.} = "#head"
   defaultRemote* {.strdefine.} = "origin"
   excludeMissingPaths* {.booldefine.} = false
+  writeNimbleDirPaths* {.booldefine.} = false
   hubTime* = initTimeFormat "yyyy-MM-dd\'T\'HH:mm:ss\'Z\'"
   shortDate* = initTimeFormat "yyyy-MM-dd"
 

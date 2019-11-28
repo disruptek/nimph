@@ -281,8 +281,7 @@ iterator packagePaths*(config: ConfigRef; exists = true): string =
       continue
     yield path
 
-proc suggestNimbleDir*(config: ConfigRef; repo: string;
-                       local = ""; global = ""): string =
+proc suggestNimbleDir*(config: ConfigRef; local = ""; global = ""): string =
   ## come up with a useful nimbleDir based upon what we find in the
   ## current configuration, the location of the project, and the provided
   ## suggestions for local or global package directories
@@ -295,13 +294,13 @@ proc suggestNimbleDir*(config: ConfigRef; repo: string;
     if local != "":
       assert local.endsWith(DirSep)
       {.warning: "look for a nimble packages file here?".}
-      for search in config.likelySearch(repo, libsToo = false):
+      for search in config.likelySearch(libsToo = false):
         if search.startsWith(local):
           result = local
           break either
 
     # otherwise, try to pick a global .nimble directory based upon lazy paths
-    for search in config.likelyLazy(repo):
+    for search in config.likelyLazy:
       {.warning: "maybe we should look for some nimble debris?".}
       if search.endsWith(PkgDir & DirSep):
         result = search.parentDir  # ie. the parent of pkgs
@@ -311,10 +310,29 @@ proc suggestNimbleDir*(config: ConfigRef; repo: string;
 
     # otherwise, try to make one up using the suggestion
     if global == "":
-      raise newException(IOError, "unable to guess global {dotNimble} directory")
+      raise newException(IOError, "can't guess global {dotNimble} directory")
     assert global.endsWith(DirSep)
     result = global
     break either
+
+iterator pathSubsFor(config: ConfigRef; sub: string; conf: string): string =
+  ## a convenience to work around the compiler's broken pathSubs
+  if sub.toLowerAscii in ["nimbledir", "nimblepath"]:
+    when NimMajor <= 1 and NimMinor < 1:
+      # we have to pick the first lazy path because that's what Nimble does
+      block found:
+        for search in config.likelyLazy:
+          if search.endsWith(PkgDir & DirSep):
+            yield search.parentDir / ""
+          else:
+            yield search
+          break found
+        raise newException(ValueError, "unable to compute $" & sub)
+    else:
+      for path in config.nimbleSubs(&"${sub}"):
+        yield path / ""
+  else:
+    yield config.pathSubs(&"${sub}", conf) / ""
 
 iterator pathSubstitutions(config: ConfigRef; path: string;
                            conf: string; write: bool): string =
@@ -322,7 +340,11 @@ iterator pathSubstitutions(config: ConfigRef; path: string;
   const
     readSubs = @["nimcache", "config", "nimbledir", "nimblepath",
                  "projectdir", "projectpath", "lib", "nim", "home"]
-    writeSubs = @["nimcache", "config", "projectdir", "lib", "nim", "home"]
+    writeSubs =
+      when writeNimbleDirPaths:
+        readSubs
+      else:
+        @["nimcache", "config", "projectdir", "lib", "nim", "home"]
   var
     matchedPath = false
   when defined(debug):
@@ -334,15 +356,15 @@ iterator pathSubstitutions(config: ConfigRef; path: string;
     substitutions = if write: writeSubs else: readSubs
 
   for sub in substitutions.items:
-    let attempt = config.pathSubs(&"${sub}", conf) / ""
-    # ignore any empty substitutions
-    if attempt == "/":
-      continue
-    # note if any substitution matches the path
-    if path == attempt:
-      matchedPath = true
-    if path.startsWith(attempt):
-      yield path.replace(attempt, &"${sub}" / "")
+    for attempt in config.pathSubsFor(sub, conf):
+      # ignore any empty substitutions
+      if attempt == "/":
+        continue
+      # note if any substitution matches the path
+      if path == attempt:
+        matchedPath = true
+      if path.startsWith(attempt):
+        yield path.replace(attempt, &"${sub}" / "")
   # if a substitution matches the path, don't yield it at the end
   if not matchedPath:
     yield path

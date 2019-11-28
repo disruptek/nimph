@@ -111,8 +111,7 @@ proc nimbleDir*(project: Project): string =
   # otherwise, if we have configuration data, we should use it to determine
   # what the user might be using as a package directory -- local or elsewise
   elif project.cfg != nil:
-    result = project.cfg.suggestNimbleDir(project.repo,
-                                          local = project.localDeps,
+    result = project.cfg.suggestNimbleDir(local = project.localDeps,
                                           global = globaldeps)
 
   # otherwise, we'll just presume some configuration-free defaults
