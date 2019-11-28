@@ -241,7 +241,7 @@ proc contains*(dependencies: DependencyGroup; req: Requirement): bool =
 proc contains*(dependencies: DependencyGroup; dep: Dependency): bool =
   result = dep.requirement in dependencies
 
-proc `[]`*(dependencies: DependencyGroup; req: Requirement): Dependency =
+proc `[]`*(dependencies: DependencyGroup; req: Requirement): var Dependency =
   result = dependencies.table[req]
 
 proc addsRequirements(dependencies: DependencyGroup;
