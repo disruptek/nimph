@@ -153,9 +153,11 @@ proc doctor*(project: var Project; dry = true): bool =
   # check dependencies and maybe install some
   block dependencies:
     var
-      tryAgain = false
+      tryAgain = true
       group = newDependencyGroup()
-    for iteration in 0 .. 1:
+      iteration = 0
+    #for iteration in 0 .. 1:
+    while tryAgain:
       # we need to reload the config each repeat through this loop so that we
       # can correctly identify new search paths after adding new packages
       if iteration > 0:
@@ -163,6 +165,9 @@ proc doctor*(project: var Project; dry = true): bool =
         fatal "👍environment changed; re-examining dependencies..."
         project.cfg = loadAllCfgs(project.repo)
         group = newDependencyGroup()
+
+      # by default, we won't try this again
+      tryAgain = false
 
       if not project.resolveDependencies(group):
         notice &"unable to resolve all dependencies for {project}"
@@ -178,12 +183,15 @@ proc doctor*(project: var Project; dry = true): bool =
                 project.cfg = loadAllCfgs(project.repo)
               else:
                 warn &"couldn't add path `{path}` to `{project.nimcfg}`"
+          # dependency is happy and in a search path now
           continue
         let name = dependency.names.join("|")
         if dry:
           notice &"{requirement} missing"
           result = false
-        elif iteration == 0:
+        # for now, we'll force trying again even though it's a security risk,
+        # because it will make users happy sooner, and we love happy users
+        elif true or iteration == 0:
           for package in dependency.packages.values:
             if project.clone(package.url, package.name):
               tryAgain = true
@@ -196,6 +204,7 @@ proc doctor*(project: var Project; dry = true): bool =
           result = false
       if not tryAgain:
         break
+      iteration.inc
 
     # if dependencies are available via --nimblePath, then warn of any
     # dependencies that aren't recorded as part of the dependency graph;
