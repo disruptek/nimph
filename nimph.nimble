@@ -14,4 +14,5 @@ requires "parsetoml"
 requires "https://github.com/disruptek/cutelog.git >= 1.0.0"
 requires "https://github.com/stefantalpalaru/nim-unittest2.git >= 0.0.1"
 
+bin = @["nimph"]
 srcDir = "src"
