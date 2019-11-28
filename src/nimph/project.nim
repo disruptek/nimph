@@ -89,7 +89,7 @@ template localDeps*(project: Project): string = project.repo / DepDir / ""
 template packageDirectory*(project: Project): string {.deprecated.}=
   project.nimbleDir / PkgDir
 
-template hasReleaseTag(project: Project): bool =
+template hasReleaseTag*(project: Project): bool =
   project.release.kind == Tag
 
 template nimCfg*(project: Project): Target =
@@ -181,8 +181,8 @@ proc knowVersion*(project: var Project): Version =
           debug "parsed a version from `nimble dump`"
         result = parsed.get
       else:
-        raise newException(IOError,
-                           &"unparsable version `{text}` in {project.name}")
+        let emsg = &"unparsable version `{text}` in {project.name}" # noqa
+        raise newException(IOError, emsg)
       return
   result = project.guessVersion
   if result.isValid:
@@ -219,7 +219,8 @@ proc getHeadOid(path: string): GitOid =
 proc getHeadOid*(project: Project): GitOid =
   ## retrieve the #head oid from the project's repository
   if project.dist != Git:
-    raise newException(Defect, &"{project} lacks a git repository to load")
+    let emsg = &"{project} lacks a git repository to load" # noqa
+    raise newException(Defect, emsg)
   result = getHeadOid(project.gitDir)
 
 proc parseVersionFromTag(tag: string): Version =
@@ -387,7 +388,7 @@ proc parseNimbleLink(path: string): tuple[nimble: string; source: string] =
   let
     lines = readFile(path).splitLines
   if lines.len != 2:
-    raise newException(ValueError, &"malformed {path}")
+    raise newException(ValueError, "malformed " & path)
   result = (nimble: lines[0], source: lines[1])
 
 proc linkedFindTarget(dir: string; target = ""; nimToo = false;
