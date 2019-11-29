@@ -125,17 +125,35 @@ proc nimbleDir*(project: Project): string =
 proc `$`*(project: Project): string =
   result = &"{project.name}-{project.release}"
 
-proc runNimble*(project: Project; args: seq[string]): RunNimbleOutput =
+proc fetchConfig*(project: var Project; force = false): bool =
+  ## ensure we've got a valid configuration to work with
+  if project.cfg == nil or force:
+    if project.parent == nil:
+      project.cfg = loadAllCfgs(project.repo)
+      result = true
+    else:
+      project.cfg = project.parent.cfg
+      result = overlayConfig(project.cfg, project.repo)
+      discard project.parent.fetchConfig(force = true)
+      if not result:
+        project.cfg = project.parent.cfg
+
+proc runNimble*(project: Project; args: seq[string];
+                opts = {poParentStreams}): RunNimbleOutput =
   ## run nimble against a particular project
-  var
-    arguments = @["--nimbleDir=" & project.nimbleDir].concat args
-  when defined(debug):
-    arguments = @["--verbose"].concat arguments
-  when defined(debugNimble):
-    arguments = @["--debug"].concat arguments
-  # the ol' belt-and-suspenders approach to specifying nimbleDir
-  putEnv("NIMBLE_DIR", project.nimbleDir)
-  result = runNimble(arguments, {poParentStreams})
+  let
+    nimbleDir = project.nimbleDir
+  result = runNimble(args, opts, nimbleDir = nimbleDir)
+
+proc runNimble*(project: var Project; args: seq[string];
+                opts = {poParentStreams}): RunNimbleOutput =
+  ## run nimble against a particular project, fetching its config first
+  let
+    readonly = project
+  # ensure we have a config for the project before running nimble;
+  # this could change the nimbleDir value used
+  discard project.fetchConfig
+  result = readonly.runNimble(args, opts = opts)
 
 proc guessVersion*(project: Project): Version =
   ## a poor man's measure of project version; pukes on comments
@@ -153,8 +171,9 @@ proc guessVersion*(project: Project): Version =
 proc fetchDump*(project: var Project; package: string; refresh = false): bool =
   ## make sure the nimble dump is available
   if project.dump == nil or refresh:
+    discard project.fetchConfig
     let
-      dumped = fetchNimbleDump(package)
+      dumped = fetchNimbleDump(package, nimbleDir = project.nimbleDir)
     result = dumped.ok
     if not result:
       # puke on this for now...
@@ -728,19 +747,6 @@ iterator asFoundVia*(group: ProjectGroup; config: ConfigRef;
         dedupe.add target.importName, project
         yield project
         break
-
-proc fetchConfig*(project: var Project; force = false): bool =
-  ## ensure we've got a valid configuration to work with
-  if project.cfg == nil or force:
-    if project.parent == nil:
-      project.cfg = loadAllCfgs(project.repo)
-      result = true
-    else:
-      project.cfg = project.parent.cfg
-      result = overlayConfig(project.cfg, project.repo)
-      discard project.parent.fetchConfig(force = true)
-      if not result:
-        project.cfg = project.parent.cfg
 
 proc countNimblePaths*(project: Project):
   tuple[local: int; global: int; paths: seq[string]] =
