@@ -108,13 +108,19 @@ proc adopt*(parent: Project; child: var Project) =
   ## associate a child project with the parent project of which the
   ## child is a requirement, member of local dependencies, or otherwise
   ## available to the compiler's search paths
+  if child.parent != nil and child.parent != parent:
+    let emsg = &"{parent} cannot adopt {child}"
+    raise newException(Defect, emsg)
   child.parent = parent
 
-proc childProjects*(project: Project): ProjectGroup =
+proc childProjects*(project: var Project): ProjectGroup =
   ## compose a group of possible dependencies of the project
   result = project.availableProjects
   for child in result.mvalues:
+    if child == project:
+      continue
     project.adopt(child)
+    discard child.fetchConfig
 
 proc determineDeps*(project: Project): Option[Requires] =
   ## try to parse requirements of a project
@@ -355,7 +361,7 @@ proc resolveDependencies*(project: var Project;
   ## store result in dependencies
 
   # assert a usable config
-  discard project.fetchConfig
+  assert project.cfg != nil
 
   info &"{project.cuteRelease:>8} {project.name:>12}   {project.releaseSummary}"
 

@@ -51,7 +51,7 @@ template prepareForTheWorst(body: untyped) =
     body
 
 template setupLocalProject(project: var Project) =
-  if not findProject(project):
+  if not findProject(project, getCurrentDir()):
     crash &"unable to find a project; try `nimble init`?"
   try:
     project.cfg = loadAllCfgs(project.repo)

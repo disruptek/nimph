@@ -129,14 +129,20 @@ proc fetchConfig*(project: var Project; force = false): bool =
   ## ensure we've got a valid configuration to work with
   if project.cfg == nil or force:
     if project.parent == nil:
+      debug &"config fetch for parent {project}"
       project.cfg = loadAllCfgs(project.repo)
       result = true
     else:
       project.cfg = project.parent.cfg
+      debug &"config fetch for child {project}"
       result = overlayConfig(project.cfg, project.repo)
-      discard project.parent.fetchConfig(force = true)
-      if not result:
-        project.cfg = project.parent.cfg
+      if result:
+        discard project.parent.fetchConfig(force = true)
+      result = true
+  else:
+    discard
+    when defined(debug):
+      notice &"unnecessary config fetch for {project}"
 
 proc runNimble*(project: Project; args: seq[string];
                 opts = {poParentStreams}): RunNimbleOutput =
@@ -441,10 +447,11 @@ proc linkedFindTarget(dir: string; target = ""; nimToo = false;
     result.search.message = e.msg
   result.search.found = none(Target)
 
-proc findProject*(project: var Project; dir = "."): bool =
+proc findProject*(project: var Project; dir: string;
+                  parent: Project = nil): bool =
   ## locate a project starting from `dir`
   let
-    target = linkedFindTarget(dir)
+    target = linkedFindTarget(dir, ascend = true)
   if target.search.found.isNone:
     if target.search.message != "":
       error target.search.message
@@ -456,7 +463,14 @@ proc findProject*(project: var Project; dir = "."): bool =
       debug &"--> via {target.via.search.found.get}"
       target = target.via
 
+  # there's really no scenario in which we need to instantiate a
+  # new parent project when looking for children...
+  if parent != nil:
+    if parent.nimble == target.search.found.get:
+      return
+
   project = newProject(target.search.found.get)
+  project.parent = parent
   project.develop = target.via
   project.meta = fetchNimbleMeta(project.repo)
   project.dist = project.guessDist
@@ -486,7 +500,11 @@ proc len*(group: ProjectGroup): int =
   result = group.table.len
 
 proc add*(group: ProjectGroup; name: string; project: Project) =
-  group.table.add name, project
+  when defined(debug):
+    if name in group.table:
+      raise newException(Defect, "attempt to add duplicate {name}")
+  if name notin group.table:
+    group.table.add name, project
 
 proc newProjectGroup*(): ProjectGroup =
   result = ProjectGroup()
@@ -546,13 +564,14 @@ proc mgetProjectIn*(group: var ProjectGroup; directory: string): var Project =
 
 proc availableProjects*(project: Project): ProjectGroup =
   ## find packages locally available to a project; note that
-  ## this can include the project itself -- perfectly fine
+  ## this will include the project itself
   result = newProjectGroup()
+  result.add project.repo, project
   for directory in project.packageDirectories:
-    var package: Project
-    if findProject(package, directory):
-      if package.repo notin result:
-        result.add package.repo, package
+    var proj: Project
+    if findProject(proj, directory, parent = project):
+      if proj.repo notin result:
+        result.add proj.repo, proj
     else:
       debug &"no package found in {directory}"
 
@@ -567,7 +586,7 @@ proc `==`*(a, b: Project): bool =
     if apath == bpath:
       result = true
     else:
-      debug "had to use samefile to compare {apath} to {bpath}"
+      debug &"had to use samefile to compare {apath} to {bpath}"
       result = sameFile(apath, bpath)
 
 proc findRepositoryUrl*(path: string): Option[Uri] =
@@ -621,6 +640,7 @@ proc determineSearchPath(project: Project): string =
           result = srcDir.absolutePath
         break
     result = project.repo
+  result = result / ""
 
 iterator missingSearchPaths*(project: Project; target: Project): string =
   ## one (or more?) paths to the target package which are
@@ -695,7 +715,8 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
 
   var
     proj: Project
-  if findProject(proj, directory) and proj.repo == directory:
+  if findProject(proj, directory, parent = project) and
+                 proj.repo == directory:
     if not writeNimbleMeta(directory, bare, oid):
       warn &"unable to write {nimbleMeta} in {directory}"
     proj.relocateDependency(oid)
@@ -736,17 +757,24 @@ iterator asFoundVia*(group: ProjectGroup; config: ConfigRef;
   var
     dedupe = newTable[string, Project](nextPowerOfTwo(group.len))
 
+  # procede in path order to try to find projects using the paths
   for path in config.packagePaths(exists = true):
     let
       target = linkedFindTarget(path, ascend = false)
       found = target.search.found
-    if found.isNone or target.importName in dedupe:
+    if found.isNone:
       continue
     for project in group.mvalues:
       if found.get == project.nimble:
-        dedupe.add target.importName, project
-        yield project
+        if project.importName notin dedupe:
+          dedupe.add project.importName, project
+          yield project
         break
+
+  # now report on anything we weren't able to discover
+  for project in group.values:
+    if project.importName notin dedupe:
+      notice &"no path to {project.repo}"
 
 proc countNimblePaths*(project: Project):
   tuple[local: int; global: int; paths: seq[string]] =

@@ -45,16 +45,34 @@ proc loadProjectCfg*(path: string): Option[ConfigRef] =
     result = config.some
 
 proc overlayConfig*(config: var ConfigRef; directory: string): bool =
+  ## true if new config data was added to the env
   withinDirectory(directory):
-    # stuff the current directory as the project path
-    config.projectPath = AbsoluteDir getCurrentDir()
-    let filename = config.projectPath.string / NimCfg
-    if filename.fileExists:
-      var cache = newIdentCache()
-      result = readConfigFile(filename.AbsoluteFile, cache, config)
-      if not result:
-        let emsg = &"unable to read config in {config.projectPath}" # noqa
-        warn emsg
+    var
+      priorProjectPath = config.projectPath
+    let
+      nextProjectPath = AbsoluteDir getCurrentDir()
+      filename = nextProjectPath.string / NimCfg
+
+    # if there's no config file, we're done
+    result = filename.fileExists
+    if not result:
+      return
+
+    # remember to reset the config's project path
+    defer:
+      config.projectPath = priorProjectPath
+    # set the new project path for substitution purposes
+    config.projectPath = nextProjectPath
+
+    var cache = newIdentCache()
+    result = readConfigFile(filename.AbsoluteFile, cache, config)
+
+    if result:
+      # this config is now authoritative, so force the project path
+      priorProjectPath = nextProjectPath
+    else:
+      let emsg = &"unable to read config in {nextProjectPath}" # noqa
+      warn emsg
 
 proc loadAllCfgs*(directory: string): ConfigRef =
   ## use the compiler to parse all the usual nim.cfgs;
@@ -298,6 +316,8 @@ iterator packagePaths*(config: ConfigRef; exists = true): string =
     addOne(path)
   for path in config.lazyPaths:
     addOne(path)
+  when defined(debugPath):
+    debug &"package directory count: {paths.len}"
   for path in paths:
     if exists and not path.dirExists:
       continue
