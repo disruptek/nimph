@@ -23,6 +23,9 @@ import parsetoml
 
 import nimph/spec
 
+when defined(debugPath):
+  from std/sequtils import count
+
 type
   ProjectCfgParsed* = object
     table*: TableRef[string, string]
@@ -64,9 +67,9 @@ proc loadAllCfgs*(directory: string): ConfigRef =
   initDefines(result.symbols)
 
   # maybe we should turn off configuration hints for these reads
-  when not defined(debug):
+  when not defined(debug) and not defined(debugPath):
     result.notes.excl hintConf
-  when false and defined(debugPath):
+  when defined(debugPath):
     result.notes.incl hintPath
 
   # stuff the prefixDir so we load the compiler's config/nim.cfg
@@ -81,6 +84,12 @@ proc loadAllCfgs*(directory: string): ConfigRef =
     # now follow the compiler process of loading the configs
     var cache = newIdentCache()
     loadConfigs(NimCfg.RelativeFile, cache, result)
+  when defined(debugPath):
+    debug "loaded", result.searchPaths.len, "search paths"
+    debug "loaded", result.lazyPaths.len, "lazy paths"
+    for path in result.lazyPaths.items:
+      if result.lazyPaths.count(path) > 1:
+        raise newException(Defect, "duplicate lazy path: " & path.string)
 
 proc appendConfig*(path: Target; config: string): bool =
   # make a temp file in an appropriate spot, with a significant name
@@ -227,12 +236,11 @@ iterator likelyLazy*(config: ConfigRef; least = 0): string =
     let
       search = search.string / ""      # cast from AbsoluteDir
       parent = search.parentDir / ""   # ensure a trailing /
+    when defined(debugPath):
+      if search in popular:
+        raise newException(Defect, "duplicate lazy path: " & search)
     if search notin popular:
       popular.inc search
-    else:
-      discard
-      when defined(debugPath):
-        error "duplicate lazy path", search
     if search != parent:               # silly: elide /
       if parent in popular:            # the parent has to have been added
         popular.inc parent
