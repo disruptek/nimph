@@ -227,7 +227,12 @@ iterator likelyLazy*(config: ConfigRef; least = 0): string =
     let
       search = search.string / ""      # cast from AbsoluteDir
       parent = search.parentDir / ""   # ensure a trailing /
-    popular.inc search
+    if search notin popular:
+      popular.inc search
+    else:
+      discard
+      when defined(debugPath):
+        error "duplicate lazy path", search
     if search != parent:               # silly: elide /
       if parent in popular:            # the parent has to have been added
         popular.inc parent
