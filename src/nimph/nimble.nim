@@ -6,6 +6,7 @@ import std/strutils
 import std/os
 import std/osproc
 import std/strformat
+import std/sequtils
 
 import npeg
 
@@ -25,15 +26,27 @@ type
     js: JsonNode
     link: seq[string]
 
-proc runNimble*(args: seq[string]; options: set[ProcessOption]): RunNimbleOutput =
+proc runNimble*(args: seq[string]; options: set[ProcessOption];
+                nimbleDir = ""): RunNimbleOutput =
   ## run nimble
   var
     command = findExe("nimble")
+    arguments = args
     opts = options
   if command == "":
     result = (output: "unable to find nimble in path", ok: false)
     warn result.output
     return
+
+  when defined(debug):
+    arguments = @["--verbose"].concat arguments
+  when defined(debugNimble):
+    arguments = @["--debug"].concat arguments
+
+  if nimbleDir != "":
+    # the ol' belt-and-suspenders approach to specifying nimbleDir
+    arguments = @["--nimbleDir=" & nimbleDir].concat arguments
+    putEnv("NIMBLE_DIR", nimbleDir)
 
   if poParentStreams in opts or poInteractive in opts:
     # sorry; i just find this easier to read than union()
@@ -41,13 +54,13 @@ proc runNimble*(args: seq[string]; options: set[ProcessOption]): RunNimbleOutput
     opts.incl poParentStreams
     # the user wants interactivity
     when defined(debug):
-      debug command, args.join(" ")
+      debug command, arguments.join(" ")
     let
-      process = startProcess(command, args = args, options = opts)
+      process = startProcess(command, args = arguments, options = opts)
     result = (output: "", ok: process.waitForExit == 0)
   else:
     # the user wants to capture output
-    command &= " " & quoteShellCommand(args)
+    command &= " " & quoteShellCommand(arguments)
     when defined(debug):
       debug command
     let
@@ -74,12 +87,12 @@ proc parseNimbleDump*(input: string): Option[StringTableRef] =
   if parsed.ok:
     result = table.some
 
-proc fetchNimbleDump*(path: string): DumpResult =
+proc fetchNimbleDump*(path: string; nimbleDir = ""): DumpResult =
   ## parse nimble dump output into a string table
   result = DumpResult(ok: false)
   withinDirectory(path):
     let
-      nimble = runNimble(@["dump", path], {poDaemon})
+      nimble = runNimble(@["dump", path], {poDaemon}, nimbleDir = nimbleDir)
     if not nimble.ok:
       result.why = "nimble execution failed"
       error nimble.output
