@@ -19,5 +19,10 @@ or: _How I Learned to Stop Worrying and Love the Search Path_
 - compiler _ie. the compiler as a library_
 - nim >= 1.0.4 _for --clearNimblePath and --define:key=value syntax_
 
+## Installation
+```
+$ nimble install https://github.com/disruptek/nimph
+```
+
 ## License
 MIT
