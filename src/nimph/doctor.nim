@@ -162,7 +162,6 @@ proc doctor*(project: var Project; dry = true): bool =
       # we need to reload the config each repeat through this loop so that we
       # can correctly identify new search paths after adding new packages
       if iteration > 0:
-        fatal ""
         fatal "👍environment changed; re-examining dependencies..."
         project.cfg = loadAllCfgs(project.repo)
         group = newDependencyGroup()
@@ -290,4 +289,4 @@ proc doctor*(project: var Project; dry = true): bool =
       fatal "❔it looks like you have multiple --nimblePaths defined:"
       for index, path in found.paths.pairs:
         fatal &"❔\t{index + 1}\t{path}"
-      fatal "❔nim and nimph support this, but humans may find it confusing 😏"
+      fatal "❔nim and nimph support this, but some humans find it confusing 😏"
