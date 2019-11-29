@@ -1,4 +1,4 @@
-version = "0.0.19"
+version = "0.0.20"
 author = "disruptek"
 description = "nim package handler from the future"
 license = "MIT"

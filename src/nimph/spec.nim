@@ -24,8 +24,7 @@ const
   officialPackages* {.strdefine.} = "packages_official.json"
   emptyRelease* {.strdefine.} = "#head"
   defaultRemote* {.strdefine.} = "origin"
-  # disable this when nim issue #12767 is fixed
-  excludeMissingPaths* {.booldefine.} = true
+  excludeMissingPaths* {.booldefine.} = false
   writeNimbleDirPaths* {.booldefine.} = false
   hubTime* = initTimeFormat "yyyy-MM-dd\'T\'HH:mm:ss\'Z\'"
   shortDate* = initTimeFormat "yyyy-MM-dd"
