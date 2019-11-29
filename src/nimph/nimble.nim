@@ -64,9 +64,12 @@ proc parseNimbleDump*(input: string): Option[StringTableRef] =
       white <- {'\t', ' '}
       key <- +(1 - ':')
       value <- '"' * *(1 - '"') * '"'
+      errline <- white * >*(1 - nl) * +nl:
+        warn $1
       line <- >key * ':' * +white * >value * +nl:
         table[$1] = unescape($2)
-      document <- +line * !1
+      anyline <- line | errline
+      document <- +anyline * !1
     parsed = peggy.match(input)
   if parsed.ok:
     result = table.some
