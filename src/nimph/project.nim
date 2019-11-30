@@ -499,6 +499,9 @@ iterator packageDirectories(project: Project): string =
 proc len*(group: ProjectGroup): int =
   result = group.table.len
 
+proc `[]`*(group: ProjectGroup; name: string): Project =
+  result = group.table[name]
+
 proc add*(group: ProjectGroup; name: string; project: Project) =
   when defined(debug):
     if name in group.table:
