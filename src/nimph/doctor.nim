@@ -241,12 +241,14 @@ proc doctor*(project: var Project; dry = true): bool =
         continue
       if dry:
         warn &"search path {path} does not exist"
+        result = false
       elif project.removeSearchPath(path):
         info &"removed missing search path {path}"
       elif excludeMissingPaths and project.excludeSearchPath(path):
         info &"excluded missing search path {path}"
       else:
         warn &"unable to remove search path {path}"
+        result = false
 
     # lazy paths that are missing can be explicitly removed/ignored
     for path in likelyLazy(project.cfg, least = 0):
@@ -254,12 +256,14 @@ proc doctor*(project: var Project; dry = true): bool =
         continue
       if dry:
         warn &"nimblePath {path} does not exist"
+        result = false
       elif project.removeSearchPath(path):
         info &"removed missing nimblePath {path}"
       elif excludeMissingPaths and project.excludeSearchPath(path):
         info &"excluded missing nimblePath {path}"
       else:
         warn &"unable to remove nimblePath {path}"
+        result = false
 
   # if a dependency (local or otherwise) is shadowed by another dependency
   # in one of the nimblePaths, then we should warn that a removal of one
