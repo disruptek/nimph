@@ -182,9 +182,7 @@ when isMainModule:
       scHelp = "--help"
 
   let
-    console = newConsoleLogger(levelThreshold = lvlAll,
-                               useStderr = true, fmtStr = "")
-    logger = newCuteLogger(console)
+    logger = newCuteConsoleLogger()
   addHandler(logger)
 
   const
