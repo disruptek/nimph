@@ -166,7 +166,6 @@ proc cloner*(args: seq[string]; log_level = logLevel): int =
 
   if not project.clone(url, name):
     crash &"unable to clone {url}"
-  fatal &"👌cloned {url}"
 
 when isMainModule:
   import cligen
