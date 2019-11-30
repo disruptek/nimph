@@ -224,6 +224,10 @@ proc doctor*(project: var Project; dry = true): bool =
           let name = linked.importName
           warn &"seems like we're not using import `{name}` from {target.repo}"
 
+  # identify packages that aren't named according to their versions; rename
+  # local dependencies and merely warn about others
+  {.warning: "mislabeled project directories unimplemented".}
+
   # remove missing paths from nim.cfg if possible
   block missingpaths:
     when defined(debugPath):
