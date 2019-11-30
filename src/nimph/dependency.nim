@@ -22,8 +22,13 @@ type
     packages*: PackageGroup
     projects*: ProjectGroup
 
+  Flag* {.pure.} = enum
+    Quiet
+
   DependencyGroup* = ref object
     table*: TableRef[Requirement, Dependency]
+    imports*: StringTableRef
+    flags*: set[Flag]
 
 proc name*(dependency: Dependency): string =
   result = dependency.names.join("|")
@@ -36,9 +41,10 @@ proc newDependency*(requirement: Requirement): Dependency =
   result.projects = newProjectGroup()
   result.packages = newPackageGroup()
 
-proc newDependencyGroup*(): DependencyGroup =
-  result = DependencyGroup()
+proc newDependencyGroup*(flags: set[Flag] = {}): DependencyGroup =
+  result = DependencyGroup(flags: flags)
   result.table = newTable[Requirement, Dependency]()
+  result.imports = newStringTable(modeStyleInsensitive)
 
 iterator pairs*(dependencies: DependencyGroup):
   tuple[requirement: Requirement; dependency: Dependency] =
@@ -264,6 +270,19 @@ proc mergeContents(existing: var Dependency; dependency: Dependency): bool =
     existing.projects.add directory, project
     result = true
 
+proc recordImportNames(dependencies: var DependencyGroup;
+                       dependency: Dependency) =
+  ## associate any import names in the dependency with their paths
+  for directory, project in dependency.projects.pairs:
+    let
+      name = project.importName
+    if name in dependencies.imports:
+      let exists = dependencies.imports[name]
+      if exists != directory:
+        warn &"import collision between {name} and {exists}"
+    else:
+      dependencies.imports[name] = directory
+
 proc addedRequirements(dependencies: var DependencyGroup;
                        dependency: var Dependency): bool =
   ## true if the addition of a dependency added new requirements to
@@ -297,6 +316,14 @@ proc addedRequirements(dependencies: var DependencyGroup;
     result = existing.mergeContents dependency
     # point to the merged dependency
     dependency = existing
+
+  # add any names in the dependency list to our name cache
+  dependencies.recordImportNames(dependency)
+
+proc pathForName*(dependencies: DependencyGroup; name: string): Option[string] =
+  ## try to retrieve the directory for a given import
+  if name in dependencies.imports:
+    result = dependencies.imports[name].some
 
 proc isHappy*(dependency: Dependency): bool =
   ## true if the dependency is being met successfully
@@ -363,7 +390,8 @@ proc resolveDependencies*(project: var Project;
   # assert a usable config
   assert project.cfg != nil
 
-  info &"{project.cuteRelease:>8} {project.name:>12}   {project.releaseSummary}"
+  if Flag.Quiet notin dependencies.flags:
+    info &"{project.cuteRelease:>8} {project.name:>12}   {project.releaseSummary}"
 
   result = true
 

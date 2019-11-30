@@ -15,6 +15,7 @@ import nimph/doctor
 import nimph/thehub
 import nimph/config
 import nimph/package
+import nimph/dependency
 
 template crash(why: string) =
   ## a good way to exit nimph
@@ -100,6 +101,25 @@ proc nimbler*(args: seq[string]; log_level = logLevel): int =
   if not nimble.ok:
     crash &"nimble didn't like that"
 
+proc pather*(names: seq[string]; log_level = logLevel): int =
+  # user's choice, our default
+  setLogFilter(log_level)
+
+  var
+    project: Project
+    group = newDependencyGroup(flags = {Flag.Quiet})
+  setupLocalProject(project)
+
+  if not project.resolveDependencies(group):
+    notice &"unable to resolve all dependencies for {project}"
+
+  for name in names.items:
+    let found = group.pathForName(name)
+    if found.isSome:
+      echo found.get
+    else:
+      echo ""
+
 proc cloner*(args: seq[string]; log_level = logLevel): int =
   # user's choice, our default
   setLogFilter(log_level)
@@ -157,6 +177,7 @@ when isMainModule:
       scSearch = "search"
       scClone = "clone"
       scNimble = "nimble"
+      scPath = "path"
       scVersion = "--version"
       scHelp = "--help"
 
@@ -180,16 +201,18 @@ when isMainModule:
               doc="repair (or report) env issues")
   dispatchGen(cloner, cmdName = $scClone, dispatchName = "run" & $scClone,
               doc="add a package to the env")
+  dispatchGen(pather, cmdName = $scPath, dispatchName = "run" & $scPath,
+              doc="fetch a package path by import name")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
 
   const
     # these are our subcommands that we want to include in help
-    dispatchees = [runsearch, runclone, rundoctor]
+    dispatchees = [runsearch, runclone, rundoctor, runpath]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
-                   "path", "refresh", "list", "tasks"]
+                   "refresh", "list", "tasks"]
 
   var
     # get the command line
@@ -205,6 +228,7 @@ when isMainModule:
       scSearch: runsearch,
       scDoctor: rundoctor,
       scClone: runclone,
+      scPath: runpath,
       #scNimble: runnimble,
     }.toTable
 
@@ -234,7 +258,7 @@ when isMainModule:
   # take action according to the subcommand
   try:
     case sub:
-    of scSearch, scDoctor, scClone:
+    of scSearch, scDoctor, scClone, scPath:
       # invoke the appropriate dispatcher
       quit dispatchers[sub](cmdline = params[1..^1])
     of scNimble:
