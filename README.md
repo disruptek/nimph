@@ -49,6 +49,21 @@ The `search` subcommand is used to query GitHub for packages.  Arguments should
 match [GitHub search syntax for repositories](https://help.github.com/en/github/searching-for-information-on-github/searching-for-repositories) and for convenience, a `language:nim` qualifier will be included.
 
 Results are output in **increasing order of relevance** to reduce scrolling; _the last result is the best_.
+```
+$ nimph search pegs
+
+https://github.com/GlenHertz/peg                                  pushed 2017-11-19
+  645 kb            0 issues        0 stars         0 forks      created 2017-11-18
+  PEG version of grep
+
+https://github.com/lguzzon-NIM/simplePEG                          pushed 2019-09-05
+   82 kb            0 issues        0 stars         0 forks      created 2017-09-05
+  Simple Peg
+
+https://github.com/zevv/npeg                                      pushed 2019-11-27
+ 9125 kb            2 issues       66 stars         2 forks      created 2019-03-08
+  PEGs for Nim, another take
+```
 
 ### Clone
 
@@ -66,6 +81,11 @@ of packages, with the following exception:
 _This behavior will be changed shortly to simply clone into the last-specified
 `nimblePath`, for consistency with Nimble._
 
+```
+$ nimph clone npeg
+👭cloning git://github.com/zevv/npeg.git...
+👌cloned git://github.com/zevv/npeg.git
+```
 ### Doctor
 
 The interesting action happens in the `doctor` subcommand.  When run without any
@@ -74,9 +94,41 @@ perform non-destructive evaluation of your environment and report any issues.
 In this mode, logging is elevated to report package versions and a summary of
 their last commit or tag.
 
+```
+$ nimph
+✔️  8a7114          bot   cleanups
+✔️  775047      swayipc   we can remove this notice now
+✔️  v0.4.5         nesm   Version 0.4.5
+✔️  5186f4       cligen   Add a test program and update release notes as per last commit to fix https://github.com/c-blake/cligen/issues/120
+✔️  c7ba0f         dbus   Merge pull request #3 from SolitudeSF/case
+✔️  57f244        c2nim   new option: annotate procs with `{.noconv.}`
+✔️  54ed41         npeg   Added section about non-consuming operators and captures to the README. Fixes #17
+✔️  183eaa    unittest2   remove redundant import
+✔️  v0.3.0          irc   v0.3.0
+✔️  fe276f         rest   add generated docs
+✔️  5d72a4      foreach   clarify example
+✔️  5493b2           xs   add some docs about google
+✔️   1.0.1      cutelog   ladybug easier to see
+✔️  9d75fe         bump   update docs
+✔️   1.0.2       github   fix nimble again
+✔️  6830ae        nimph   add asciinema demo
+✔️  b6b8d5     compiler   [backport] always set `fileInfoIdx.isKnownFile` (#12773)
+✔️  v0.3.3     nimterop   v0.3.3
+✔️ v0.13.0        regex   bump 0.13.0 (#52)
+✔️  2afc38    unicodedb   improve decomposition performance (#11)
+✔️  v0.5.1  unicodeplus   Fix ascii range (#2)
+✔️  v0.1.1      nimgit2   v0.1.1
+✔️  v0.5.0    parsetoml   Update to version 0.5.0
+👌bot version 0.0.11 lookin' good
+```
 When run as `nimph doctor`, any problems discovered will be fixed, if possible.
 This includes cloning missing packages for which we can determine a URL,
 adjusting path settings in the project's `nim.cfg`, and similar housekeeping.
+
+```
+$ nimph doctor
+👌bot version 0.0.11 lookin' good
+```
 
 ### Path
 
@@ -86,7 +138,11 @@ must be installed.
 
 In contrast to Nimble, you can specify multiple symbols to search for, and the
 symbols are matched without regard to underscores or capitalization.
-
+```
+$ nimph path nimterop irc
+/home/adavidoff/git/bot/deps/pkgs/nimterop-#v0.3.3
+/home/adavidoff/git/bot/deps/pkgs/irc-#v0.3.0
+```
 ### Nimble Subcommands
 
 Any commands not mentioned above are passed directly to an instance of `nimble`
@@ -95,6 +151,11 @@ operate upon the project it should.
 
 You can use this to, for example, **refresh** the official packages list, run **test**s, or build **doc**umentation for a project.
 
+```
+$ nimph refresh
+Downloading Official package list
+    Success Package list downloaded.
+```
 ## Hacking
 
 Virtually all constants in Nimph are recorded in a single `spec` file where
