@@ -118,7 +118,8 @@ proc pather*(names: seq[string]; log_level = logLevel): int =
     if found.isSome:
       echo found.get
     else:
-      echo ""
+      echo ""      # a failed find produces empty output
+      result = 1   # and sets the return code to nonzero
 
 proc cloner*(args: seq[string]; log_level = logLevel): int =
   # user's choice, our default
