@@ -17,6 +17,9 @@ import github
 
 import nimph/spec
 
+const
+  hubTime* = initTimeFormat "yyyy-MM-dd\'T\'HH:mm:ss\'Z\'"
+
 type
   HubRepo* = ref object
     fullname*: string
