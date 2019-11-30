@@ -202,7 +202,7 @@ when isMainModule:
   dispatchGen(cloner, cmdName = $scClone, dispatchName = "run" & $scClone,
               doc="add a package to the env")
   dispatchGen(pather, cmdName = $scPath, dispatchName = "run" & $scPath,
-              doc="fetch a package path by import name")
+              doc="fetch package path(s) by import name(s)")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
 
