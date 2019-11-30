@@ -1,3 +1,4 @@
+import std/strtabs
 import std/tables
 import std/times
 import std/os
@@ -15,7 +16,6 @@ import bump
 
 import nimph/spec
 import nimph/version
-import nimph/sanitize
 
 type
   DistMethod* = enum
@@ -38,25 +38,13 @@ type
 
   PackageGroup* = ref object
     table*: OrderedTableRef[string, Package]
+    imports*: StringTableRef
     info*: FileInfo  ## sloppy support for aging the nimble package list
 
   PackagesResult* = tuple
     ok: bool
     why: string
     packages: PackageGroup
-
-proc packageName*(name: string): string =
-  ## return a string that is plausible as a module name
-  let
-    sane = name.sanitizeIdentifier(capsOkay = false)
-  if sane.isSome:
-    result = sane.get.toLowerAscii
-  else:
-    raise newException(ValueError, "unable to sanitize " & name)
-
-proc packageName*(url: Uri): string =
-  ## guess the import name of a package from a url
-  result = packageName(url.path.extractFilename.changeFileExt("").split("-")[^1])
 
 proc newPackage*(name: string; path: string; dist: DistMethod;
                  url: Uri): Package =
@@ -88,6 +76,7 @@ proc newPackageGroup*(): PackageGroup =
   ## instantiate a new package group for collecting a list of packages
   result = PackageGroup()
   result.table = newOrderedTable[string, Package]()
+  result.imports = newStringTable(modeStyleInsensitive)
 
 proc newPackageGroup(filename: string): PackageGroup =
   ## instantiate a new package group using a package list from nimble
@@ -97,17 +86,21 @@ proc newPackageGroup(filename: string): PackageGroup =
 proc len*(group: PackageGroup): int =
   result = group.table.len
 
-proc `[]`*(group: PackageGroup; name: string): Package =
-  result = group.table[name]
-
 proc contains*(group: PackageGroup; name: string): bool =
-  result = name.packageName in group.table
+  result = name in group.imports or name.packageName in group.imports
 
 proc contains*(group: PackageGroup; url: Uri): bool =
   for package in group.table.values:
     result = bareUrlsAreEqual(url, package.url)
     if result:
       break
+
+proc `[]`*(group: PackageGroup; name: string): Package =
+  ## fetch a package from the group using style-insensitive lookup
+  if name in group.table:
+    result = group.table[name]
+  else:
+    result = group.table[group.imports[name]]
 
 when false:
   proc contains*(group: PackageGroup; package: Package): bool =
@@ -116,11 +109,22 @@ when false:
 proc del*(group: PackageGroup; name: string) =
   group.table.del name.packageName
 
+proc addName(group: PackageGroup; key: string; name: string) =
+  assert key in group.table
+  group.imports[name] = key
+  group.imports[name.packageName] = key
+
 proc add*(group: PackageGroup; name: string; package: Package) =
-  group.table.add name.packageName, package
+  let
+    key = name.packageName
+  group.table.add key, package
+  group.addName key, name
 
 proc add*(group: PackageGroup; url: Uri; package: Package) =
-  group.table.add $url.bare, package
+  let
+    key = $url.bare
+  group.table.add key, package
+  group.addName key, package.name
 
 proc aimAt*(package: Package; req: Requirement): Package =
   ## produce a refined package which might meet the requirement
@@ -276,12 +280,6 @@ proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
         result.add name, package.aimAt(req)
         when defined(debug):
           debug "matched the package by name"
-
-proc convertToGit(uri: Uri): Uri =
-  result = uri
-  if not result.path.endsWith(".git"):
-    result.path &= ".git"
-  result.scheme = "git"
 
 iterator urls*(group: PackageGroup): Uri =
   for package in group.values:

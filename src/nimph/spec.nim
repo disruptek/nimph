@@ -1,3 +1,4 @@
+import std/options
 import std/strutils
 import std/hashes
 import std/uri
@@ -6,6 +7,8 @@ import std/times
 
 import cutelog
 export cutelog
+
+import nimph/sanitize
 
 const
   dotNimble* {.strdefine.} = "".addFileExt("nimble")
@@ -70,3 +73,22 @@ proc pathToImport*(path: string): string =
   assert path.len > 0
   result = path.lastPathPart.split("-")[0]
   assert result.len > 0
+
+proc convertToGit*(uri: Uri): Uri =
+  result = uri
+  if not result.path.endsWith(".git"):
+    result.path &= ".git"
+  result.scheme = "git"
+
+proc packageName*(name: string): string =
+  ## return a string that is plausible as a module name
+  let
+    sane = name.sanitizeIdentifier(capsOkay = false)
+  if sane.isSome:
+    result = sane.get.toLowerAscii
+  else:
+    raise newException(ValueError, "unable to sanitize " & name)
+
+proc packageName*(url: Uri): string =
+  ## guess the import name of a package from a url
+  result = packageName(url.path.extractFilename.changeFileExt("").split("-")[^1])
