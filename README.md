@@ -24,5 +24,8 @@ or: _How I Learned to Stop Worrying and Love the Search Path_
 $ nimble install https://github.com/disruptek/nimph
 ```
 
+## Demonstration
+[![asciicast](https://asciinema.org/a/aoDAm39yjoKenepl15L3AyfzN.svg)](https://asciinema.org/a/aoDAm39yjoKenepl15L3AyfzN)
+
 ## License
 MIT
