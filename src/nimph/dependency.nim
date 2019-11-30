@@ -325,6 +325,21 @@ proc pathForName*(dependencies: DependencyGroup; name: string): Option[string] =
   if name in dependencies.imports:
     result = dependencies.imports[name].some
 
+proc projectForPath*(dependencies: DependencyGroup; path: string): Project =
+  ## retrieve a project from the dependencies using its path
+  for dependency in dependencies.table.values:
+    if path in dependency.projects:
+      result = dependency.projects[path]
+      break
+
+proc projectForName*(group: DependencyGroup; name: string): Option[Project] =
+  ## try to retrieve a project given an import name
+  let
+    path = group.pathForName(name)
+  if path.isNone:
+    return
+  result = group.projectForPath(path.get).some
+
 proc isHappy*(dependency: Dependency): bool =
   ## true if the dependency is being met successfully
   result = dependency.projects.len > 0
