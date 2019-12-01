@@ -805,7 +805,7 @@ proc numberOfNimblePaths*(project: Project): int =
   ## simpler count of effective --nimblePaths
   result = project.countNimblePaths.paths.len
 
-proc forkTarget(url: Uri): ForkTargetResult =
+proc forkTarget*(url: Uri): ForkTargetResult =
   result.url = url
   block success:
     if not url.isValid:
