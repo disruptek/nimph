@@ -169,7 +169,7 @@ proc add(group: PackageGroup; js: JsonNode) =
   else:
     package.dist = Git # let's be explicit here
   if "tags" in js:
-    package.tags = mapIt(js["tags"], it.getStr)
+    package.tags = mapIt(js["tags"], it.getStr.toLowerAscii)
 
   group.add name, package
 
