@@ -24,7 +24,7 @@ const
   stalePackages* {.intdefine.} = 14
   configFile* {.strdefine.} = "nimph".addFileExt("toml")
   nimbleMeta* {.strdefine.} = "nimblemeta".addFileExt("json")
-  officialPackages* {.strdefine.} = "packages_official.json"
+  officialPackages* {.strdefine.} = "packages_official".addFileExt("json")
   emptyRelease* {.strdefine.} = "#head"
   defaultRemote* {.strdefine.} = "origin"
   upstreamRemote* {.strdefine.} = "upstream"
