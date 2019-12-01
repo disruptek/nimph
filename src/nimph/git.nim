@@ -70,11 +70,17 @@ template dumpError() =
   if err != nil:
     error $err.message
 
-template gitTrap*(allocd: typed; code: int; body: untyped) =
+template gitFail*(allocd: typed; code: int; body: untyped) =
+  ## a version of gitTrap that expects failure; no error messages!
   defer:
     if code == 0:
       free(allocd)
   if code != 0:
+    body
+
+template gitTrap*(allocd: typed; code: int; body: untyped) =
+  ## trap a git call, freeing the alloc'd argument if it succeeds
+  gitFail(allocd, code):
     dumpError()
     body
 
