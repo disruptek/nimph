@@ -118,8 +118,47 @@ proc pather*(names: seq[string]; log_level = logLevel): int =
     if found.isSome:
       echo found.get
     else:
+      error &"couldn't find `{name}` among our installed dependencies"
       echo ""      # a failed find produces empty output
       result = 1   # and sets the return code to nonzero
+
+proc forker*(names: seq[string]; log_level = logLevel): int =
+  # user's choice, our default
+  setLogFilter(log_level)
+
+  var
+    project: Project
+    group = newDependencyGroup(flags = {Flag.Quiet})
+  setupLocalProject(project)
+
+  if not project.resolveDependencies(group):
+    notice &"unable to resolve all dependencies for {project}"
+
+  for name in names.items:
+    let found = group.projectForName(name)
+    if found.isNone:
+      error &"couldn't find `{name}` among our installed dependencies"
+      result = 1
+      continue
+    let
+      child = found.get
+      fork = child.forkTarget
+    if not fork.ok:
+      error fork.why
+      result = 1
+      continue
+    info &"🍴forking {child}"
+    let forked = waitfor forkHub(fork.owner, fork.repo)
+    if forked.isNone:
+      result = 1
+      continue
+    fatal &"🔱{forked.get.web}"
+    if child.dist == Git:
+      let name = defaultRemote
+      if not child.promoteFork(forked.get, defaultRemote):
+        notice &"unable to promote new fork to {name}"
+    else:
+      {.warning: "optionally upgrade a gitless install to clone".}
 
 proc cloner*(args: seq[string]; log_level = logLevel): int =
   # user's choice, our default
@@ -178,6 +217,7 @@ when isMainModule:
       scClone = "clone"
       scNimble = "nimble"
       scPath = "path"
+      scFork = "fork"
       scVersion = "--version"
       scHelp = "--help"
 
@@ -192,7 +232,7 @@ when isMainModule:
   else:
     clCfg.version = "(unknown version)"
 
-  # setup some dispatches for various subcommands
+  # setup some dispatchers for various subcommands
   dispatchGen(searcher, cmdName = $scSearch, dispatchName = "run" & $scSearch,
               doc="search github for packages")
   dispatchGen(fixer, cmdName = $scDoctor, dispatchName = "run" & $scDoctor,
@@ -201,12 +241,14 @@ when isMainModule:
               doc="add a package to the env")
   dispatchGen(pather, cmdName = $scPath, dispatchName = "run" & $scPath,
               doc="fetch package path(s) by import name(s)")
+  dispatchGen(forker, cmdName = $scFork, dispatchName = "run" & $scFork,
+              doc="fork a package to your GitHub profile")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
 
   const
     # these are our subcommands that we want to include in help
-    dispatchees = [runsearch, runclone, rundoctor, runpath]
+    dispatchees = [runsearch, runclone, rundoctor, runpath, runfork]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
@@ -227,6 +269,7 @@ when isMainModule:
       scDoctor: rundoctor,
       scClone: runclone,
       scPath: runpath,
+      scFork: runfork,
       #scNimble: runnimble,
     }.toTable
 
@@ -256,9 +299,6 @@ when isMainModule:
   # take action according to the subcommand
   try:
     case sub:
-    of scSearch, scDoctor, scClone, scPath:
-      # invoke the appropriate dispatcher
-      quit dispatchers[sub](cmdline = params[1..^1])
     of scNimble:
       # invoke nimble with the original parameters
       quit runnimble(cmdline = params)
@@ -280,6 +320,9 @@ when isMainModule:
       # produce help for nimble subcommands
       discard runnimble(cmdline = @["--help"], prefix = "    ",
                          usage = nimbleUse)
+    else:
+      # invoke the appropriate dispatcher
+      quit dispatchers[sub](cmdline = params[1..^1])
   except HelpOnly:
     discard
   quit 0

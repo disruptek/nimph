@@ -32,7 +32,7 @@ much as possible.
 $ nimble install https://github.com/disruptek/nimph
 ```
 
-## Details
+## Usage
 
 It's worth noting that you can run `nimph` from anywhere in your project tree;
 it will simply search upwards until it finds a `.nimble` file and act as if you
@@ -129,6 +129,21 @@ adjusting path settings in the project's `nim.cfg`, and similar housekeeping.
 $ nimph doctor
 👌bot version 0.0.11 lookin' good
 ```
+### Fork
+
+The `fork` subcommand is used to fork an installed dependency in your GitHub
+account and add a new git `origin` remote pointing at your new fork. The
+original `origin` remote is renamed to `upstream` by default. These constants
+may be easily changed; see **Hacking** below.
+
+This allows you to quickly move from merely testing a package to improving it
+and sharing your work upstream.
+
+```
+$ nimph fork npeg
+🍴forking npeg-#54ed418e80f1e1b14133ed383b9c585b320a66cf
+🔱https://github.com/disruptek/npeg
+```
 
 ### Path
 
@@ -168,6 +183,9 @@ more spam.
 
 Interesting procedures are exported so that you can exploit them in your own
 projects.
+
+Compilation flags to adjust output colors/styling/emojis are found in the
+project's `nimph.nim.cfg`.
 
 ## Documentation
 
