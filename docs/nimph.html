@@ -840,6 +840,8 @@ function main() {
     title="nimbler(args: seq[string]; log_level = logLevel): int"><wbr />nimbler<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#pather%2Cseq%5BT%5D%5Bstring%5D"
     title="pather(names: seq[string]; log_level = logLevel): int"><wbr />pather<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#forker%2Cseq%5BT%5D%5Bstring%5D"
+    title="forker(names: seq[string]; log_level = logLevel): int"><wbr />forker<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#cloner%2Cseq%5BT%5D%5Bstring%5D"
     title="cloner(args: seq[string]; log_level = logLevel): int"><wbr />cloner<span class="attachedType"></span></a></li>
 
@@ -904,6 +906,17 @@ function main() {
 
 
 </dd>
+<a id="forker,seq[T][string]"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#forker%2Cseq%5BT%5D%5Bstring%5D"><span class="Identifier">forker</span></a><span class="Other">(</span><span class="Identifier">names</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">log_level</span> <span class="Other">=</span> <span class="Identifier">logLevel</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span>
+    <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">TomlError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span>
+    <span class="Identifier">ERecoverableError</span><span class="Other">,</span> <span class="Identifier">EOFError</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">FutureError</span><span class="Other">,</span> <span class="Identifier">IndexError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span>
+    <span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">,</span>
+    <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">WriteDirEffect</span><span class="Other">,</span> <span class="Identifier">ExecIOEffect</span><span class="Other">,</span> <span class="Identifier">TimeEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
 <a id="cloner,seq[T][string]"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#cloner%2Cseq%5BT%5D%5Bstring%5D"><span class="Identifier">cloner</span></a><span class="Other">(</span><span class="Identifier">args</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">log_level</span> <span class="Other">=</span> <span class="Identifier">logLevel</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span>
     <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">TomlError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span>
@@ -925,7 +938,7 @@ function main() {
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-11-30 04:55:44 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-01 01:56:37 UTC</small>
       </div>
     </div>
   </div>

@@ -880,6 +880,10 @@ function main() {
     title="`[]`(dependencies: DependencyGroup; req: Requirement): var Dependency"><wbr />`[]`<span class="attachedType">DependencyGroup</span></a></li>
   <li><a class="reference" href="#pathForName%2CDependencyGroup%2Cstring"
     title="pathForName(dependencies: DependencyGroup; name: string): Option[string]"><wbr />path<wbr />For<wbr />Name<span class="attachedType">DependencyGroup</span></a></li>
+  <li><a class="reference" href="#projectForPath%2CDependencyGroup%2Cstring"
+    title="projectForPath(dependencies: DependencyGroup; path: string): Project"><wbr />project<wbr />For<wbr />Path<span class="attachedType">DependencyGroup</span></a></li>
+  <li><a class="reference" href="#projectForName%2CDependencyGroup%2Cstring"
+    title="projectForName(group: DependencyGroup; name: string): Option[Project]"><wbr />project<wbr />For<wbr />Name<span class="attachedType">DependencyGroup</span></a></li>
   <li><a class="reference" href="#isHappy%2CDependency"
     title="isHappy(dependency: Dependency): bool"><wbr />is<wbr />Happy<span class="attachedType">Dependency</span></a></li>
   <li><a class="reference" href="#resolveDependency%2CProject%2CProjectGroup%2CPackageGroup%2CRequirement"
@@ -1071,6 +1075,22 @@ try to parse requirements of a (mutable) project
 try to retrieve the directory for a given import
 
 </dd>
+<a id="projectForPath,DependencyGroup,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#projectForPath%2CDependencyGroup%2Cstring"><span class="Identifier">projectForPath</span></a><span class="Other">(</span><span class="Identifier">dependencies</span><span class="Other">:</span> <a href="dependency.html#DependencyGroup"><span class="Identifier">DependencyGroup</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+retrieve a project from the dependencies using its path
+
+</dd>
+<a id="projectForName,DependencyGroup,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#projectForName%2CDependencyGroup%2Cstring"><span class="Identifier">projectForName</span></a><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="dependency.html#DependencyGroup"><span class="Identifier">DependencyGroup</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+try to retrieve a project given an import name
+
+</dd>
 <a id="isHappy,Dependency"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#isHappy%2CDependency"><span class="Identifier">isHappy</span></a><span class="Other">(</span><span class="Identifier">dependency</span><span class="Other">:</span> <a href="dependency.html#Dependency"><span class="Identifier">Dependency</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
@@ -1142,7 +1162,7 @@ entrance to the recursive dependency resolution
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-11-30 04:55:44 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-01 01:56:37 UTC</small>
       </div>
     </div>
   </div>
