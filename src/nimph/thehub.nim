@@ -123,7 +123,7 @@ proc newHubRepo(js: JsonNode): HubRepo =
     license: js["license"].getOrDefault("name").getStr,
     branch: js["default_branch"].getStr,
     original: not js["fork"].getBool,
-    score: js["score"].getFloat,
+    score: js.getOrDefault("score").getFloat,
   )
 
 proc newHubGroup(): HubGroup =
@@ -141,20 +141,49 @@ iterator reversed*(group: HubGroup): HubRepo =
   for i in countDown(repos.high, repos.low):
     yield repos[i]
 
+proc authorize*(request: var Recallable): bool =
+  let token = findGithubToken()
+  result = token.isSome
+  if result:
+    request.headers.del "Authorization"
+    request.headers.add "Authorization", "token " & token.get
+  else:
+    error "unable to find a github authorization token"
+
+proc forkHub*(owner: string; repo: string): Future[Option[HubRepo]] {.async.} =
+  ## attempt to fork an existing repository
+  var
+    req = postReposOwnerRepoForks.call(repo, owner, body = newJObject())
+  debug &"forking owner `{owner}` repo `{repo}`"
+
+  # add our credentials
+  if not req.authorize:
+    return
+
+  let
+    response = await req.issueRequest()
+  if not response.code.is2xx:
+    notice &"got response code {response.code} from github"
+    return
+  let
+    body = await response.body
+    js = parseJson(body)
+  try:
+    result = newHubRepo(js).some
+  except Exception as e:
+    warn "error parsing repo: " & e.msg
+
 proc searchHub*(keywords: seq[string]; sort = Best;
                 order = Descending): Future[Option[HubGroup]] {.async.} =
   ## search github for packages
-  let
-    token = findGithubToken()
-  if not token.isSome:
-    return
   var
     query = @["language:nim"].concat(keywords)
     req = getSearchRepositories.call(q = query.join(" "),
                                      sort = $sort,
                                      order = $order)
-  req.headers.del "Authorization"
-  req.headers.add "Authorization", "token " & token.get
+  # add our credentials
+  if not req.authorize:
+    return
 
   let
     response = await req.issueRequest()
