@@ -41,6 +41,7 @@ import nimph/nimble
 import nimph/git
 import nimph/package
 import nimph/version
+import nimph/thehub
 
 type
   Project* = ref object
@@ -77,6 +78,13 @@ type
     via: LinkedSearchResult
     source: string
     search: SearchResult
+
+  ForkTargetResult* = object
+    ok*: bool
+    why*: string
+    owner*: string
+    repo*: string
+    url*: Uri
 
 template repo*(project: Project): string = project.nimble.repo
 template gitDir*(project: Project): string = project.repo / dotGit
@@ -592,12 +600,11 @@ proc `==`*(a, b: Project): bool =
       debug &"had to use samefile to compare {apath} to {bpath}"
       result = sameFile(apath, bpath)
 
-proc findRepositoryUrl*(path: string): Option[Uri] =
+proc findRepositoryUrl*(path: string; name = defaultRemote): Option[Uri] =
   ## find the (remote?) url to a given local repository
   var
     remote: GitRemote
     open: GitOpen
-    name = defaultRemote
 
   withGit:
     gitTrap openRepository(open, path):
@@ -797,3 +804,88 @@ proc countNimblePaths*(project: Project):
 proc numberOfNimblePaths*(project: Project): int =
   ## simpler count of effective --nimblePaths
   result = project.countNimblePaths.paths.len
+
+proc forkTarget(url: Uri): ForkTargetResult =
+  result.url = url
+  block success:
+    if not url.isValid:
+      result.why = &"url is invalid"
+      break
+    if result.url.hostname.toLowerAscii != "github.com":
+      result.why = &"url {result.url} does not point to github"
+      break
+    if result.url.path.len < 1:
+      result.why = &"unable to parse url {result.url}"
+      break
+    # split /foo/bar into (bar, foo)
+    (result.owner, result.repo) = result.url.path[1..^1].splitPath
+    # strip .git
+    if result.repo.endsWith(".git"):
+      result.repo = result.repo[0..^len("git+2")]
+    result.ok = result.owner.len > 0 and result.repo.len > 0
+    if not result.ok:
+      result.why = &"unable to parse url {result.url}"
+
+proc forkTarget*(project: Project): ForkTargetResult =
+  ## try to determine a github source of a project so that we can fork it
+  result.ok = false
+
+  {.warning: "look at any remotes to see if they are valid".}
+  {.warning: "try to lookup the project in the packages list".}
+  {.warning: "try to lookup the project in our github repos".}
+
+  block success:
+    if not project.url.isValid:
+      result.why = &"unable to parse url {result.url}"
+      break
+    result = project.url.forkTarget
+
+proc `==`(x, y: ForkTargetResult): bool =
+  result = x.ok == y.ok and x.owner == y.owner and x.repo == y.repo
+
+proc promoteFork*(project: Project; repo: HubRepo; name: string): bool =
+  ## true if we were able to promote a repo to be our new origin
+  var
+    remote, upstream: GitRemote
+    open: GitOpen
+  let
+    path = project.repo
+
+  withGit:
+    gitTrap openRepository(open, project.repo):
+      warn &"error opening repository {path}"
+      return
+    gitTrap remote, remoteLookup(remote, open.repo, name):
+      warn &"unable to fetch remote `{name}` from repo in {path}"
+      return
+    block donehere:
+      try:
+        # maybe we've already pointed at the repo?
+        if remote.url.forkTarget == repo.git.forkTarget:
+          result = true
+          break
+      except:
+        warn &"unparseable remote `{name}` from repo in {path}"
+      gitTrap upstream, remoteLookup(upstream, open.repo, upstreamRemote):
+        # there's no upstream remote; rename origin to upstream
+        gitTrap open.repo.remoteRename(name, upstreamRemote):
+          # this should issue warnings of any problems...
+          break
+        # and make a new origin remote using the hubrepo's url
+        gitTrap upstream, remoteCreate(upstream, open.repo,
+                                       defaultRemote, repo.git):
+          # this'll issue some errors for us, too...
+          break
+        # success
+        result = true
+        return
+
+      try:
+        # upstream exists, so, i dunno, just warn the user?
+        if upstream.url.forkTarget != remote.url.forkTarget:
+          warn &"remote `{upstreamRemote}` exists for repo in {path}"
+        else:
+          {.warning: "origin equals upstream; remove upstream and try again?".}
+          warn &"remote `{upstreamRemote}` is the same as `{name}` in {path}"
+      except:
+        warn &"unparseable remote `{upstreamRemote}` from repo in {path}"
