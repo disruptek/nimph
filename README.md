@@ -33,7 +33,7 @@ much as possible.
 $ nimble install https://github.com/disruptek/nimph
 ```
 
-You may want to [create a new GitHub personal access token here](https://github.com/settings/tokens) and then add it to your environment as `NIMPH_TOKEN`.
+You may want to [create a new GitHub personal access token here](https://github.com/settings/tokens) and then add it to your environment as `NIMPH_TOKEN` or `GITHUB_TOKEN`.
 
 If you skip this step, Nimph will try to use a Nimble token for **search**es,
 and it will also try to read any `hub` or `ghi` credentials.  Notably, the
