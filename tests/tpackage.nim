@@ -1,3 +1,4 @@
+import std/uri
 import std/tables
 import std/strtabs
 import std/options
@@ -88,9 +89,8 @@ suite "package":
     check parsed.isSome
 
   test "naive package naming":
-    check "somepack" == naiveName("/some/nim-somepack.git")
-    check "somepack" == naiveName("/some/somepack.git")
-    check "somepack" == naiveName("/some/other/somepack")
+    check "somepack" == importName(parseUri"/some/nim-somepack.git")
+    check "somepack" == importName("/some/other/somepack-1.2.3")
 
   test "get the official packages list":
     let

@@ -48,7 +48,7 @@ type
     info: FileInfo
 
 proc importName*(package: Package): string =
-  result = package.name.importName
+  result = package.name.split("-")[^1].packageName
 
 proc newPackage*(name: string; path: string; dist: DistMethod;
                  url: Uri): Package =

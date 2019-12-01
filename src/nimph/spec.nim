@@ -104,4 +104,4 @@ proc importName*(path: string): string =
   result = path.pathToImport.packageName
 
 proc importName*(url: Uri): string =
-  result = url.path.importName
+  result = url.packageName.importName
