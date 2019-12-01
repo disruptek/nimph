@@ -79,7 +79,7 @@ proc findGithubToken*(): Option[string] =
   let
     hub = getHomeDir() / hubTokenFn
     file = getHomeDir() / dotNimble / ghTokenFn
-    env = getEnv(ghTokenEnv, "")
+    env = getEnv(ghTokenEnv, getEnv("GITHUB_TOKEN", getEnv("GHI_TOKEN", "")))
   if env != "":
     token = env
     debug "using a github token from environment"
