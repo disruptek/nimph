@@ -460,13 +460,6 @@ proc isVirtual*(requirement: Requirement): bool =
 proc isUrl*(requirement: Requirement): bool =
   result = ':' in requirement.identity
 
-when false:
-  proc importName*(requirement: Requirement): string =
-    if not requirement.isUrl:
-      result = requirement.identity
-    else:
-      result = now what genius
-
 proc toUrl*(requirement: Requirement): Option[Uri] =
   ## try to determine the distribution url for a requirement
   var url: Uri
@@ -485,3 +478,12 @@ proc importName*(target: Target): string =
   ## a uniform name usable in code for imports
   assert target.repo.len > 0
   result = target.repo.importName
+
+proc importName*(requirement: Requirement): string =
+  block:
+    if requirement.isUrl:
+      let url = requirement.toUrl
+      if url.isSome:
+        result = url.get.importName
+        break
+    result = requirement.identity.importName
