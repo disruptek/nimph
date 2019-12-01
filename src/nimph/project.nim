@@ -43,6 +43,9 @@ import nimph/package
 import nimph/version
 import nimph/thehub
 
+import nimph/group
+export group
+
 type
   Project* = ref object
     name*: string
@@ -51,22 +54,16 @@ type
     dist*: DistMethod
     release*: Release
     dump*: StringTableRef
-    # unused yet
     config*: NimphConfig
     cfg*: ConfigRef
     mycfg*: ConfigRef
-    # unused yet
-    #deps*: PackageGroup
     tags*: GitTagTable
-    # unused yet
-    #refs*: Releases
     meta*: NimbleMeta
     url*: Uri
     parent*: Project
     develop*: LinkedSearchResult
 
-  ProjectGroup* = ref object
-    table*: TableRef[string, Project]
+  ProjectGroup* = NimphGroup[Project]
 
   Dependency* = object
     url*: Uri
@@ -504,35 +501,14 @@ iterator packageDirectories(project: Project): string =
   for directory in project.cfg.packagePaths(exists = true):
     yield directory
 
-proc len*(group: ProjectGroup): int =
-  result = group.table.len
-
-proc `[]`*(group: ProjectGroup; name: string): Project =
-  result = group.table[name]
-
-proc add*(group: ProjectGroup; name: string; project: Project) =
-  when defined(debug):
-    if name in group.table:
-      raise newException(Defect, "attempt to add duplicate {name}")
-  if name notin group.table:
-    group.table.add name, project
-
 proc newProjectGroup*(): ProjectGroup =
+  const mode =
+    when FilesystemCaseSensitive:
+      modeCaseSensitive
+    else:
+      modeCaseInsensitive
   result = ProjectGroup()
-  result.table = newTable[string, Project]()
-
-proc contains*(group: ProjectGroup; name: string): bool =
-  result = name in group.table
-
-proc importName*(path: string): string =
-  ## a uniform name usable in code for imports
-  assert path.len > 0
-  result = path.pathToImport.packageName
-
-proc importName*(target: Target): string =
-  ## a uniform name usable in code for imports
-  assert target.repo.len > 0
-  result = target.repo.importName
+  result.init(Project, mode = mode)
 
 proc importName*(linked: LinkedSearchResult): string =
   ## a uniform name usable in code for imports
@@ -549,29 +525,17 @@ proc importName*(project: Project): string =
   else:
     result = project.nimble.importName
 
-iterator pairs*(group: ProjectGroup): tuple[name: string; project: Project] =
-  for directory, project in group.table.pairs:
-    yield (name: directory, project: project)
-
-iterator values*(group: ProjectGroup): Project =
-  for project in group.table.values:
-    yield project
-
-iterator mvalues*(group: ProjectGroup): var Project =
-  for project in group.table.mvalues:
-    yield project
-
 proc hasProjectIn*(group: ProjectGroup; directory: string): bool =
   ## true if a project is stored at the given directory
-  result = group.table.hasKey(directory)
+  result = group.hasKey(directory)
 
 proc getProjectIn*(group: ProjectGroup; directory: string): Project =
   ## retrieve a project via its path
-  result = group.table[directory]
+  result = group.get(directory)
 
 proc mgetProjectIn*(group: var ProjectGroup; directory: string): var Project =
   ## retrieve a mutable project via its path
-  result = group.table[directory]
+  result = group.mget(directory)
 
 proc availableProjects*(project: Project): ProjectGroup =
   ## find packages locally available to a project; note that
@@ -597,7 +561,8 @@ proc `==`*(a, b: Project): bool =
     if apath == bpath:
       result = true
     else:
-      debug &"had to use samefile to compare {apath} to {bpath}"
+      when defined(debugPath):
+        debug &"had to use samefile to compare {apath} to {bpath}"
       result = sameFile(apath, bpath)
 
 proc findRepositoryUrl*(path: string; name = defaultRemote): Option[Uri] =

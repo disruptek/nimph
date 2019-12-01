@@ -15,6 +15,9 @@ import nimph/project
 import nimph/version
 import nimph/git
 
+import nimph/group
+export group
+
 type
   Dependency* = ref object
     names*: seq[string]

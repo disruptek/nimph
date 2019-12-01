@@ -82,13 +82,26 @@ proc convertToGit*(uri: Uri): Uri =
 
 proc packageName*(name: string): string =
   ## return a string that is plausible as a module name
+  const capsOkay =
+    when FilesystemCaseSensitive:
+      true
+    else:
+      false
   let
-    sane = name.sanitizeIdentifier(capsOkay = false)
+    sane = name.sanitizeIdentifier(capsOkay = capsOkay)
   if sane.isSome:
-    result = sane.get.toLowerAscii
+    result = sane.get
   else:
     raise newException(ValueError, "unable to sanitize " & name)
 
 proc packageName*(url: Uri): string =
   ## guess the import name of a package from a url
   result = packageName(url.path.extractFilename.changeFileExt("").split("-")[^1])
+
+proc importName*(path: string): string =
+  ## a uniform name usable in code for imports
+  assert path.len > 0
+  result = path.pathToImport.packageName
+
+proc importName*(url: Uri): string =
+  result = url.path.importName

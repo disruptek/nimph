@@ -480,3 +480,8 @@ proc toUrl*(requirement: Requirement): Option[Uri] =
       result = url.some
     except:
       warn &"unable to parse requirement `{requirement.identity}`"
+
+proc importName*(target: Target): string =
+  ## a uniform name usable in code for imports
+  assert target.repo.len > 0
+  result = target.repo.importName

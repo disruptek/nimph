@@ -16,6 +16,9 @@ import bump
 import nimph/spec
 import nimph/version
 
+import nimph/group
+export group
+
 type
   DistMethod* = enum
     Local = "local"
@@ -36,15 +39,13 @@ type
     path*: string
     author*: string
 
-  PackageGroup* = ref object
-    table*: OrderedTableRef[string, Package]
-    imports*: StringTableRef
-    info*: FileInfo  ## sloppy support for aging the nimble package list
+  PackageGroup* = NimphGroup[Package]
 
-  PackagesResult* = tuple
-    ok: bool
-    why: string
-    packages: PackageGroup
+  PackagesResult* = object
+    ok*: bool
+    why*: string
+    packages*: PackageGroup
+    info: FileInfo
 
 proc newPackage*(name: string; path: string; dist: DistMethod;
                  url: Uri): Package =
@@ -75,56 +76,7 @@ proc `$`*(package: Package): string =
 proc newPackageGroup*(): PackageGroup =
   ## instantiate a new package group for collecting a list of packages
   result = PackageGroup()
-  result.table = newOrderedTable[string, Package]()
-  result.imports = newStringTable(modeStyleInsensitive)
-
-proc newPackageGroup(filename: string): PackageGroup =
-  ## instantiate a new package group using a package list from nimble
-  result = newPackageGroup()
-  result.info = getFileInfo(filename)
-
-proc len*(group: PackageGroup): int =
-  result = group.table.len
-
-proc contains*(group: PackageGroup; name: string): bool =
-  result = name in group.imports or name.packageName in group.imports
-
-proc contains*(group: PackageGroup; url: Uri): bool =
-  for package in group.table.values:
-    result = bareUrlsAreEqual(url, package.url)
-    if result:
-      break
-
-proc `[]`*(group: PackageGroup; name: string): Package =
-  ## fetch a package from the group using style-insensitive lookup
-  if name in group.table:
-    result = group.table[name]
-  else:
-    result = group.table[group.imports[name]]
-
-when false:
-  proc contains*(group: PackageGroup; package: Package): bool =
-    {.error: "do not implement this ambiguous `contains`".}
-
-proc del*(group: PackageGroup; name: string) =
-  group.table.del name.packageName
-
-proc addName(group: PackageGroup; key: string; name: string) =
-  assert key in group.table
-  group.imports[name] = key
-  group.imports[name.packageName] = key
-
-proc add*(group: PackageGroup; name: string; package: Package) =
-  let
-    key = name.packageName
-  group.table.add key, package
-  group.addName key, name
-
-proc add*(group: PackageGroup; url: Uri; package: Package) =
-  let
-    key = $url.bare
-  group.table.add key, package
-  group.addName key, package.name
+  result.init(Package, mode = modeStyleInsensitive)
 
 proc aimAt*(package: Package; req: Requirement): Package =
   ## produce a refined package which might meet the requirement
@@ -180,12 +132,17 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
   let
     filename = nimbledir / officialPackages
 
+  result = PackagesResult(ok: false, why: "", packages: nil) # explicit
+
   block parsing:
     try:
       # we might not even have to open the file; wouldn't that be wonderful?
       if not nimbledir.dirExists or not filename.fileExists:
-        result = (ok: false, why: &"{filename} not found", packages: nil)
+        result.why = &"{filename} not found"
         break
+
+      # grab the file info for aging purposes
+      result.info = getFileInfo(filename)
 
       # okay, i guess we have to read and parse this silly thing
       let
@@ -194,7 +151,7 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
 
       # setup a new group
       var
-        group = newPackageGroup(filename)
+        group = newPackageGroup()
 
       # consume the json array
       var
@@ -220,13 +177,14 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
         else:
           warn &"alias `{name}` refers to a missing package `{alias}`"
 
-      result = (ok: true, why: "", packages: group)
+      result.ok = true
+      result.packages = group
     except Exception as e:
-      result = (ok: false, why: e.msg, packages: nil)
+      result.why = e.msg
 
-proc ageInDays*(group: PackageGroup): int64 =
+proc ageInDays*(found: PackagesResult): int64 =
   ## days since the packages file was last refreshed
-  result = (getTime() - group.info.lastWriteTime).inDays
+  result = (getTime() - found.info.lastWriteTime).inDays
 
 proc toUrl*(requirement: Requirement; group: PackageGroup): Option[Uri] =
   ## try to determine the distribution url for a requirement
@@ -254,13 +212,11 @@ proc toUrl*(requirement: Requirement; group: PackageGroup): Option[Uri] =
       removePrefix(url.anchor, {'#'})
     result = url.some
 
-iterator pairs*(group: PackageGroup): tuple[name: string; package: Package] =
-  for name, package in group.table.pairs:
-    yield (name: name, package: package)
-
-iterator values*(group: PackageGroup): Package =
-  for package in group.table.values:
-    yield package
+proc contains*(group: PackageGroup; url: Uri): bool {.deprecated.} =
+  for value in group.values:
+    if bareUrlsAreEqual(value.url, url):
+      result = true
+      break
 
 proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
   ## select a subgroup of packages that appear to match the requirement

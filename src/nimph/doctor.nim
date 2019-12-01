@@ -14,6 +14,7 @@ import nimph/thehub
 import nimph/package
 import nimph/version
 import nimph/dependency
+import nimph/group
 import nimph/git as git
 
 proc doctor*(project: var Project; dry = true): bool =
@@ -132,11 +133,11 @@ proc doctor*(project: var Project; dry = true): bool =
             if packs.why != "":
               error packs.why
             notice &"couldn't get nimble's package list from {project.nimbleDir}"
-          elif packs.packages.ageInDays > stalePackages:
+          elif packs.ageInDays > stalePackages:
             notice &"the nimble package list in {project.nimbleDir} is stale"
-          elif packs.packages.ageInDays > 1:
+          elif packs.ageInDays > 1:
             info "the nimble package list is " &
-                 &"{packs.packages.ageInDays} days old"
+                 &"{packs.ageInDays} days old"
             break skiprefresh
           else:
             break skiprefresh
