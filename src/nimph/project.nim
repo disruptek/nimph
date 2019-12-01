@@ -866,7 +866,7 @@ proc promoteFork*(project: Project; repo: HubRepo; name: string): bool =
           break
       except:
         warn &"unparseable remote `{name}` from repo in {path}"
-      gitTrap upstream, remoteLookup(upstream, open.repo, upstreamRemote):
+      gitFail upstream, remoteLookup(upstream, open.repo, upstreamRemote):
         # there's no upstream remote; rename origin to upstream
         gitTrap open.repo.remoteRename(name, upstreamRemote):
           # this should issue warnings of any problems...
