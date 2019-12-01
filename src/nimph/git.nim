@@ -72,7 +72,8 @@ template dumpError() =
 
 template gitTrap*(allocd: typed; code: int; body: untyped) =
   defer:
-    free(allocd)
+    if code == 0:
+      free(allocd)
   if code != 0:
     dumpError()
     body
