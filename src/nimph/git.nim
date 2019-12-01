@@ -285,6 +285,23 @@ proc remoteLookup*(remote: var GitRemote; repo: GitRepository;
   ## get the remote by name
   result = git_remote_lookup(addr remote, repo, name)
 
+proc remoteRename*(repo: GitRepository; prior: string; next: string): int =
+  ## rename a remote
+  var
+    list: git_strarray
+  result = git_remote_rename(addr list, repo, prior, next)
+  if list.count > 0'u:
+    let problems = cstringArrayToSeq(cast[cstringArray](list.strings),
+                                     list.count)
+    for problem in problems.items:
+      warn problem
+  git_strarray_free(addr list)
+
+proc remoteCreate*(remote: var GitRemote; repo: GitRepository;
+                   name: string; url: Uri): int =
+  ## create a new remote in the repository
+  result = git_remote_create(addr remote, repo, name, $url)
+
 proc url*(remote: GitRemote): Uri =
   ## retrieve the url of a remote
   result = parseUri($git_remote_url(remote))
