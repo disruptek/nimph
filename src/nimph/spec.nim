@@ -27,6 +27,7 @@ const
   officialPackages* {.strdefine.} = "packages_official.json"
   emptyRelease* {.strdefine.} = "#head"
   defaultRemote* {.strdefine.} = "origin"
+  upstreamRemote* {.strdefine.} = "upstream"
   excludeMissingPaths* {.booldefine.} = false
   writeNimbleDirPaths* {.booldefine.} = false
   shortDate* = initTimeFormat "yyyy-MM-dd"
