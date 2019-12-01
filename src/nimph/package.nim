@@ -6,7 +6,6 @@ import std/hashes
 import std/strformat
 import std/sequtils
 import std/strutils
-import std/tables
 import std/uri
 import std/json
 import std/options
