@@ -39,13 +39,16 @@ type
     path*: string
     author*: string
 
-  PackageGroup* = NimphGroup[Package]
+  PackageGroup* = NimphGroup[string, Package]
 
   PackagesResult* = object
     ok*: bool
     why*: string
     packages*: PackageGroup
     info: FileInfo
+
+proc importName*(package: Package): string =
+  result = package.name.importName
 
 proc newPackage*(name: string; path: string; dist: DistMethod;
                  url: Uri): Package =
@@ -59,7 +62,7 @@ proc newPackage*(name: string; dist: DistMethod; url: Uri): Package =
 
 proc newPackage*(url: Uri): Package =
   ## create a new package with only a url
-  result = newPackage(name = url.packageName, dist = Git, url = url)
+  result = newPackage(name = url.importName, dist = Git, url = url)
   # flag this package as not necessarily named correctly;
   # we had to guess at what the final name might be...
   result.naive = true
@@ -76,7 +79,8 @@ proc `$`*(package: Package): string =
 proc newPackageGroup*(): PackageGroup =
   ## instantiate a new package group for collecting a list of packages
   result = PackageGroup()
-  result.init(Package, mode = modeStyleInsensitive)
+  #result.init(string, Package, mode = modeStyleInsensitive)
+  result.init(mode = modeStyleInsensitive)
 
 proc aimAt*(package: Package; req: Requirement): Package =
   ## produce a refined package which might meet the requirement
@@ -173,7 +177,7 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
       # now add in the aliases we collected
       for name, alias in aliases.items:
         if alias in group:
-          group.add name, group[alias]
+          group.add name, group.get(alias)
         else:
           warn &"alias `{name}` refers to a missing package `{alias}`"
 
@@ -196,7 +200,7 @@ proc toUrl*(requirement: Requirement; group: PackageGroup): Option[Uri] =
     # otherwise, see if we can find it in the package group
     if requirement.identity in group:
       let
-        package = group[requirement.identity]
+        package = group.get(requirement.identity)
       if package.dist notin {Local, Git}:
         warn &"the `{package.dist}` distribution method is unsupported"
         return
@@ -225,8 +229,8 @@ proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
     let
       findurl = req.toUrl(group)
     if findurl.isNone:
-      raise newException(ValueError,
-                         &"couldn't parse url for requirement {req}")
+      let emsg = &"couldn't parse url for requirement {req}" # noqa
+      raise newException(ValueError, emsg)
     for name, package in group.pairs:
       if bareUrlsAreEqual(package.url, findurl.get):
         result.add name, package.aimAt(req)

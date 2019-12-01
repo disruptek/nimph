@@ -63,7 +63,7 @@ type
     parent*: Project
     develop*: LinkedSearchResult
 
-  ProjectGroup* = NimphGroup[Project]
+  ProjectGroup* = NimphGroup[string, Project]
 
   Dependency* = object
     url*: Uri
@@ -508,7 +508,7 @@ proc newProjectGroup*(): ProjectGroup =
     else:
       modeCaseInsensitive
   result = ProjectGroup()
-  result.init(Project, mode = mode)
+  result.init(mode = mode)
 
 proc importName*(linked: LinkedSearchResult): string =
   ## a uniform name usable in code for imports

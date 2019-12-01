@@ -1,5 +1,4 @@
 import std/os
-import std/hashes
 import std/strtabs
 import std/tables
 import std/uri
@@ -7,18 +6,20 @@ import std/uri
 import nimph/spec
 
 type
-  NimphGroup*[T: ref object] = ref object of RootObj
-    table: OrderedTableRef[string, T]
-    imports: StringTableRef
+  NimphGroup*[K; V: ref object] = ref object of RootObj
+    table*: OrderedTableRef[K, V]
+    imports*: StringTableRef
 
-template init*(group: var typed; node: typedesc; mode = modeStyleInsensitive) =
-  ## initialize the name cache
-  group.table = newOrderedTable[string, node]()
+proc init*[K, V](group: NimphGroup[K, V];
+                 mode = modeStyleInsensitive) =
+  ## initialize the table and name cache
+  group.table = newOrderedTable[K, V]()
   group.imports = newStringTable(mode)
 
-proc addName(group: NimphGroup; name: string; value: string) =
+proc addName[K: string, V](group: NimphGroup[K, V];
+                           name: K; value: string) =
   ## add a name to the group, which points to value
-  assert value in group.table
+  assert group.table.hasKey(value)
   group.imports[name] = value
 
 proc delName(group: NimphGroup; key: string) =
@@ -39,29 +40,39 @@ proc del*(group: NimphGroup; name: string) =
 proc len*(group: NimphGroup): int =
   result = group.table.len
 
-proc get*[T](group: NimphGroup[T]; name: string): T =
+proc get*[K: string, V](group: NimphGroup[K, V]; key: K): V =
   ## fetch a package from the group using style-insensitive lookup
-  if name in group.table:
-    result = group.table[name]
+  if group.table.hasKey(key):
+    result = group.table[key]
+  elif group.imports.hasKey(key.importName):
+    result = group.table[group.imports[key.importName]]
   else:
-    result = group.table[group.imports[name.importName]]
+    let emsg = &"{key.importName} not found"
+    raise newException(KeyError, emsg)
 
-proc mget*[T](group: var NimphGroup[T]; name: string): var T =
+proc mget*[K: string, V](group: var NimphGroup[K, V]; key: K): var V =
   ## fetch a package from the group using style-insensitive lookup
-  if name in group.table:
-    result = group.table[name]
+  if group.table.hasKey(key):
+    result = group.table[key]
+  elif group.imports.hasKey(key.importName):
+    result = group.table[group.imports[key.importName]]
   else:
-    result = group.table[group.imports[name.importName]]
+    let emsg = &"{key.importName} not found"
+    raise newException(KeyError, emsg)
 
-proc `[]`*[T](group: NimphGroup[T]; name: string): T =
+proc `[]`*[K, V](group: var NimphGroup[K, V]; key: K): var V =
   ## fetch a package from the group using style-insensitive lookup
-  result = group.get(name)
+  result = group.mget(key)
 
-proc add*[T](group: NimphGroup[T]; name: string; value: T) =
-  group.table.add name, value
-  group.addName name.importName, name
+proc `[]`*[K, V](group: NimphGroup[K, V]; key: K): V =
+  ## fetch a package from the group using style-insensitive lookup
+  result = group.get(key)
 
-proc add*[T](group: NimphGroup[T]; url: Uri; value: T) =
+proc add*[K: string, V](group: NimphGroup[K, V]; key: K; value: V) =
+  group.table.add key, value
+  group.addName(key.importName, key)
+
+proc add*[K: string, V](group: NimphGroup[K, V]; url: Uri; value: V) =
   ## add a (bare) url as a key
   let
     naked = url.bare
@@ -70,33 +81,36 @@ proc add*[T](group: NimphGroup[T]; url: Uri; value: T) =
   {.warning: "does this make sense?  when?".}
   group.addName naked.importName, key
 
-iterator pairs*[T](group: NimphGroup[T]): tuple[key: string; val: T] =
+iterator pairs*[K, V](group: NimphGroup[K, V]): tuple[key: K; val: V] =
   for key, value in group.table.pairs:
     yield (key: key, val: value)
 
+iterator mpairs*[K, V](group: NimphGroup[K, V]): tuple[key: K; val: V] =
+  for key, value in group.table.mpairs:
+    yield (key: key, val: value)
 
-iterator values*[T](group: NimphGroup[T]): T =
+iterator values*[K, V](group: NimphGroup[K, V]): V =
   for value in group.table.values:
     yield value
 
-iterator mvalues*[T](group: NimphGroup[T]): var T =
+iterator mvalues*[K, V](group: NimphGroup[K, V]): var V =
   for value in group.table.mvalues:
     yield value
 
-proc hasKey*[T](group: NimphGroup[T]; name: string): bool =
-  result = name in group.table or name.importName in group.imports
+proc hasKey*[K, V](group: NimphGroup[K, V]; key: K): bool =
+  result = group.table.hasKey(key)
 
-proc contains*[T](group: NimphGroup[T]; name: string): bool =
-  result = group.hasKey(name)
+proc contains*[K, V](group: NimphGroup[K, V]; key: K): bool =
+  result = group.table.contains(key) or group.imports.contains(key.importName)
 
-proc contains*[T](group: NimphGroup[T]; url: Uri): bool =
+proc contains*[K, V](group: NimphGroup[K, V]; url: Uri): bool =
   ## true if a member of the group has the same (bare) url
   for value in group.values:
     if bareUrlsAreEqual(value.url, url):
       result = true
       break
 
-proc contains*[T](group: NimphGroup[T]; value: T): bool =
+proc contains*[K, V](group: NimphGroup[K, V]; value: V): bool =
   for v in group.values:
     if v == value:
       result = true

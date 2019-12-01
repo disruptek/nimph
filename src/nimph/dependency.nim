@@ -28,9 +28,7 @@ type
   Flag* {.pure.} = enum
     Quiet
 
-  DependencyGroup* = ref object
-    table*: TableRef[Requirement, Dependency]
-    imports*: StringTableRef
+  DependencyGroup* = ref object of NimphGroup[Requirement, Dependency]
     flags*: set[Flag]
 
 proc name*(dependency: Dependency): string =
@@ -46,13 +44,7 @@ proc newDependency*(requirement: Requirement): Dependency =
 
 proc newDependencyGroup*(flags: set[Flag] = {}): DependencyGroup =
   result = DependencyGroup(flags: flags)
-  result.table = newTable[Requirement, Dependency]()
-  result.imports = newStringTable(modeStyleInsensitive)
-
-iterator pairs*(dependencies: DependencyGroup):
-  tuple[requirement: Requirement; dependency: Dependency] =
-  for requirement, dependency in dependencies.table.pairs:
-    yield (requirement: requirement, dependency: dependency)
+  result.init(mode = modeStyleInsensitive)
 
 proc contains*(dependencies: DependencyGroup; package: Package): bool =
   for name, dependency in dependencies.pairs:
@@ -222,10 +214,18 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
       elif project.version.isValid:
         result = newRelease(project.version) in req
 
+proc get*[K: Requirement, V](group: NimphGroup[K, V]; key: K): V =
+  ## fetch a package from the group using style-insensitive lookup
+  result = group.table[key]
+
+proc mget*[K: Requirement, V](group: var NimphGroup[K, V]; key: K): var V =
+  ## fetch a package from the group using style-insensitive lookup
+  result = group.table[key]
+
 proc addName(dependency: var Dependency; name: string) =
   ## add an import name to the dependency, as might be used in code
   let
-    package = name.packageName
+    package = name.importName
   if package notin dependency.names:
     dependency.names.add package
 
@@ -233,7 +233,7 @@ proc add(dependency: var Dependency; package: Package) =
   ## add a package to the dependency
   if package.url notin dependency.packages:
     dependency.packages.add package.url, package
-  dependency.addName package.name
+  dependency.addName package.importName
 
 proc add(dependency: var Dependency; url: Uri) =
   ## add a url (as a package) to the dependency
@@ -246,21 +246,12 @@ proc add(dependency: var Dependency; packages: PackageGroup) =
 
 proc add(dependency: var Dependency; directory: string; project: Project) =
   ## add a local project in the given directory to an existing dependency
-  if directory in dependency.projects:
+  if dependency.projects.hasKey(directory):
     raise newException(Defect, "attempt to duplicate project dependency")
   dependency.projects.add directory, project
   dependency.addName project.name
   # this'll help anyone sniffing around thinking packages precede projects
   dependency.add project.asPackage
-
-proc contains*(dependencies: DependencyGroup; req: Requirement): bool =
-  result = req in dependencies.table
-
-proc contains*(dependencies: DependencyGroup; dep: Dependency): bool =
-  result = dep.requirement in dependencies
-
-proc `[]`*(dependencies: DependencyGroup; req: Requirement): var Dependency =
-  result = dependencies.table[req]
 
 proc mergeContents(existing: var Dependency; dependency: Dependency): bool =
   ## combine two dependencies and yield true if a new project is added
@@ -273,18 +264,20 @@ proc mergeContents(existing: var Dependency; dependency: Dependency): bool =
     existing.projects.add directory, project
     result = true
 
-proc recordImportNames(dependencies: var DependencyGroup;
-                       dependency: Dependency) =
-  ## associate any import names in the dependency with their paths
-  for directory, project in dependency.projects.pairs:
-    let
-      name = project.importName
-    if name in dependencies.imports:
-      let exists = dependencies.imports[name]
-      if exists != directory:
-        warn &"import collision between {name} and {exists}"
-    else:
-      dependencies.imports[name] = directory
+proc addName(group: var DependencyGroup; req: Requirement; dep: Dependency) =
+  ## add any import names from the dependency into the dependency group
+  for directory, project in dep.projects.pairs:
+    let name = project.importName
+    if name notin group.imports:
+      group.imports[project.importName] = directory
+    elif group.imports[name] != directory:
+      warn &"name collision for import `{name}`:"
+      for path in [directory, group.imports[name]]:
+        warn &"\t{path}"
+
+proc add(group: var DependencyGroup; req: Requirement; dep: Dependency) =
+  group.table.add req, dep
+  group.addName req, dep
 
 proc addedRequirements(dependencies: var DependencyGroup;
                        dependency: var Dependency): bool =
@@ -298,19 +291,19 @@ proc addedRequirements(dependencies: var DependencyGroup;
   # look for an existing dependency to merge into
   block found:
     # check to see if an existing project will work
-    for req, dep in dependencies.table.mpairs:
+    for req, dep in dependencies.mpairs:
       for directory, project in dep.projects.pairs:
         if required.isSatisfiedBy(project):
           existing = dep
           break found
     # failing that, check to see if an existing package matches
-    for req, dep in dependencies.table.mpairs:
+    for req, dep in dependencies.mpairs:
       for url, package in dep.packages.pairs:
         if package.url in dependency.packages:
           existing = dep
           break found
     # found nothing; install the dependency in the group
-    dependencies.table.add required, dependency
+    dependencies.add required, dependency
     # we've added requirements we can analyze only if projects exist
     result = dependency.projects.len > 0
 
@@ -320,18 +313,15 @@ proc addedRequirements(dependencies: var DependencyGroup;
     # point to the merged dependency
     dependency = existing
 
-  # add any names in the dependency list to our name cache
-  dependencies.recordImportNames(dependency)
-
 proc pathForName*(dependencies: DependencyGroup; name: string): Option[string] =
   ## try to retrieve the directory for a given import
-  if name in dependencies.imports:
+  if dependencies.imports.hasKey(name):
     result = dependencies.imports[name].some
 
 proc projectForPath*(dependencies: DependencyGroup; path: string): Project =
   ## retrieve a project from the dependencies using its path
-  for dependency in dependencies.table.values:
-    if path in dependency.projects:
+  for dependency in dependencies.values:
+    if dependency.projects.hasKey(path):
       result = dependency.projects[path]
       break
 
