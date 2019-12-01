@@ -34,6 +34,7 @@ type
     naive*: bool
     local*: bool
     path*: string
+    author*: string
 
   PackageGroup* = ref object
     table*: OrderedTableRef[string, Package]
@@ -165,6 +166,8 @@ proc add(group: PackageGroup; js: JsonNode) =
     package.web = package.url
   if "method" in js:
     package.dist = parseEnum[DistMethod](js["method"].getStr)
+  if "author" in js:
+    package.author = js["author"].getStr
   else:
     package.dist = Git # let's be explicit here
   if "tags" in js:
