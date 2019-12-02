@@ -62,7 +62,7 @@ proc `$`*(mask: VersionMask): string =
   result &= "." & $mask.minor
   result &= "." & $mask.patch
 
-proc `omitStars`*(mask: VersionMask): string =
+proc omitStars*(mask: VersionMask): string =
   result = $mask.major
   if mask.minor.isSome:
     result &= "." & $mask.minor
