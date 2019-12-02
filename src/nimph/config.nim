@@ -1,3 +1,4 @@
+import std/json
 import std/nre
 import std/strtabs
 import std/strformat
@@ -32,7 +33,11 @@ type
     why*: string
     ok*: bool
 
+  ConfigSection = enum
+    LockerRooms = "lockfiles"
+
   NimphConfig* = ref object
+    path: string
     toml: TomlValueRef
 
 proc loadProjectCfg*(path: string): Option[ConfigRef] =
@@ -211,11 +216,15 @@ proc isEmpty*(config: NimphConfig): bool =
 
 proc newNimphConfig*(path: string): NimphConfig =
   ## instantiate a new nimph config using the given path
-  result = NimphConfig()
-  if not path.fileExists:
+  result = NimphConfig(path: path.absolutePath)
+  if not result.path.fileExists:
     result.toml = newTNull()
   else:
-    result.toml = parseFile(path)
+    try:
+      result.toml = parsetoml.parseFile(path)
+    except Exception as e:
+      error &"unable to parse {path}:"
+      error e.msg
 
 template isStdLib*(config: ConfigRef; path: string): bool =
   path.startsWith(config.libpath.string / "")
@@ -504,3 +513,11 @@ converter fromJson*(js: JsonNode): TomlValueRef =
       result = newTTable()
       for k, v in js.pairs:
         result.add k, v.fromJson
+
+proc addLockerRoom*(config: var NimphConfig; name: string; room: JsonNode) =
+  if config.isEmpty:
+    config.toml = newTTable()
+  if $LockerRooms notin config.toml:
+    config.toml[$LockerRooms] = newTTable()
+  config.toml[$LockerRooms][name] = room.fromJson
+  writeFile(config.path, config.toml.toTomlString)
