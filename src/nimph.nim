@@ -16,6 +16,7 @@ import nimph/thehub
 import nimph/config
 import nimph/package
 import nimph/dependency
+import nimph/locker
 
 template crash(why: string) =
   ## a good way to exit nimph
@@ -122,6 +123,25 @@ proc pather*(names: seq[string]; log_level = logLevel): int =
       echo ""      # a failed find produces empty output
       result = 1   # and sets the return code to nonzero
 
+proc lockfiler*(names: seq[string]; log_level = logLevel): int =
+  # user's choice, our default
+  setLogFilter(log_level)
+
+  var
+    project: Project
+  setupLocalProject(project)
+
+  let name = names.join(" ")
+  if name == "":
+    error &"give me some arguments so i can name the lock"
+    result = 1
+  else:
+    if project.lock(name):
+      fatal &"👌locked {project} as `{name}`"
+    else:
+      error &"couldn't lock due to ambiguous environment"
+      result = 1
+
 proc forker*(names: seq[string]; log_level = logLevel): int =
   # user's choice, our default
   setLogFilter(log_level)
@@ -218,6 +238,7 @@ when isMainModule:
       scNimble = "nimble"
       scPath = "path"
       scFork = "fork"
+      scLock = "lock"
       scVersion = "--version"
       scHelp = "--help"
 
@@ -243,12 +264,14 @@ when isMainModule:
               doc="fetch package path(s) by import name(s)")
   dispatchGen(forker, cmdName = $scFork, dispatchName = "run" & $scFork,
               doc="fork a package to your GitHub profile")
+  dispatchGen(lockfiler, cmdName = $scLock, dispatchName = "run" & $scLock,
+              doc="lock dependencies")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
 
   const
     # these are our subcommands that we want to include in help
-    dispatchees = [runsearch, runclone, rundoctor, runpath, runfork]
+    dispatchees = [runsearch, runclone, rundoctor, runpath, runfork, runlock]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
@@ -270,6 +293,7 @@ when isMainModule:
       scClone: runclone,
       scPath: runpath,
       scFork: runfork,
+      scLock: runlock,
       #scNimble: runnimble,
     }.toTable
 
