@@ -355,7 +355,7 @@ proc newRelease*(reference: string; operator = Equal): Release =
     except ValueError:
       raise newException(ValueError, &"parse error on version `{reference}`")
 
-proc hash(field: VersionMaskField): Hash =
+proc hash*(field: VersionMaskField): Hash =
   ## help hash version masks
   var h: Hash = 0
   if field.isNone:
@@ -364,7 +364,7 @@ proc hash(field: VersionMaskField): Hash =
     h = h !& field.get.hash
   result = !$h
 
-proc hash(mask: VersionMask): Hash =
+proc hash*(mask: VersionMask): Hash =
   ## uniquely identify a version mask
   var h: Hash = 0
   h = h !& mask.major.hash
@@ -372,7 +372,7 @@ proc hash(mask: VersionMask): Hash =
   h = h !& mask.patch.hash
   result = !$h
 
-proc hash(release: Release): Hash =
+proc hash*(release: Release): Hash =
   ## uniquely identify a release
   var h: Hash = 0
   h = h !& release.kind.hash
