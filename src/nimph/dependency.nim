@@ -197,10 +197,10 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
     let
       url = req.toUrl
     if url.isSome:
-      if project.url == url.get:
-        result = true
-      elif bareUrlsAreEqual(project.url, url.get):
-        result = true
+      let
+        x = project.url.convertToGit
+        y = url.get.convertToGit
+      result = x == y or bareUrlsAreEqual(x, y)
   # if it does, check that the version matches
   if result:
     if req.operator == Tag:
