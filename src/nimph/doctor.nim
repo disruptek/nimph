@@ -223,7 +223,7 @@ proc doctor*(project: var Project; dry = true): bool =
           if project.cfg.isStdLib(target.repo):
             continue
           let name = linked.importName
-          warn &"seems like we're not using import `{name}` from {target.repo}"
+          warn &"no `{name}` requirement for {target.repo}"
 
   # identify packages that aren't named according to their versions; rename
   # local dependencies and merely warn about others
