@@ -15,9 +15,9 @@ type
   VersionIndex* = range[0 .. 2]
   VersionMaskField* = Option[VersionField]
   VersionMask* = object
-    major: VersionMaskField
-    minor: VersionMaskField
-    patch: VersionMaskField
+    major*: VersionMaskField
+    minor*: VersionMaskField
+    patch*: VersionMaskField
 
   Operator* = enum
     Tag = "#"
