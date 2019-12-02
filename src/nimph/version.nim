@@ -111,7 +111,6 @@ proc isValid*(req: Requirement): bool =
   if not result:
     return
   case req.operator:
-
   # if the operator is Tag, it's essentially a #== test
   of Tag:
     result = req.release.kind in {Tag}
