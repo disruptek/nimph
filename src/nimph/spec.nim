@@ -22,7 +22,7 @@ const
   ghTokenEnv* {.strdefine.} = "NIMPH_TOKEN"
   hubTokenFn* {.strdefine.} = "".addFileExt("config") / "hub"
   stalePackages* {.intdefine.} = 14
-  configFile* {.strdefine.} = "nimph".addFileExt("toml")
+  configFile* {.strdefine.} = "nimph".addFileExt("json")
   nimbleMeta* {.strdefine.} = "nimblemeta".addFileExt("json")
   officialPackages* {.strdefine.} = "packages_official".addFileExt("json")
   emptyRelease* {.strdefine.} = "#head"

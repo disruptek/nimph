@@ -1,4 +1,4 @@
-version = "0.0.25"
+version = "0.0.26"
 author = "disruptek"
 description = "nim package handler from the future"
 license = "MIT"
@@ -9,7 +9,6 @@ requires "cligen >= 0.9.41"
 requires "bump >= 1.8.12"
 requires "nimgit2 >= 0.1.1"
 requires "npeg >= 0.21.2"
-requires "parsetoml"
 requires "git://github.com/disruptek/cutelog.git >= 1.1.0"
 requires "git://github.com/stefantalpalaru/nim-unittest2.git >= 0.0.1"
 

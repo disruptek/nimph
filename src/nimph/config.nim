@@ -20,7 +20,6 @@ export nimconf
 
 import npeg
 import bump
-import parsetoml
 
 import nimph/spec
 
@@ -36,9 +35,18 @@ type
   ConfigSection = enum
     LockerRooms = "lockfiles"
 
-  NimphConfig* = ref object
-    path: string
-    toml: TomlValueRef
+when defined(tomlConfig):
+  import parsetoml
+
+  type
+    NimphConfig* = ref object
+      path: string
+      toml: TomlValueRef
+else:
+  type
+    NimphConfig* = ref object
+      path: string
+      js: JsonNode
 
 proc loadProjectCfg*(path: string): Option[ConfigRef] =
   ## use the compiler to parse a nim.cfg
@@ -211,20 +219,35 @@ proc parseProjectCfg*(input: Target): ProjectCfgParsed =
   except Exception as e:
     result.why = &"parse error in {input}: {e.msg}"
 
-proc isEmpty*(config: NimphConfig): bool =
-  result = config.toml.kind == TomlValueKind.None
+when defined(tomlConfig):
+  proc isEmpty*(config: NimphConfig): bool =
+    result = config.toml.kind == TomlValueKind.None
+  proc newNimphConfig*(path: string): NimphConfig =
+    ## instantiate a new nimph config using the given path
+    result = NimphConfig(path: path.absolutePath)
+    if not result.path.fileExists:
+      result.toml = newTNull()
+    else:
+      try:
+        result.toml = parseFile(path)
+      except Exception as e:
+        error &"unable to parse {path}:"
+        error e.msg
+else:
+  proc isEmpty*(config: NimphConfig): bool =
+    result = config.js.kind == JNull
 
-proc newNimphConfig*(path: string): NimphConfig =
-  ## instantiate a new nimph config using the given path
-  result = NimphConfig(path: path.absolutePath)
-  if not result.path.fileExists:
-    result.toml = newTNull()
-  else:
-    try:
-      result.toml = parsetoml.parseFile(path)
-    except Exception as e:
-      error &"unable to parse {path}:"
-      error e.msg
+  proc newNimphConfig*(path: string): NimphConfig =
+    ## instantiate a new nimph config using the given path
+    result = NimphConfig(path: path.absolutePath)
+    if not result.path.fileExists:
+      result.js = newJNull()
+    else:
+      try:
+        result.js = parseFile(path)
+      except Exception as e:
+        error &"unable to parse {path}:"
+        error e.msg
 
 template isStdLib*(config: ConfigRef; path: string): bool =
   path.startsWith(config.libpath.string / "")
@@ -490,34 +513,43 @@ iterator extantSearchPaths*(config: ConfigRef; least = 0): string =
     if dirExists(path):
       yield path
 
-converter fromJson*(js: JsonNode): TomlValueRef =
-  if js == nil:
-    result = nil
-  else:
-    case js.kind:
-    of JNull:
-      result = newTNull()
-    of JBool:
-      result = newTBool(js.getBool)
-    of JInt:
-      result = newTInt(js.getInt)
-    of JFloat:
-      result = newTFloat(js.getFloat)
-    of JString:
-      result = newTString(js.getStr)
-    of JArray:
-      result = newTArray()
-      for j in js.items:
-        result.add j.fromJson
-    of JObject:
-      result = newTTable()
-      for k, v in js.pairs:
-        result.add k, v.fromJson
+when defined(tomlConfig):
+  converter fromJson*(js: JsonNode): TomlValueRef =
+    if js == nil:
+      result = nil
+    else:
+      case js.kind:
+      of JNull:
+        result = newTNull()
+      of JBool:
+        result = newTBool(js.getBool)
+      of JInt:
+        result = newTInt(js.getInt)
+      of JFloat:
+        result = newTFloat(js.getFloat)
+      of JString:
+        result = newTString(js.getStr)
+      of JArray:
+        result = newTArray()
+        for j in js.items:
+          result.add j.fromJson
+      of JObject:
+        result = newTTable()
+        for k, v in js.pairs:
+          result.add k, v.fromJson
 
-proc addLockerRoom*(config: var NimphConfig; name: string; room: JsonNode) =
-  if config.isEmpty:
-    config.toml = newTTable()
-  if $LockerRooms notin config.toml:
-    config.toml[$LockerRooms] = newTTable()
-  config.toml[$LockerRooms][name] = room.fromJson
-  writeFile(config.path, config.toml.toTomlString)
+  proc addLockerRoom*(config: var NimphConfig; name: string; room: JsonNode) =
+    if config.isEmpty:
+      config.toml = newTTable()
+    if $LockerRooms notin config.toml:
+      config.toml[$LockerRooms] = newTTable()
+    config.toml[$LockerRooms][name] = room.fromJson
+    writeFile(config.path, config.toml.toTomlString)
+else:
+  proc addLockerRoom*(config: var NimphConfig; name: string; room: JsonNode) =
+    if config.isEmpty:
+      config.js = newJObject()
+    if $LockerRooms notin config.js:
+      config.js[$LockerRooms] = newJObject()
+    config.js[$LockerRooms][name] = room
+    writeFile(config.path, config.js.pretty)
