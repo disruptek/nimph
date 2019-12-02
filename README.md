@@ -93,6 +93,7 @@ $ nimph clone npeg
 👭cloning git://github.com/zevv/npeg.git...
 👌cloned git://github.com/zevv/npeg.git
 ```
+
 ### Doctor
 
 The interesting action happens in the `doctor` subcommand.  When run without any
@@ -136,6 +137,7 @@ adjusting path settings in the project's `nim.cfg`, and similar housekeeping.
 $ nimph doctor
 👌bot version 0.0.11 lookin' good
 ```
+
 ### Fork
 
 The `fork` subcommand is used to fork an installed dependency in your GitHub
@@ -165,6 +167,19 @@ $ nimph path nimterop irc
 /home/adavidoff/git/bot/deps/pkgs/nimterop-#v0.3.3
 /home/adavidoff/git/bot/deps/pkgs/irc-#v0.3.0
 ```
+
+### Lock
+
+The `lock` subcommand writes the current dependency tree to a JSON file; see
+**Hacking** below to customize its name. You pass arguments to give this record
+a name that you can use to retrieve the dependency tree later. Multiple such
+_lockfiles_ may be cached in a single file.
+
+```
+$ nimph lock works with latest npeg
+👌locked nimph-#0.0.26 as `works with latest npeg`
+```
+
 ### Nimble Subcommands
 
 Any commands not mentioned above are passed directly to an instance of `nimble`
@@ -178,6 +193,7 @@ $ nimph refresh
 Downloading Official package list
     Success Package list downloaded.
 ```
+
 ## Hacking
 
 Virtually all constants in Nimph are recorded in a single `spec` file where
