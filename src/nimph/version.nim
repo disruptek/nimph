@@ -192,13 +192,6 @@ proc at*[T: Version | VersionMask](version: T; index: VersionIndex): auto =
   of 1: result = version.minor
   of 2: result = version.patch
 
-proc `[]`*[T: Version | VersionMask](version: T; index: VersionIndex): auto {.deprecated.} =
-  ## deprecated because it doesn't seem to work consistently
-  case index:
-  of 0: result = version.major
-  of 1: result = version.minor
-  of 2: result = version.patch
-
 proc `[]=`*(mask: var VersionMask;
             index: VersionIndex; value: VersionMaskField) =
   case index:
