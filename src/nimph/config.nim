@@ -480,3 +480,27 @@ iterator extantSearchPaths*(config: ConfigRef; least = 0): string =
   for path in config.likelyLazy(least = least):
     if dirExists(path):
       yield path
+
+converter fromJson*(js: JsonNode): TomlValueRef =
+  if js == nil:
+    result = nil
+  else:
+    case js.kind:
+    of JNull:
+      result = newTNull()
+    of JBool:
+      result = newTBool(js.getBool)
+    of JInt:
+      result = newTInt(js.getInt)
+    of JFloat:
+      result = newTFloat(js.getFloat)
+    of JString:
+      result = newTString(js.getStr)
+    of JArray:
+      result = newTArray()
+      for j in js.items:
+        result.add j.fromJson
+    of JObject:
+      result = newTTable()
+      for k, v in js.pairs:
+        result.add k, v.fromJson
