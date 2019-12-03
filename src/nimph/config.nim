@@ -553,3 +553,19 @@ else:
       config.js[$LockerRooms] = newJObject()
     config.js[$LockerRooms][name] = room
     writeFile(config.path, config.js.pretty)
+
+  proc getAllLockerRooms*(config: NimphConfig): JsonNode =
+    block found:
+      if not config.isEmpty:
+        if $LockerRooms in config.js:
+          result = config.js[$LockerRooms]
+          break
+      result = newJObject()
+
+  proc getLockerRoom*(config: NimphConfig; name: string): JsonNode =
+    let
+      rooms = config.getAllLockerRooms
+    if name in rooms:
+      result = rooms[name]
+    else:
+      result = newJNull()
