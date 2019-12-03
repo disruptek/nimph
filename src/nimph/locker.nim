@@ -102,6 +102,13 @@ proc populate(room: var LockerRoom; dependencies: DependencyGroup): bool =
             let state = repositoryState(project.repo)
             if state != GitRepoState.rsNone:
               warn &"{project} repository in invalid {state} state"
+            block keepgoing:
+              block refuselock:
+                for n in status(project.repo, ssIndexAndWorkdir):
+                  warn &"{project} repository has been modified"
+                  break refuselock
+                break keepgoing
+              continue
           if room.hasKey(name):
             warn &"clashing import {name}"
             result = false

@@ -513,3 +513,14 @@ elif git2SetVer == "0.28.3":
   iterator status*(repository: GitRepository; show: GitStatusShow;
                    flags = DefaultStatusFlags): GitStatus =
     raise newException(ValueError, "you need a newer libgit2 to do that")
+
+iterator status*(path: string; show = ssIndexAndWorkdir;
+                 flags = DefaultStatusFlags): GitStatus =
+  var
+    open: GitOpen
+  withGit:
+    gitTrap open, openRepository(open, path):
+      let emsg = &"error opening repository {path}"
+      raise newException(IOError, emsg)
+    for entry in status(open.repo, show, flags):
+      yield entry
