@@ -1,9 +1,19 @@
+import std/strformat
+import std/bitops
+import std/os
 import std/strutils
 import std/hashes
 import std/tables
 import std/uri
 
 import nimgit2
+
+when git2SetVer == "master":
+  discard
+elif git2SetVer == "0.28.3":
+  discard
+else:
+  {.error: "libgit2 version " & git2SetVer & " unsupported".}
 
 {.hint: "libgit2 version " & git2SetVer.}
 
@@ -42,6 +52,45 @@ else:
                                  "apply mailbox")
       rsApplyMailboxOrRebase  = (GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
                                  "apply mailbox or rebase")
+    GitStatusShow* = enum
+      ssIndexAndWorkdir       = (GIT_STATUS_SHOW_INDEX_AND_WORKDIR,
+                                 "index and workdir")
+      ssIndexOnly             = (GIT_STATUS_SHOW_INDEX_ONLY,
+                                 "index only")
+      ssWorkdirOnly           = (GIT_STATUS_SHOW_WORKDIR_ONLY,
+                                 "workdir only")
+    GitStatusOption* = enum
+      soIncludeUntracked      = (GIT_STATUS_OPT_INCLUDE_UNTRACKED,
+                                 "include untracked")
+      soIncludeIgnored        = (GIT_STATUS_OPT_INCLUDE_IGNORED,
+                                 "include ignored")
+      soIncludeUnmodified     = (GIT_STATUS_OPT_INCLUDE_UNMODIFIED,
+                                 "include unmodified")
+      soExcludeSubmodules     = (GIT_STATUS_OPT_EXCLUDE_SUBMODULES,
+                                 "exclude submodules")
+      soRecurseUntrackedDirs  = (GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS,
+                                 "recurse untracked dirs")
+      soDisablePathspecMatch  = (GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH,
+                                 "disable pathspec match")
+      soRecurseIgnoredDirs    = (GIT_STATUS_OPT_RECURSE_IGNORED_DIRS,
+                                 "recurse ignored dirs")
+      soRenamesHeadToIndex    = (GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX,
+                                 "renames head to index")
+      soRenamesIndexToWorkdir = (GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR,
+                                 "renames index to workdir")
+      soSortCaseSensitively   = (GIT_STATUS_OPT_SORT_CASE_SENSITIVELY,
+                                 "sort case sensitively")
+      soSortCaseInsensitively = (GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY,
+                                 "sort case insensitively")
+      soRenamesFromRewrites   = (GIT_STATUS_OPT_RENAMES_FROM_REWRITES,
+                                 "renames from rewrites")
+      soNoRefresh             = (GIT_STATUS_OPT_NO_REFRESH,
+                                 "no refresh")
+      soUpdateIndex           = (GIT_STATUS_OPT_UPDATE_INDEX,
+                                 "update index")
+      soIncludeUnreadable     = (GIT_STATUS_OPT_INCLUDE_UNREADABLE,
+                                 "include unreadable")
+
     GitObject* = ptr git_object
     GitObjectKind* = enum
       goAny         = (2 + GIT_OBJECT_ANY, "object")
@@ -65,8 +114,8 @@ else:
 
 type
   GitHeapGits = git_repository | git_reference | git_remote | git_tag |
-                git_strarray | git_object | git_commit
-  NimHeapGits = git_clone_options
+                git_strarray | git_object | git_commit | git_status_list
+  NimHeapGits = git_clone_options | git_status_options
   GitOid* = ptr git_oid
   GitRemote* = ptr git_remote
   GitReference* = ptr git_reference
@@ -83,6 +132,27 @@ type
     path*: cstring
     repo*: GitRepository
   GitTagTable* = OrderedTableRef[string, GitThing]
+  GitStatus* = ptr git_status_entry
+
+const
+  CommonDefaultStatusFlags: set[GitStatusOption] = {
+    soIncludeUntracked,
+    soIncludeIgnored,
+    soIncludeUnmodified,
+    soExcludeSubmodules,
+    soDisablePathspecMatch,
+    soRenamesHeadToIndex,
+    soRenamesIndexToWorkdir,
+    soRenamesFromRewrites,
+    soUpdateIndex,
+    soIncludeUnreadable,
+  }
+
+  DefaultStatusFlags* =
+    when FileSystemCaseSensitive:
+      CommonDefaultStatusFlags + {soSortCaseSensitively}
+    else:
+      CommonDefaultStatusFlags + {soSortCaseInsensitively}
 
 template dumpError() =
   let err = git_error_last()
@@ -145,6 +215,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
       git_commit_free(point)
     elif T is git_object:
       git_object_free(point)
+    elif T is git_status_list:
+      git_status_list_free(point)
     else:
       {.error: "missing a free definition".}
 
@@ -283,7 +355,10 @@ proc newThing(obj: GitObject): GitThing =
 proc clone*(got: var GitClone; uri: Uri; path: string; branch = ""): int =
   ## clone a repository
   got.options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
-  result = git_clone_init_options(got.options, GIT_CLONE_OPTIONS_VERSION)
+  when git2SetVer == "master":
+    result = git_clone_options_init(got.options, GIT_CLONE_OPTIONS_VERSION)
+  else:
+    result = git_clone_init_options(got.options, GIT_CLONE_OPTIONS_VERSION)
   if result != 0:
     return
 
@@ -397,3 +472,44 @@ proc getHeadOid*(repository: GitRepository): GitOid =
     warn "error fetching repo head"
     return
   result = head.oid
+
+proc repositoryState*(repository: GitRepository): GitRepoState =
+  result = cast[GitRepoState](git_repository_state(repository))
+
+proc repositoryState*(path: string): GitRepoState =
+  var
+    open: GitOpen
+  withGit:
+    gitTrap open, openRepository(open, path):
+      let emsg = &"error opening repository {path}"
+      raise newException(IOError, emsg)
+    result = repositoryState(open.repo)
+
+when git2SetVer == "master":
+  iterator status*(repository: GitRepository; show: GitStatusShow;
+                   flags = DefaultStatusFlags): GitStatus =
+    ## iterate over files in the repo using the given search flags
+    var
+      statum: ptr git_status_list
+      options: ptr git_status_options = cast[ptr git_status_options](sizeof(git_status_options).alloc)
+    block:
+      if 0 != git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION):
+        break
+
+      options.show = cast[git_status_show_t](show)
+      for flag in flags.items:
+        options.flags = bitand(options.flags, flag.ord.cuint)
+
+      if 0 != git_status_list_new(addr statum, repository, options):
+        break
+
+      let
+        count = git_status_list_entrycount(statum)
+      for index in 0 ..< count:
+        yield git_status_byindex(statum, index.cuint)
+    free(options)
+    free(statum)
+elif git2SetVer == "0.28.3":
+  iterator status*(repository: GitRepository; show: GitStatusShow;
+                   flags = DefaultStatusFlags): GitStatus =
+    raise newException(ValueError, "you need a newer libgit2 to do that")
