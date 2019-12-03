@@ -21,7 +21,14 @@ type
     requirement*: Requirement
     dist*: DistMethod
     release*: Release
-  LockerRoom* = NimphGroup[string, Locker]
+  LockerRoom* = ref object of NimphGroup[string, Locker]
+    name*: string
+    root*: Locker
+
+const
+  # we use "" as a sigil to indicate the root of the project because
+  # it's not a valid import name and won't be accepted by NimphGroup
+  rootName = ""
 
 proc hash*(locker: Locker): Hash =
   # this is how we'll test equivalence
@@ -30,7 +37,17 @@ proc hash*(locker: Locker): Hash =
   h = h !& locker.release.hash
   result = !$h
 
+proc hash*(room: LockerRoom): Hash =
+  var h: Hash = 0
+  for name, locker in room.pairs:
+    h = h !& locker.hash
+  h = h !& room.root.hash
+  result = !$h
+
 proc `==`(a, b: Locker): bool =
+  result = a.hash == b.hash
+
+proc `==`(a, b: LockerRoom): bool =
   result = a.hash == b.hash
 
 proc newLockerRoom*(): LockerRoom =
@@ -47,13 +64,19 @@ proc newLocker(req: Requirement; name: string; project: Project): Locker =
   result.dist = project.dist
   result.release = project.release
 
+proc newLockerRoom*(project: Project): LockerRoom =
+  let
+    requirement = newRequirement(project.importName, Equal, project.release)
+  result = newLockerRoom()
+  result.root = newLocker(requirement, rootName, project)
+
 proc add*(room: var LockerRoom; req: Requirement; name: string;
           project: Project) =
   var locker = newLocker(req, name, project)
   block found:
     for existing in room.values:
       if existing == locker:
-        error &"unable to add equivalent lock for {name}"
+        error &"unable to add equivalent lock for `{name}`"
         break found
     room.add name, locker
 
@@ -91,15 +114,51 @@ proc toJson*(locker: Locker): JsonNode =
   result["requirement"] = locker.requirement.toJson
   result["dist"] = locker.dist.toJson
 
+proc toLocker*(js: JsonNode): Locker =
+  let
+    req = js["requirement"].toRequirement
+  result = req.newLocker
+  result.name = js["name"].getStr
+  result.url = js["url"].toUri
+  result.release = js["release"].toRelease
+  result.dist = js["dist"].toDistMethod
+
 proc toJson*(room: LockerRoom): JsonNode =
   result = newJObject()
   for name, locker in room.pairs:
     result[locker.name] = locker.toJson
+  result[room.root.name] = room.root.toJson
+
+proc toLockerRoom*(js: JsonNode; name = ""): LockerRoom =
+  result = newLockerRoom()
+  result.name = name
+  for name, locker in js.pairs:
+    if name == rootName:
+      result.root = locker.toLocker
+    elif result.hasKey(name):
+      error &"ignoring duplicate locker `{name}`"
+    else:
+      result.add name, locker.toLocker
+
+proc getLockerRoom*(project: Project; name: string; room: var LockerRoom): bool =
+  let
+    js = project.config.getLockerRoom(name)
+  if js == nil or js.kind != JObject:
+    return
+  room = js.toLockerRoom
+  result = true
+
+iterator allLockerRooms(project: Project): LockerRoom =
+  for name, js in project.config.getAllLockerRooms.pairs:
+    yield js.toLockerRoom(name)
 
 proc lock*(project: var Project; name: string): bool =
   var
     dependencies = newDependencyGroup(flags = {Flag.Quiet})
-    room = newLockerRoom()
+    room = newLockerRoom(project)
+  if project.getLockerRoom(name, room):
+    notice &"lock `{name}` already exists; choose a new name"
+    return
   result = project.resolveDependencies(dependencies)
   if not result:
     notice &"unable to resolve all dependencies for {project}"
@@ -108,4 +167,11 @@ proc lock*(project: var Project; name: string): bool =
   if not result:
     notice &"not confident enough to lock {project}"
     return
-  project.config.addLockerRoom name, room.toJson
+  for exists in project.allLockerRooms:
+    if exists == room:
+      notice &"already locked these dependencies as `{exists.name}`"
+      result = false
+      return
+  var
+    js = room.toJson
+  project.config.addLockerRoom name, js
