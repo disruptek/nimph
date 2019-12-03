@@ -304,7 +304,8 @@ when isMainModule:
 
   const
     # these are our subcommands that we want to include in help
-    dispatchees = [runsearch, runclone, rundoctor, runpath, runfork, runlock]
+    dispatchees = [runsearch, runclone, rundoctor, runpath, runfork,
+                   runlock, rununlock]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
