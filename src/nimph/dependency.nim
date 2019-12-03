@@ -52,6 +52,9 @@ proc contains*(dependencies: DependencyGroup; package: Package): bool =
     if result:
       break
 
+proc hasKey*(dependencies: DependencyGroup; name: string): bool =
+  result = dependencies.imports.hasKey(name)
+
 proc reportMultipleResolutions(project: Project; requirement: Requirement;
                                packages: PackageGroup) =
   ## output some useful warnings depending upon the nature of the dupes
@@ -233,6 +236,13 @@ proc add(dependency: var Dependency; directory: string; project: Project) =
   # this'll help anyone sniffing around thinking packages precede projects
   dependency.add project.asPackage
 
+proc newDependency*(project: Project): Dependency =
+  ## convenience to form a new dependency on a specific project
+  let
+    requirement = newRequirement(project.name, Equal, project.release)
+  result = newDependency(requirement)
+  result.add project.repo, project
+
 proc mergeContents(existing: var Dependency; dependency: Dependency): bool =
   ## combine two dependencies and yield true if a new project is added
   # adding the packages as a group will work
@@ -255,7 +265,7 @@ proc addName(group: var DependencyGroup; req: Requirement; dep: Dependency) =
       for path in [directory, group.imports[name]]:
         warn &"\t{path}"
 
-proc add(group: var DependencyGroup; req: Requirement; dep: Dependency) =
+proc add*(group: var DependencyGroup; req: Requirement; dep: Dependency) =
   group.table.add req, dep
   group.addName req, dep
 

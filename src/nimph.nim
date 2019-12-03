@@ -114,6 +114,11 @@ proc pather*(names: seq[string]; log_level = logLevel): int =
   if not project.resolveDependencies(group):
     notice &"unable to resolve all dependencies for {project}"
 
+  # for convenience, add the project itself if possible
+  if not group.hasKey(project.name):
+    let dependency = newDependency(project)
+    group.add dependency.requirement, dependency
+
   for name in names.items:
     let found = group.pathForName(name)
     if found.isSome:
