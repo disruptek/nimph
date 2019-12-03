@@ -389,13 +389,14 @@ proc toMask*(version: Version): VersionMask =
   for i, field in version.pairs:
     result[i] = field.some
 
-proc newRequirement*(id: string; operator: Operator; spec: string): Requirement =
-  ## parse a requirement
+proc newRequirement*(id: string; operator: Operator;
+                     release: Release): Requirement =
+  ## create a requirement from a release, eg. that of a project
   when defined(debug):
     if id != id.strip:
       warn &"whitespace around requirement identity: `{id}`"
   result.identity = id.strip
-  result.release = newRelease(spec, operator = operator)
+  result.release = release
   # if it parsed as Caret, Tilde, or Wild, then paint the requirement as such
   if result.release in Wildlings:
     result.operator = result.release.kind
@@ -404,6 +405,10 @@ proc newRequirement*(id: string; operator: Operator; spec: string): Requirement 
     result.operator = result.release.kind
   else:
     result.operator = operator
+
+proc newRequirement*(id: string; operator: Operator; spec: string): Requirement =
+  ## parse a requirement
+  result = newRequirement(id, operator, newRelease(spec, operator = operator))
 
 proc newRequirement(id: string; operator: string; spec: string): Requirement =
   ## parse a requirement
