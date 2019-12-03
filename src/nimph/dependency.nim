@@ -80,26 +80,6 @@ proc reportMultipleResolutions(project: Project; requirement: Requirement;
     count.inc
   fatal ""
 
-proc createUrl(project: Project): Uri =
-  ## determine the source url for a project which may be local
-  let
-    dist = project.dist
-  if project.url.isValid:
-    result = project.url
-  else:
-    case dist:
-    of Local:
-      result = Uri(scheme: "file", path: project.repo)
-    of Git:
-      var
-        url = findRepositoryUrl(project.repo)
-      if url.isSome:
-        result = url.get
-      else:
-        result = Uri(scheme: "file", path: project.repo)
-    else:
-      raise newException(Defect, "not implemented")
-
 proc asPackage*(project: Project): Package =
   ## cast a project to a package
   result = newPackage(name = project.name, path = project.repo,

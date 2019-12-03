@@ -452,6 +452,56 @@ proc linkedFindTarget(dir: string; target = ""; nimToo = false;
     result.search.message = e.msg
   result.search.found = none(Target)
 
+proc findRepositoryUrl*(path: string; name = defaultRemote): Option[Uri] =
+  ## find the (remote?) url to a given local repository
+  var
+    remote: GitRemote
+    open: GitOpen
+
+  withGit:
+    gitTrap openRepository(open, path):
+      warn &"error opening repository {path}"
+      return
+    gitTrap remote, remoteLookup(remote, open.repo, name):
+      warn &"unable to fetch remote `{name}` from repo in {path}"
+      result = Uri(scheme: "file", path: path.absolutePath / "").some
+      return
+    try:
+      let url = remote.url
+      if url.isValid:
+        result = remote.url.some
+      else:
+        warn &"bad git url in {path}: {url}"
+    except:
+      warn &"unable to parse url from remote `{name}` from repo in {path}"
+
+proc createUrl*(project: Project): Uri =
+  ## determine the source url for a project which may be local
+  if project.url.isValid:
+    result = project.url
+  else:
+    case project.dist:
+    of Local:
+      if project.meta.hasUrl:
+        result = project.meta.url
+      else:
+        result = Uri(scheme: "file", path: project.repo)
+    of Git:
+      var
+        url = findRepositoryUrl(project.repo)
+      if url.isSome:
+        result = url.get
+      else:
+        result = Uri(scheme: "file", path: project.repo)
+    else:
+      raise newException(Defect, "not implemented")
+
+proc createUrl*(project: var Project): Uri =
+  let
+    readonly = project
+  result = readonly.createUrl
+  project.url = result
+
 proc findProject*(project: var Project; dir: string;
                   parent: Project = nil): bool =
   ## locate a project starting from `dir`
@@ -483,8 +533,7 @@ proc findProject*(project: var Project; dir: string;
     mycfg = loadProjectCfg($project.nimCfg)
   if mycfg.isSome:
     project.mycfg = mycfg.get
-  if project.meta.hasUrl:
-    project.url = project.meta.url
+  project.url = project.createUrl
   project.version = project.knowVersion
   project.inventRelease
   if project.release.isValid:
@@ -564,27 +613,6 @@ proc `==`*(a, b: Project): bool =
       when defined(debugPath):
         debug &"had to use samefile to compare {apath} to {bpath}"
       result = sameFile(apath, bpath)
-
-proc findRepositoryUrl*(path: string; name = defaultRemote): Option[Uri] =
-  ## find the (remote?) url to a given local repository
-  var
-    remote: GitRemote
-    open: GitOpen
-
-  withGit:
-    gitTrap openRepository(open, path):
-      warn &"error opening repository {path}"
-      return
-    gitTrap remote, remoteLookup(remote, open.repo, name):
-      warn &"unable to fetch remote `{name}` from repo in {path}"
-      result = parseUri("file://" & path.absolutePath / "").some
-      return
-    try:
-      let url = remote.url
-      if url.isValid:
-        result = remote.url.some
-    except:
-      warn &"unable to parse url from remote `{name}` from repo in {path}"
 
 proc removeSearchPath*(project: Project; path: string): bool =
   ## remove a search path from the project's nim.cfg
