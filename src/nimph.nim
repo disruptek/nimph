@@ -128,6 +128,12 @@ proc pather*(names: seq[string]; log_level = logLevel): int =
       echo ""      # a failed find produces empty output
       result = 1   # and sets the return code to nonzero
 
+proc dumpLockList(project: Project) =
+  for room in project.allLockerRooms:
+    once:
+      fatal &"here's a list of available locks:"
+    fatal &"\t{room.name}"
+
 proc lockfiler*(names: seq[string]; log_level = logLevel): int =
   # user's choice, our default
   setLogFilter(log_level)
@@ -138,13 +144,32 @@ proc lockfiler*(names: seq[string]; log_level = logLevel): int =
 
   let name = names.join(" ")
   if name == "":
-    error &"give me some arguments so i can name the lock"
+    project.dumpLockList
+    fatal &"give me some arguments so i can name the lock"
     result = 1
   else:
     if project.lock(name):
       fatal &"👌locked {project} as `{name}`"
     else:
-      error &"couldn't lock due to ambiguous environment"
+      result = 1
+
+proc unlockfiler*(names: seq[string]; log_level = logLevel): int =
+  # user's choice, our default
+  setLogFilter(log_level)
+
+  var
+    project: Project
+  setupLocalProject(project)
+
+  let name = names.join(" ")
+  if name == "":
+    project.dumpLockList
+    fatal &"give me some arguments so i can fetch the lock by name"
+    result = 1
+  else:
+    if project.unlock(name):
+      fatal &"👌unlocked {project} via `{name}`"
+    else:
       result = 1
 
 proc forker*(names: seq[string]; log_level = logLevel): int =
@@ -244,6 +269,7 @@ when isMainModule:
       scPath = "path"
       scFork = "fork"
       scLock = "lock"
+      scUnlock = "unlock"
       scVersion = "--version"
       scHelp = "--help"
 
@@ -271,6 +297,8 @@ when isMainModule:
               doc="fork a package to your GitHub profile")
   dispatchGen(lockfiler, cmdName = $scLock, dispatchName = "run" & $scLock,
               doc="lock dependencies")
+  dispatchGen(unlockfiler, cmdName = $scUnlock, dispatchName = "run" & $scUnlock,
+              doc="unlock dependencies")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
 
@@ -299,6 +327,7 @@ when isMainModule:
       scPath: runpath,
       scFork: runfork,
       scLock: runlock,
+      scUnlock: rununlock,
       #scNimble: runnimble,
     }.toTable
 

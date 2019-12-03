@@ -50,8 +50,8 @@ proc `==`(a, b: Locker): bool =
 proc `==`(a, b: LockerRoom): bool =
   result = a.hash == b.hash
 
-proc newLockerRoom*(): LockerRoom =
-  result = LockerRoom()
+proc newLockerRoom*(name = ""): LockerRoom =
+  result = LockerRoom(name: name)
   result.init(mode = modeStyleInsensitive)
 
 proc newLocker(requirement: Requirement): Locker =
@@ -106,6 +106,11 @@ proc populate(room: var LockerRoom; dependencies: DependencyGroup): bool =
       warn &"shadowed project {project}"
       result = false
 
+proc populate(dependencies: var DependencyGroup; room: LockerRoom): bool =
+  for name, locker in room.pairs:
+    dependencies.add locker.requirement, newDependency(locker.requirement)
+  result = true
+
 proc toJson*(locker: Locker): JsonNode =
   result = newJObject()
   result["name"] = newJString(locker.name)
@@ -130,8 +135,7 @@ proc toJson*(room: LockerRoom): JsonNode =
   result[room.root.name] = room.root.toJson
 
 proc toLockerRoom*(js: JsonNode; name = ""): LockerRoom =
-  result = newLockerRoom()
-  result.name = name
+  result = newLockerRoom(name)
   for name, locker in js.pairs:
     if name == rootName:
       result.root = locker.toLocker
@@ -145,12 +149,30 @@ proc getLockerRoom*(project: Project; name: string; room: var LockerRoom): bool 
     js = project.config.getLockerRoom(name)
   if js == nil or js.kind != JObject:
     return
-  room = js.toLockerRoom
+  room = js.toLockerRoom(name)
   result = true
 
-iterator allLockerRooms(project: Project): LockerRoom =
+iterator allLockerRooms*(project: Project): LockerRoom =
   for name, js in project.config.getAllLockerRooms.pairs:
     yield js.toLockerRoom(name)
+
+proc unlock*(project: var Project; name: string): bool =
+  var
+    dependencies = newDependencyGroup(flags = {Flag.Quiet})
+    room = newLockerRoom()
+
+  if not project.getLockerRoom(name, room):
+    notice &"unable to find a lock named `{name}`"
+    return
+
+  for name, locker in room.pairs:
+    if locker.dist != Git:
+      warn &"unsafe lock of `{name}` for {locker.requirement} as {locker.release}"
+
+  result = dependencies.populate(room)
+  if not result:
+    notice &"unable to resolve all dependencies for `{name}`"
+    return
 
 proc lock*(project: var Project; name: string): bool =
   var
