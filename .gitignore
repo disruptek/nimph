@@ -2,3 +2,4 @@ tests/tconfig
 tests/tnimble
 tests/tpackage
 tests/tspec
+nim.cfg
