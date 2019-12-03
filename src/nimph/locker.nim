@@ -13,6 +13,7 @@ import nimph/project
 import nimph/dependency
 import nimph/package
 import nimph/asjson
+import nimph/git
 
 type
   Locker* = ref object
@@ -97,6 +98,10 @@ proc populate(room: var LockerRoom; dependencies: DependencyGroup): bool =
         for name in dependency.names.items:
           if project.dist != Git:
             warn &"{project} isn't in git; it's {project.dist} {project.repo}"
+          else:
+            let state = repositoryState(project.repo)
+            if state != GitRepoState.rsNone:
+              warn &"{project} repository in invalid {state} state"
           if room.hasKey(name):
             warn &"clashing import {name}"
             result = false
