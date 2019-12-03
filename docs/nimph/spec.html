@@ -855,7 +855,7 @@ function main() {
   <li><a class="reference" href="#stalePackages"
     title="stalePackages = 14"><wbr />stale<wbr />Packages<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#configFile"
-    title="configFile = &quot;nimph.toml&quot;"><wbr />config<wbr />File<span class="attachedType"></span></a></li>
+    title="configFile = &quot;nimph.json&quot;"><wbr />config<wbr />File<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#nimbleMeta"
     title="nimbleMeta = &quot;nimblemeta.json&quot;"><wbr />nimble<wbr />Meta<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#officialPackages"
@@ -894,6 +894,10 @@ function main() {
     title="packageName(name: string): string"><wbr />package<wbr />Name<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#packageName%2CUri"
     title="packageName(url: Uri): string"><wbr />package<wbr />Name<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#importName%2Cstring"
+    title="importName(path: string): string"><wbr />import<wbr />Name<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#importName%2CUri"
+    title="importName(url: Uri): string"><wbr />import<wbr />Name<span class="attachedType"></span></a></li>
 
   </ul>
 </li>
@@ -1001,7 +1005,7 @@ function main() {
 
 </dd>
 <a id="configFile"></a>
-<dt><pre><a href="spec.html#configFile"><span class="Identifier">configFile</span></a> <span class="Other">=</span> <span class="StringLit">&quot;nimph.toml&quot;</span></pre></dt>
+<dt><pre><a href="spec.html#configFile"><span class="Identifier">configFile</span></a> <span class="Other">=</span> <span class="StringLit">&quot;nimph.json&quot;</span></pre></dt>
 <dd>
 
 
@@ -1126,6 +1130,22 @@ return a string that is plausible as a module name
 guess the import name of a package from a url
 
 </dd>
+<a id="importName,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#importName%2Cstring"><span class="Identifier">importName</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span>
+                                    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+a uniform name usable in code for imports
+
+</dd>
+<a id="importName,Uri"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#importName%2CUri"><span class="Identifier">importName</span></a><span class="Other">(</span><span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span>
+                                <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
 
 </dl></div>
 <div class="section" id="18">
@@ -1155,7 +1175,7 @@ guess the import name of a package from a url
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-01 01:56:34 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-03 03:27:26 UTC</small>
       </div>
     </div>
   </div>

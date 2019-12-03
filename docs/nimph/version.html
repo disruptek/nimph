@@ -840,9 +840,9 @@ function main() {
     title="VersionMaskField = Option[VersionField]"><wbr />Version<wbr />Mask<wbr />Field<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#VersionMask"
     title="VersionMask = object
-  major: VersionMaskField
-  minor: VersionMaskField
-  patch: VersionMaskField"><wbr />Version<wbr />Mask<span class="attachedType"></span></a></li>
+  major*: VersionMaskField
+  minor*: VersionMaskField
+  patch*: VersionMaskField"><wbr />Version<wbr />Mask<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#Operator"
     title="Operator = enum
   Tag = &quot;#&quot;, Wild = &quot;*&quot;, Tilde = &quot;~&quot;, Caret = &quot;^&quot;, Equal = &quot;==&quot;, AtLeast = &quot;&gt;=&quot;, Over = &quot;&gt;&quot;,
@@ -903,8 +903,6 @@ function main() {
     title="acceptable(mask: VersionMaskField; op: Operator; value: VersionField): bool"><wbr />acceptable<span class="attachedType">VersionMaskField</span></a></li>
   <li><a class="reference" href="#at%2CT%2CVersionIndex"
     title="at[T: Version | VersionMask](version: T; index: VersionIndex): auto"><wbr />at<span class="attachedType">VersionIndex</span></a></li>
-  <li><a class="reference" href="#%5B%5D%2CT%2CVersionIndex"
-    title="`[]`[T: Version | VersionMask](version: T; index: VersionIndex): auto"><wbr />`[]`<span class="attachedType">VersionIndex</span></a></li>
   <li><a class="reference" href="#%5B%5D%3D%2CVersionMask%2CVersionIndex%2CVersionMaskField"
     title="`[]=`(mask: var VersionMask; index: VersionIndex; value: VersionMaskField)"><wbr />`[]=`<span class="attachedType">VersionMask</span></a></li>
   <li><a class="reference" href="#isSpecific%2CRelease"
@@ -919,10 +917,18 @@ function main() {
     title="newRelease(version: Version): Release"><wbr />new<wbr />Release<span class="attachedType">Release</span></a></li>
   <li><a class="reference" href="#newRelease%2Cstring"
     title="newRelease(reference: string; operator = Equal): Release"><wbr />new<wbr />Release<span class="attachedType">Release</span></a></li>
+  <li><a class="reference" href="#hash%2CVersionMaskField"
+    title="hash(field: VersionMaskField): Hash"><wbr />hash<span class="attachedType">VersionMaskField</span></a></li>
+  <li><a class="reference" href="#hash%2CVersionMask"
+    title="hash(mask: VersionMask): Hash"><wbr />hash<span class="attachedType">VersionMask</span></a></li>
+  <li><a class="reference" href="#hash%2CRelease"
+    title="hash(release: Release): Hash"><wbr />hash<span class="attachedType">Release</span></a></li>
   <li><a class="reference" href="#hash%2CRequirement"
     title="hash(req: Requirement): Hash"><wbr />hash<span class="attachedType">Requirement</span></a></li>
   <li><a class="reference" href="#toMask%2CVersion"
     title="toMask(version: Version): VersionMask"><wbr />to<wbr />Mask<span class="attachedType">VersionMask</span></a></li>
+  <li><a class="reference" href="#newRequirement%2Cstring%2COperator%2CRelease"
+    title="newRequirement(id: string; operator: Operator; release: Release): Requirement"><wbr />new<wbr />Requirement<span class="attachedType">Requirement</span></a></li>
   <li><a class="reference" href="#newRequirement%2Cstring%2COperator%2Cstring"
     title="newRequirement(id: string; operator: Operator; spec: string): Requirement"><wbr />new<wbr />Requirement<span class="attachedType">Requirement</span></a></li>
   <li><a class="reference" href="#parseRequires%2Cstring"
@@ -933,6 +939,10 @@ function main() {
     title="isUrl(requirement: Requirement): bool"><wbr />is<wbr />Url<span class="attachedType">Requirement</span></a></li>
   <li><a class="reference" href="#toUrl%2CRequirement"
     title="toUrl(requirement: Requirement): Option[Uri]"><wbr />to<wbr />Url<span class="attachedType">Requirement</span></a></li>
+  <li><a class="reference" href="#importName%2CTarget"
+    title="importName(target: Target): string"><wbr />import<wbr />Name<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#importName%2CRequirement"
+    title="importName(requirement: Requirement): string"><wbr />import<wbr />Name<span class="attachedType">Requirement</span></a></li>
 
   </ul>
 </li>
@@ -985,9 +995,9 @@ function main() {
 </dd>
 <a id="VersionMask"></a>
 <dt><pre><a href="version.html#VersionMask"><span class="Identifier">VersionMask</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">major</span><span class="Other">:</span> <a href="version.html#VersionMaskField"><span class="Identifier">VersionMaskField</span></a>
-  <span class="Identifier">minor</span><span class="Other">:</span> <a href="version.html#VersionMaskField"><span class="Identifier">VersionMaskField</span></a>
-  <span class="Identifier">patch</span><span class="Other">:</span> <a href="version.html#VersionMaskField"><span class="Identifier">VersionMaskField</span></a>
+  <span class="Identifier">major</span><span class="Operator">*</span><span class="Other">:</span> <a href="version.html#VersionMaskField"><span class="Identifier">VersionMaskField</span></a>
+  <span class="Identifier">minor</span><span class="Operator">*</span><span class="Other">:</span> <a href="version.html#VersionMaskField"><span class="Identifier">VersionMaskField</span></a>
+  <span class="Identifier">patch</span><span class="Operator">*</span><span class="Other">:</span> <a href="version.html#VersionMaskField"><span class="Identifier">VersionMaskField</span></a>
 </pre></dt>
 <dd>
 
@@ -1157,16 +1167,6 @@ true if the versionfield value passes the mask
 like [int] but clashless
 
 </dd>
-<a id="[],T,VersionIndex"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%2CT%2CVersionIndex"><span class="Identifier">`[]`</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">:</span> <span class="Identifier">Version</span> <span class="Operator">|</span> <a href="version.html#VersionMask"><span class="Identifier">VersionMask</span></a><span class="Other">]</span><span class="Other">(</span><span class="Identifier">version</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">;</span> <span class="Identifier">index</span><span class="Other">:</span> <a href="version.html#VersionIndex"><span class="Identifier">VersionIndex</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">auto</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">deprecated</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-  <div class="deprecation-message">
-    <b>Deprecated</b> 
-  </div>
-
-deprecated because it doesn't seem to work consistently
-
-</dd>
 <a id="[]=,VersionMask,VersionIndex,VersionMaskField"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%3D%2CVersionMask%2CVersionIndex%2CVersionMaskField"><span class="Identifier">`[]=`</span></a><span class="Other">(</span><span class="Identifier">mask</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="version.html#VersionMask"><span class="Identifier">VersionMask</span></a><span class="Other">;</span> <span class="Identifier">index</span><span class="Other">:</span> <a href="version.html#VersionIndex"><span class="Identifier">VersionIndex</span></a><span class="Other">;</span> <span class="Identifier">value</span><span class="Other">:</span> <a href="version.html#VersionMaskField"><span class="Identifier">VersionMaskField</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
@@ -1220,6 +1220,27 @@ true if the requirement is satisfied by the specification
 parse a version, mask, or tag with an operator hint from the requirement
 
 </dd>
+<a id="hash,VersionMaskField"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#hash%2CVersionMaskField"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">field</span><span class="Other">:</span> <a href="version.html#VersionMaskField"><span class="Identifier">VersionMaskField</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+help hash version masks
+
+</dd>
+<a id="hash,VersionMask"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#hash%2CVersionMask"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">mask</span><span class="Other">:</span> <a href="version.html#VersionMask"><span class="Identifier">VersionMask</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+uniquely identify a version mask
+
+</dd>
+<a id="hash,Release"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#hash%2CRelease"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">release</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+uniquely identify a release
+
+</dd>
 <a id="hash,Requirement"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#hash%2CRequirement"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">req</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
@@ -1232,6 +1253,14 @@ uniquely identify a requirement
 <dd>
 
 
+
+</dd>
+<a id="newRequirement,string,Operator,Release"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#newRequirement%2Cstring%2COperator%2CRelease"><span class="Identifier">newRequirement</span></a><span class="Other">(</span><span class="Identifier">id</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">operator</span><span class="Other">:</span> <a href="version.html#Operator"><span class="Identifier">Operator</span></a><span class="Other">;</span> <span class="Identifier">release</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a><span class="Other">)</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+create a requirement from a release, eg. that of a project
 
 </dd>
 <a id="newRequirement,string,Operator,string"></a>
@@ -1272,6 +1301,22 @@ parse a <tt class="docutils literal"><span class="pre">requires</span></tt> stri
 try to determine the distribution url for a requirement
 
 </dd>
+<a id="importName,Target"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#importName%2CTarget"><span class="Identifier">importName</span></a><span class="Other">(</span><span class="Identifier">target</span><span class="Other">:</span> <span class="Identifier">Target</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span>
+                                      <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+a uniform name usable in code for imports
+
+</dd>
+<a id="importName,Requirement"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#importName%2CRequirement"><span class="Identifier">importName</span></a><span class="Other">(</span><span class="Identifier">requirement</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
 
 </dl></div>
 <div class="section" id="15">
@@ -1301,7 +1346,7 @@ try to determine the distribution url for a requirement
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-01 01:56:36 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-03 03:27:28 UTC</small>
       </div>
     </div>
   </div>

@@ -16,7 +16,7 @@
 <link href='https://fonts.googleapis.com/css?family=Source+Code+Pro:400,500,600' rel='stylesheet' type='text/css'/>
 
 <!-- CSS -->
-<title>nimble</title>
+<title>locker</title>
 <style type="text/css" >
 /*
 Stylesheet for use with Docutils/rst2html.
@@ -804,7 +804,7 @@ function main() {
 <body onload="main()">
 <div class="document" id="documentId">
   <div class="container">
-    <h1 class="title">nimble</h1>
+    <h1 class="title">locker</h1>
     <div class="row">
   <div class="three columns">
   <div id="global-links">
@@ -832,41 +832,44 @@ function main() {
 <li>
   <a class="reference reference-toplevel" href="#7" id="57">Types</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#DumpResult"
-    title="DumpResult = object
-  table*: StringTableRef
-  why*: string
-  ok*: bool"><wbr />Dump<wbr />Result<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#RunNimbleOutput"
-    title="RunNimbleOutput = tuple[output: string, ok: bool]"><wbr />Run<wbr />Nimble<wbr />Output<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#NimbleMeta"
-    title="NimbleMeta = ref object
-  js: JsonNode
-  link: seq[string]"><wbr />Nimble<wbr />Meta<span class="attachedType"></span></a></li>
+      <li><a class="reference" href="#Locker"
+    title="Locker = ref object
+  name*: string
+  url*: Uri
+  requirement*: Requirement
+  dist*: DistMethod
+  release*: Release"><wbr />Locker<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#LockerRoom"
+    title="LockerRoom = ref object of NimphGroup[string, Locker]
+  root*: Locker"><wbr />Locker<wbr />Room<span class="attachedType"></span></a></li>
 
   </ul>
 </li>
 <li>
   <a class="reference reference-toplevel" href="#12" id="62">Procs</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#runNimble%2Cseq%5BT%5D%5Bstring%5D%2Cset%5BProcessOption%5D%2Cstring"
-    title="runNimble(args: seq[string]; options: set[ProcessOption]; nimbleDir = &quot;&quot;): RunNimbleOutput"><wbr />run<wbr />Nimble<span class="attachedType">RunNimbleOutput</span></a></li>
-  <li><a class="reference" href="#parseNimbleDump%2Cstring"
-    title="parseNimbleDump(input: string): Option[StringTableRef]"><wbr />parse<wbr />Nimble<wbr />Dump<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#fetchNimbleDump%2Cstring%2Cstring"
-    title="fetchNimbleDump(path: string; nimbleDir = &quot;&quot;): DumpResult"><wbr />fetch<wbr />Nimble<wbr />Dump<span class="attachedType">DumpResult</span></a></li>
-  <li><a class="reference" href="#hasUrl%2CNimbleMeta"
-    title="hasUrl(meta: NimbleMeta): bool"><wbr />has<wbr />Url<span class="attachedType">NimbleMeta</span></a></li>
-  <li><a class="reference" href="#url%2CNimbleMeta"
-    title="url(meta: NimbleMeta): Uri"><wbr />url<span class="attachedType">NimbleMeta</span></a></li>
-  <li><a class="reference" href="#writeNimbleMeta%2Cstring%2CUri%2Cstring"
-    title="writeNimbleMeta(path: string; url: Uri; revision: string): bool"><wbr />write<wbr />Nimble<wbr />Meta<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#isLink%2CNimbleMeta"
-    title="isLink(meta: NimbleMeta): bool"><wbr />is<wbr />Link<span class="attachedType">NimbleMeta</span></a></li>
-  <li><a class="reference" href="#isValid%2CNimbleMeta"
-    title="isValid(meta: NimbleMeta): bool"><wbr />is<wbr />Valid<span class="attachedType">NimbleMeta</span></a></li>
-  <li><a class="reference" href="#fetchNimbleMeta%2Cstring"
-    title="fetchNimbleMeta(path: string): NimbleMeta"><wbr />fetch<wbr />Nimble<wbr />Meta<span class="attachedType">NimbleMeta</span></a></li>
+      <li><a class="reference" href="#hash%2CLocker"
+    title="hash(locker: Locker): Hash"><wbr />hash<span class="attachedType">Locker</span></a></li>
+  <li><a class="reference" href="#hash%2CLockerRoom"
+    title="hash(room: LockerRoom): Hash"><wbr />hash<span class="attachedType">LockerRoom</span></a></li>
+  <li><a class="reference" href="#newLockerRoom"
+    title="newLockerRoom(): LockerRoom"><wbr />new<wbr />Locker<wbr />Room<span class="attachedType">LockerRoom</span></a></li>
+  <li><a class="reference" href="#newLockerRoom%2CProject"
+    title="newLockerRoom(project: Project): LockerRoom"><wbr />new<wbr />Locker<wbr />Room<span class="attachedType">LockerRoom</span></a></li>
+  <li><a class="reference" href="#add%2CLockerRoom%2CRequirement%2Cstring%2CProject"
+    title="add(room: var LockerRoom; req: Requirement; name: string; project: Project)"><wbr />add<span class="attachedType">LockerRoom</span></a></li>
+  <li><a class="reference" href="#toJson%2CLocker"
+    title="toJson(locker: Locker): JsonNode"><wbr />to<wbr />Json<span class="attachedType">Locker</span></a></li>
+  <li><a class="reference" href="#toLocker%2CJsonNode"
+    title="toLocker(js: JsonNode): Locker"><wbr />to<wbr />Locker<span class="attachedType">Locker</span></a></li>
+  <li><a class="reference" href="#toJson%2CLockerRoom"
+    title="toJson(room: LockerRoom): JsonNode"><wbr />to<wbr />Json<span class="attachedType">LockerRoom</span></a></li>
+  <li><a class="reference" href="#toLockerRoom%2CJsonNode"
+    title="toLockerRoom(js: JsonNode): LockerRoom"><wbr />to<wbr />Locker<wbr />Room<span class="attachedType">LockerRoom</span></a></li>
+  <li><a class="reference" href="#getLockerRoom%2CProject%2Cstring%2CLockerRoom"
+    title="getLockerRoom(project: Project; name: string; room: var LockerRoom): bool"><wbr />get<wbr />Locker<wbr />Room<span class="attachedType">LockerRoom</span></a></li>
+  <li><a class="reference" href="#lock%2CProject%2Cstring"
+    title="lock(project: var Project; name: string): bool"><wbr />lock<span class="attachedType"></span></a></li>
 
   </ul>
 </li>
@@ -881,33 +884,27 @@ function main() {
   <div class="section" id="6">
 <h1><a class="toc-backref" href="#6">Imports</a></h1>
 <dl class="item">
-<a class="reference external" href="spec.html">spec</a>
+<a class="reference external" href="spec.html">spec</a>, <a class="reference external" href="version.html">version</a>, <a class="reference external" href="group.html">group</a>, <a class="reference external" href="config.html">config</a>, <a class="reference external" href="project.html">project</a>, <a class="reference external" href="dependency.html">dependency</a>, <a class="reference external" href="package.html">package</a>, <a class="reference external" href="asjson.html">asjson</a>
 </dl></div>
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
 <dl class="item">
-<a id="DumpResult"></a>
-<dt><pre><a href="nimble.html#DumpResult"><span class="Identifier">DumpResult</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">table</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">StringTableRef</span>
-  <span class="Identifier">why</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">ok</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+<a id="Locker"></a>
+<dt><pre><a href="locker.html#Locker"><span class="Identifier">Locker</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">url</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Uri</span>
+  <span class="Identifier">requirement</span><span class="Operator">*</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a>
+  <span class="Identifier">dist</span><span class="Operator">*</span><span class="Other">:</span> <a href="package.html#DistMethod"><span class="Identifier">DistMethod</span></a>
+  <span class="Identifier">release</span><span class="Operator">*</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a>
 </pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="RunNimbleOutput"></a>
-<dt><pre><a href="nimble.html#RunNimbleOutput"><span class="Identifier">RunNimbleOutput</span></a> <span class="Other">=</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">output</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">ok</span><span class="Other">:</span> <span class="Identifier">bool</span><span class="Other">]</span></pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="NimbleMeta"></a>
-<dt><pre><a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">js</span><span class="Other">:</span> <span class="Identifier">JsonNode</span>
-  <span class="Identifier">link</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span>
+<a id="LockerRoom"></a>
+<dt><pre><a href="locker.html#LockerRoom"><span class="Identifier">LockerRoom</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span> <span class="Keyword">of</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <a href="locker.html#Locker"><span class="Identifier">Locker</span></a><span class="Other">]</span>
+  <span class="Identifier">root</span><span class="Operator">*</span><span class="Other">:</span> <a href="locker.html#Locker"><span class="Identifier">Locker</span></a>
 </pre></dt>
 <dd>
 
@@ -919,76 +916,89 @@ function main() {
 <div class="section" id="12">
 <h1><a class="toc-backref" href="#12">Procs</a></h1>
 <dl class="item">
-<a id="runNimble,seq[T][string],set[ProcessOption],string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#runNimble%2Cseq%5BT%5D%5Bstring%5D%2Cset%5BProcessOption%5D%2Cstring"><span class="Identifier">runNimble</span></a><span class="Other">(</span><span class="Identifier">args</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">options</span><span class="Other">:</span> <span class="Identifier">set</span><span class="Other">[</span><span class="Identifier">ProcessOption</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">nimbleDir</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">)</span><span class="Other">:</span> <a href="nimble.html#RunNimbleOutput"><span class="Identifier">RunNimbleOutput</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span>
-    <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-run nimble
-
-</dd>
-<a id="parseNimbleDump,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#parseNimbleDump%2Cstring"><span class="Identifier">parseNimbleDump</span></a><span class="Other">(</span><span class="Identifier">input</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><span class="Identifier">StringTableRef</span><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-parse output from <tt class="docutils literal"><span class="pre">nimble dump</span></tt>
-
-</dd>
-<a id="fetchNimbleDump,string,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#fetchNimbleDump%2Cstring%2Cstring"><span class="Identifier">fetchNimbleDump</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">nimbleDir</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">)</span><span class="Other">:</span> <a href="nimble.html#DumpResult"><span class="Identifier">DumpResult</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span>
-    <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span>
-    <span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span>
-    <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-parse nimble dump output into a string table
-
-</dd>
-<a id="hasUrl,NimbleMeta"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#hasUrl%2CNimbleMeta"><span class="Identifier">hasUrl</span></a><span class="Other">(</span><span class="Identifier">meta</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-true if the metadata includes a url
-
-</dd>
-<a id="url,NimbleMeta"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#url%2CNimbleMeta"><span class="Identifier">url</span></a><span class="Other">(</span><span class="Identifier">meta</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Uri</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-return the url associated with the package
-
-</dd>
-<a id="writeNimbleMeta,string,Uri,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#writeNimbleMeta%2Cstring%2CUri%2Cstring"><span class="Identifier">writeNimbleMeta</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">;</span> <span class="Identifier">revision</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-try to write a new nimblemeta.json
-
-</dd>
-<a id="isLink,NimbleMeta"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#isLink%2CNimbleMeta"><span class="Identifier">isLink</span></a><span class="Other">(</span><span class="Identifier">meta</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="hash,Locker"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#hash%2CLocker"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">locker</span><span class="Other">:</span> <a href="locker.html#Locker"><span class="Identifier">Locker</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="isValid,NimbleMeta"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#isValid%2CNimbleMeta"><span class="Identifier">isValid</span></a><span class="Other">(</span><span class="Identifier">meta</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="hash,LockerRoom"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#hash%2CLockerRoom"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">room</span><span class="Other">:</span> <a href="locker.html#LockerRoom"><span class="Identifier">LockerRoom</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="fetchNimbleMeta,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#fetchNimbleMeta%2Cstring"><span class="Identifier">fetchNimbleMeta</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="newLockerRoom"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#newLockerRoom"><span class="Identifier">newLockerRoom</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="locker.html#LockerRoom"><span class="Identifier">LockerRoom</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-parse the nimblemeta.json file if it exists
+
+
+</dd>
+<a id="newLockerRoom,Project"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#newLockerRoom%2CProject"><span class="Identifier">newLockerRoom</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <a href="locker.html#LockerRoom"><span class="Identifier">LockerRoom</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="add,LockerRoom,Requirement,string,Project"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#add%2CLockerRoom%2CRequirement%2Cstring%2CProject"><span class="Identifier">add</span></a><span class="Other">(</span><span class="Identifier">room</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="locker.html#LockerRoom"><span class="Identifier">LockerRoom</span></a><span class="Other">;</span> <span class="Identifier">req</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="toJson,Locker"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#toJson%2CLocker"><span class="Identifier">toJson</span></a><span class="Other">(</span><span class="Identifier">locker</span><span class="Other">:</span> <a href="locker.html#Locker"><span class="Identifier">Locker</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">JsonNode</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="toLocker,JsonNode"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#toLocker%2CJsonNode"><span class="Identifier">toLocker</span></a><span class="Other">(</span><span class="Identifier">js</span><span class="Other">:</span> <span class="Identifier">JsonNode</span><span class="Other">)</span><span class="Other">:</span> <a href="locker.html#Locker"><span class="Identifier">Locker</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="toJson,LockerRoom"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#toJson%2CLockerRoom"><span class="Identifier">toJson</span></a><span class="Other">(</span><span class="Identifier">room</span><span class="Other">:</span> <a href="locker.html#LockerRoom"><span class="Identifier">LockerRoom</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">JsonNode</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="toLockerRoom,JsonNode"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#toLockerRoom%2CJsonNode"><span class="Identifier">toLockerRoom</span></a><span class="Other">(</span><span class="Identifier">js</span><span class="Other">:</span> <span class="Identifier">JsonNode</span><span class="Other">)</span><span class="Other">:</span> <a href="locker.html#LockerRoom"><span class="Identifier">LockerRoom</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="getLockerRoom,Project,string,LockerRoom"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#getLockerRoom%2CProject%2Cstring%2CLockerRoom"><span class="Identifier">getLockerRoom</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">room</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="locker.html#LockerRoom"><span class="Identifier">LockerRoom</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="lock,Project,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#lock%2CProject%2Cstring"><span class="Identifier">lock</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span>
+    <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">ERecoverableError</span><span class="Other">,</span> <span class="Identifier">EOFError</span><span class="Other">,</span>
+    <span class="Identifier">NPegException</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span>
+                         <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">WriteDirEffect</span><span class="Other">,</span>
+                         <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
 
 </dd>
 
@@ -1001,7 +1011,7 @@ parse the nimblemeta.json file if it exists
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-03 03:27:27 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-03 03:27:29 UTC</small>
       </div>
     </div>
   </div>
