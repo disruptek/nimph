@@ -310,13 +310,7 @@ proc remoteCreate*(remote: var GitRemote; repo: GitRepository;
 
 proc url*(remote: GitRemote): Uri =
   ## retrieve the url of a remote
-  result = parseUri($git_remote_url(remote))
-  # convert ssh syntax to uri syntax
-  if result.scheme == "" and "@" in result.path:
-    result.scheme = "git+ssh"
-    {.warning: "fix this terrible hack".}
-    if ":/" notin result.path:
-      result.path = result.path.replace(":", ":/~/")
+  result = parseUri($git_remote_url(remote)).normalizeUrl
 
 proc `==`*(a, b: GitOid): bool =
   result = 1 == git_oid_equal(a, b)

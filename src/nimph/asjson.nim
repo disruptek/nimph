@@ -6,6 +6,7 @@ import std/json
 
 import bump
 
+import nimph/spec
 import nimph/version
 import nimph/package
 
@@ -95,7 +96,12 @@ proc toJson*(dist: DistMethod): JsonNode =
 proc toDistMethod*(js: JsonNode): DistMethod =
   result = parseEnum[DistMethod](js.getStr)
 
-proc toJson*(url: Uri): JsonNode =
+proc toJson*(uri: Uri): JsonNode =
+  let url = case uri.scheme:
+  of "ssh", "":
+    uri.convertToSsh
+  else:
+    uri.normalizeUrl
   result = newJString($url)
 
 proc toUri*(js: JsonNode): Uri =
