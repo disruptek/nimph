@@ -651,6 +651,8 @@ iterator missingSearchPaths*(project: Project; target: Project): string =
   let
     path = target.determineSearchPath / ""
   block found:
+    if not path.dirExists:
+      break
     for search in project.cfg.packagePaths(exists = false):
       if search == path:
         break found
