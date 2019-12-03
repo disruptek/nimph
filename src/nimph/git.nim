@@ -23,6 +23,25 @@ when false:
       goRefDelta    = (GIT_OBJECT_REF_DELTA, "ref")
 else:
   type
+    GitRepoState* = enum
+      rsNone                  = (GIT_REPOSITORY_STATE_NONE, "none")
+      rsMerge                 = (GIT_REPOSITORY_STATE_MERGE, "merge")
+      rsRevert                = (GIT_REPOSITORY_STATE_REVERT, "revert")
+      rsRevertSequence        = (GIT_REPOSITORY_STATE_REVERT_SEQUENCE,
+                                 "revert sequence")
+      rsCherrypick            = (GIT_REPOSITORY_STATE_CHERRYPICK, "cherrypick")
+      rsCherrypickSequence    = (GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE,
+                                 "cherrypick sequence")
+      rsBisect                = (GIT_REPOSITORY_STATE_BISECT, "bisect")
+      rsRebase                = (GIT_REPOSITORY_STATE_REBASE, "rebase")
+      rsRebaseInteractive     = (GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,
+                                 "rebase interactive")
+      rsRebaseMerge           = (GIT_REPOSITORY_STATE_REBASE_MERGE,
+                                 "rebase merge")
+      rsApplyMailbox          = (GIT_REPOSITORY_STATE_APPLY_MAILBOX,
+                                 "apply mailbox")
+      rsApplyMailboxOrRebase  = (GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
+                                 "apply mailbox or rebase")
     GitObject* = ptr git_object
     GitObjectKind* = enum
       goAny         = (2 + GIT_OBJECT_ANY, "object")
