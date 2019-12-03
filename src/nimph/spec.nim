@@ -74,11 +74,31 @@ proc pathToImport*(path: string): string =
   result = path.lastPathPart.split("-")[0]
   assert result.len > 0
 
-proc convertToGit*(uri: Uri): Uri =
+proc normalizeUrl*(uri: Uri): Uri =
   result = uri
+  if result.scheme == "" and result.path.startsWith("git@github.com:"):
+    result.path = result.path["git@github.com:".len .. ^1]
+    result.username = "git"
+    result.hostname = "github.com"
+    result.scheme = "ssh"
+
+proc convertToGit*(uri: Uri): Uri =
+  result = uri.normalizeUrl
   if not result.path.endsWith(".git"):
     result.path &= ".git"
   result.scheme = "git"
+  result.username = ""
+
+proc convertToSsh*(uri: Uri): Uri =
+  result = uri.convertToGit
+  if result.path.startsWith("/"):
+    result.path = result.path[1..^1]
+  if result.username == "":
+    result.username = "git"
+  result.path = result.username & "@" & result.hostname & ":" & result.path
+  result.username = ""
+  result.hostname = ""
+  result.scheme = ""
 
 proc packageName*(name: string): string =
   ## return a string that is plausible as a module name

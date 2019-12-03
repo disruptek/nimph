@@ -866,7 +866,7 @@ proc promoteFork*(project: Project; repo: HubRepo; name: string): bool =
           break
         # and make a new origin remote using the hubrepo's url
         gitTrap upstream, remoteCreate(upstream, open.repo,
-                                       defaultRemote, repo.git):
+                                       defaultRemote, repo.git.convertToSsh):
           # this'll issue some errors for us, too...
           break
         # success
