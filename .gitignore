@@ -3,3 +3,4 @@ tests/tnimble
 tests/tpackage
 tests/tspec
 nim.cfg
+nimph.json
