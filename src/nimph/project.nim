@@ -641,7 +641,8 @@ proc determineSearchPath(project: Project): string =
       if srcDir != "":
         withinDirectory(project.repo):
           result = srcDir.absolutePath
-        break
+        if result.dirExists:
+          break
     result = project.repo
   result = result / ""
 
@@ -652,6 +653,7 @@ iterator missingSearchPaths*(project: Project; target: Project): string =
     path = target.determineSearchPath / ""
   block found:
     if not path.dirExists:
+      warn &"search path for {project.name} doesn't exist"
       break
     for search in project.cfg.packagePaths(exists = false):
       if search == path:
