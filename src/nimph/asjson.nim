@@ -69,7 +69,7 @@ proc toJson*(release: Release): JsonNode =
     result["version"] = release.version.toJson
 
 proc toRelease*(js: JsonNode): Release =
-  result.kind = js["operator"].toOperator
+  result = Release(kind: js["operator"].toOperator)
   case result.kind:
   of Tag:
     result.reference = js["reference"].getStr
