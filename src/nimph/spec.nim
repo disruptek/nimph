@@ -132,4 +132,7 @@ proc importName*(path: string): string =
   result = path.pathToImport.packageName
 
 proc importName*(url: Uri): string =
-  result = url.packageName.importName
+  if url.scheme == "file":
+    result = url.path.importName
+  else:
+    result = url.packageName.importName
