@@ -120,7 +120,7 @@ proc packageName*(name: string): string =
   if sane.isSome:
     result = sane.get
   else:
-    raise newException(ValueError, "unable to sanitize " & name)
+    raise newException(ValueError, "unable to sanitize `" & name & "`")
 
 proc packageName*(url: Uri): string =
   ## guess the import name of a package from a url
