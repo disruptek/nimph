@@ -10,6 +10,13 @@ export cutelog
 
 import nimph/sanitize
 
+type
+  Flag* {.pure.} = enum
+    Quiet
+    Strict
+    Force
+    Dry
+
 const
   dotNimble* {.strdefine.} = "".addFileExt("nimble")
   dotNimbleLink* {.strdefine.} = "".addFileExt("nimble-link")
@@ -31,6 +38,7 @@ const
   excludeMissingPaths* {.booldefine.} = false
   writeNimbleDirPaths* {.booldefine.} = false
   shortDate* = initTimeFormat "yyyy-MM-dd"
+  defaultFlags*: set[Flag] = {Quiet, Strict}
 
   # when true, try to clamp analysis to project-local directories
   WhatHappensInVegas* = false

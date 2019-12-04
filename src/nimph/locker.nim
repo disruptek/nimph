@@ -22,13 +22,13 @@ type
     requirement*: Requirement
     dist*: DistMethod
     release*: Release
-  LockerRoom* = ref object of NimphGroup[string, Locker]
+  LockerRoom* = ref object of Group[string, Locker]
     name*: string
     root*: Locker
 
 const
   # we use "" as a sigil to indicate the root of the project because
-  # it's not a valid import name and won't be accepted by NimphGroup
+  # it's not a valid import name and won't be accepted by Group
   rootName = ""
 
 proc hash*(locker: Locker): Hash =
@@ -51,9 +51,9 @@ proc `==`(a, b: Locker): bool =
 proc `==`(a, b: LockerRoom): bool =
   result = a.hash == b.hash
 
-proc newLockerRoom*(name = ""): LockerRoom =
-  result = LockerRoom(name: name)
-  result.init(mode = modeStyleInsensitive)
+proc newLockerRoom*(name = ""; flags: set[Flag] = defaultFlags): LockerRoom =
+  result = LockerRoom(name: name, flags: flags)
+  result.init(flags, mode = modeStyleInsensitive)
 
 proc newLocker(requirement: Requirement): Locker =
   result = Locker(requirement: requirement)
@@ -115,17 +115,8 @@ proc populate(room: var LockerRoom; dependencies: DependencyGroup): bool =
         for name in dependency.names.items:
           if project.dist != Git:
             warn &"{project} isn't in git; it's {project.dist} {project.repo}"
-          else:
-            let state = repositoryState(project.repo)
-            if state != GitRepoState.rsNone:
-              warn &"{project} repository in invalid {state} state"
-            block keepgoing:
-              block refuselock:
-                for n in status(project.repo, ssIndexAndWorkdir):
-                  warn &"{project} repository has been modified"
-                  break refuselock
-                break keepgoing
-              continue
+          elif not project.repoLockReady:
+            result = false
           if room.hasKey(name):
             warn &"clashing import {name}"
             result = false

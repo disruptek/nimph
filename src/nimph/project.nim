@@ -63,7 +63,7 @@ type
     parent*: Project
     develop*: LinkedSearchResult
 
-  ProjectGroup* = NimphGroup[string, Project]
+  ProjectGroup* = Group[string, Project]
 
   Dependency* = object
     url*: Uri
@@ -550,14 +550,14 @@ iterator packageDirectories(project: Project): string =
   for directory in project.cfg.packagePaths(exists = true):
     yield directory
 
-proc newProjectGroup*(): ProjectGroup =
+proc newProjectGroup*(flags: set[Flag] = defaultFlags): ProjectGroup =
   const mode =
     when FilesystemCaseSensitive:
       modeCaseSensitive
     else:
       modeCaseInsensitive
-  result = ProjectGroup()
-  result.init(mode = mode)
+  result = ProjectGroup(flags: flags)
+  result.init(flags, mode = mode)
 
 proc importName*(linked: LinkedSearchResult): string =
   ## a uniform name usable in code for imports

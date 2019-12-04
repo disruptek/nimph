@@ -39,7 +39,7 @@ type
     path*: string
     author*: string
 
-  PackageGroup* = NimphGroup[string, Package]
+  PackageGroup* = Group[string, Package]
 
   PackagesResult* = object
     ok*: bool
@@ -76,11 +76,10 @@ proc `$`*(package: Package): string =
   if package.naive:
     result &= " (???)"
 
-proc newPackageGroup*(): PackageGroup =
+proc newPackageGroup*(flags: set[Flag] = defaultFlags): PackageGroup =
   ## instantiate a new package group for collecting a list of packages
-  result = PackageGroup()
-  #result.init(string, Package, mode = modeStyleInsensitive)
-  result.init(mode = modeStyleInsensitive)
+  result = PackageGroup(flags: flags)
+  result.init(flags, mode = modeStyleInsensitive)
 
 proc aimAt*(package: Package; req: Requirement): Package =
   ## produce a refined package which might meet the requirement

@@ -17,9 +17,17 @@ import nimph/dependency
 import nimph/group
 import nimph/git as git
 
-proc doctor*(project: var Project; dry = true): bool =
+proc doctor*(project: var Project; dry = true; strict = true): bool =
   ## perform some sanity tests against the project and
   ## try to fix any issues we find unless `dry` is true
+  var
+    flags: set[Flag] = {}
+
+  template toggle(x: typed; flag: Flag; test: bool) =
+    if test: x.incl flag else: x.excl flag
+
+  flags.toggle Dry, dry
+  flags.toggle Strict, strict
 
   block configuration:
     let
@@ -156,7 +164,7 @@ proc doctor*(project: var Project; dry = true): bool =
   block dependencies:
     var
       tryAgain = true
-      group = newDependencyGroup()
+      group = newDependencyGroup(flags)
       iteration = 0
     #for iteration in 0 .. 1:
     while tryAgain:
@@ -165,7 +173,7 @@ proc doctor*(project: var Project; dry = true): bool =
       if iteration > 0:
         fatal "👍environment changed; re-examining dependencies..."
         project.cfg = loadAllCfgs(project.repo)
-        group = newDependencyGroup()
+        group = newDependencyGroup(flags)
 
       # by default, we won't try this again
       tryAgain = false

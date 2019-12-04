@@ -25,11 +25,7 @@ type
     packages*: PackageGroup
     projects*: ProjectGroup
 
-  Flag* {.pure.} = enum
-    Quiet
-
-  DependencyGroup* = ref object of NimphGroup[Requirement, Dependency]
-    flags*: set[Flag]
+  DependencyGroup* = ref object of Group[Requirement, Dependency]
 
 proc name*(dependency: Dependency): string =
   result = dependency.names.join("|")
@@ -42,9 +38,9 @@ proc newDependency*(requirement: Requirement): Dependency =
   result.projects = newProjectGroup()
   result.packages = newPackageGroup()
 
-proc newDependencyGroup*(flags: set[Flag] = {}): DependencyGroup =
+proc newDependencyGroup*(flags: set[Flag]): DependencyGroup =
   result = DependencyGroup(flags: flags)
-  result.init(mode = modeStyleInsensitive)
+  result.init(flags, mode = modeStyleInsensitive)
 
 proc contains*(dependencies: DependencyGroup; package: Package): bool =
   for name, dependency in dependencies.pairs:
@@ -197,11 +193,11 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
       elif project.version.isValid:
         result = newRelease(project.version) in req
 
-proc get*[K: Requirement, V](group: NimphGroup[K, V]; key: K): V =
+proc get*[K: Requirement, V](group: Group[K, V]; key: K): V =
   ## fetch a package from the group using style-insensitive lookup
   result = group.table[key]
 
-proc mget*[K: Requirement, V](group: var NimphGroup[K, V]; key: K): var V =
+proc mget*[K: Requirement, V](group: var Group[K, V]; key: K): var V =
   ## fetch a package from the group using style-insensitive lookup
   result = group.table[key]
 
