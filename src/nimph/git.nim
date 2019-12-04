@@ -362,7 +362,8 @@ proc clone*(got: var GitClone; uri: Uri; path: string; branch = ""): int =
   if result != 0:
     return
 
-  got.options.checkout_branch = ""
+  if branch != "":
+    got.options.checkout_branch = branch
   got.url = $uri
   got.directory = path
 
