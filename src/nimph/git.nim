@@ -93,14 +93,38 @@ else:
                                  "include unreadable")
 
     GitResultCode* = enum
-      grcOk          = (-1 * GIT_OK, "ok")
-      grcError       = (-1 * GIT_ERROR, "generic error")
-      grcNotFound    = (-1 * GIT_ENOTFOUND, "not found")
-      grcExists      = (-1 * GIT_EEXISTS, "object exists")
-      grcAmbiguous   = (-1 * GIT_EAMBIGUOUS, "ambiguous match")
-      grcBuffer      = (-1 * GIT_EBUFS, "buffer overflow")
-      grcUser        = (-1 * GIT_EUSER, "user-specified")
-      # ...
+      grcOk              = (-1 * GIT_OK, "ok")
+      grcError           = (-1 * GIT_ERROR, "generic error")
+      # this space intentionally left blank
+      grcNotFound        = (-1 * GIT_ENOTFOUND, "not found")
+      grcExists          = (-1 * GIT_EEXISTS, "object exists")
+      grcAmbiguous       = (-1 * GIT_EAMBIGUOUS, "ambiguous match")
+      grcBuffer          = (-1 * GIT_EBUFS, "buffer overflow")
+      grcUser            = (-1 * GIT_EUSER, "user-specified")
+      grcBareRepo        = (-1 * GIT_EBAREREPO, "bare repository")
+      grcUnbornBranch    = (-1 * GIT_EUNBORNBRANCH, "unborn branch")
+      grcUnmerged        = (-1 * GIT_EUNMERGED, "unmerged")
+      grcNonFastForward  = (-1 * GIT_ENONFASTFORWARD, "not fast-forward")
+      grcInvalidSpec     = (-1 * GIT_EINVALIDSPEC, "invalid spec")
+      grcConflict        = (-1 * GIT_ECONFLICT, "conflict")
+      grcLocked          = (-1 * GIT_ELOCKED, "locked")
+      grcModified        = (-1 * GIT_EMODIFIED, "modified")
+      grcAuthentication  = (-1 * GIT_EAUTH, "authentication")
+      grcCertificate     = (-1 * GIT_ECERTIFICATE, "certificate")
+      grcApplied         = (-1 * GIT_EAPPLIED, "applied")
+      grcPeel            = (-1 * GIT_EPEEL, "peel")
+      grcEndOfFile       = (-1 * GIT_EEOF, "end-of-file")
+      grcInvalid         = (-1 * GIT_EINVALID, "invalid")
+      grcUncommitted     = (-1 * GIT_EUNCOMMITTED, "uncommitted")
+      grcDirectory       = (-1 * GIT_EDIRECTORY, "directory")
+      grcMergeConflict   = (-1 * GIT_EMERGE_CONFLICT, "merge conflict")
+      # this space intentionally left blank
+      grcPassThrough     = (-1 * GIT_PASSTHROUGH, "pass-through")
+      grcIterOver        = (-1 * GIT_ITEROVER, "end of iteration")
+      grcRetry           = (-1 * GIT_RETRY, "retry")
+      grcMismatch        = (-1 * GIT_EMISMATCH, "hash mismatch")
+      grcIndexDirty      = (-1 * GIT_EINDEXDIRTY, "dirty index")
+      grcApplyFail       = (-1 * GIT_EAPPLYFAIL, "patch failed")
 
     GitErrorClass* = enum
       gecNone        = (GIT_ERROR_NONE, "none")
@@ -522,9 +546,7 @@ proc getHeadOid*(repository: GitRepository): Option[GitOid] =
     of grcOk, grcNotFound:
       discard
     else:
-      error "hey: ", $code.ord
       dumpError()
-      error "hey: ", $code.ord
     return
   result = head.oid.some
 
