@@ -392,7 +392,7 @@ proc suggestNimbleDir*(config: ConfigRef; local = ""; global = ""): string =
 iterator pathSubsFor(config: ConfigRef; sub: string; conf: string): string =
   ## a convenience to work around the compiler's broken pathSubs
   if sub.toLowerAscii in ["nimbledir", "nimblepath"]:
-    when NimMajor <= 1 and NimMinor < 1:
+    when declaredInScope nimbleSubs:
       # we have to pick the first lazy path because that's what Nimble does
       block found:
         for search in config.lazyPaths:
