@@ -79,7 +79,8 @@ proc add*[K: string, V](group: Group[K, V]; url: Uri; value: V) =
     naked = url.bare
     key = $naked
   group.table.add key, value
-  {.warning: "does this make sense?  when?".}
+  # this gets picked up during instant-instantiation of a package from
+  # a project's url, a la asPackage(project: Project): Package ...
   group.addName naked.importName, key
 
 iterator pairs*[K, V](group: Group[K, V]): tuple[key: K; val: V] =
