@@ -58,6 +58,7 @@ output (and optional repair) of the environment it finds itself in.
 - [Locking the Dependency Tree by Name](https://github.com/disruptek/nimph#lock)
 - [Rolling the Dependency Tree by Name](https://github.com/disruptek/nimph#unlock)
 - [Cutting New Release Versions+Tags](https://github.com/disruptek/nimph#bump)
+- [Nimble Subcommand Auto-Integration](https://github.com/disruptek/nimph#nimble-subcommands)
 - [Tweaking Nimph Behavior Constants](https://github.com/disruptek/nimph#hacking)
 - [Nimph Module Documentation](https://github.com/disruptek/nimph#documentation)
 
