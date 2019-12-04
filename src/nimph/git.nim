@@ -10,7 +10,7 @@ import nimgit2
 
 when git2SetVer == "master":
   discard
-elif git2SetVer == "0.28.3":
+elif git2SetVer == "v0.28.3":
   discard
 else:
   {.error: "libgit2 version " & git2SetVer & " unsupported".}
@@ -362,7 +362,7 @@ proc clone*(got: var GitClone; uri: Uri; path: string; branch = ""): int =
   if result != 0:
     return
 
-  got.options.checkout_branch = branch
+  got.options.checkout_branch = ""
   got.url = $uri
   got.directory = path
 
@@ -509,7 +509,7 @@ when git2SetVer == "master":
         yield git_status_byindex(statum, index.cuint)
     free(options)
     free(statum)
-elif git2SetVer == "0.28.3":
+else:
   iterator status*(repository: GitRepository; show: GitStatusShow;
                    flags = DefaultStatusFlags): GitStatus =
     raise newException(ValueError, "you need a newer libgit2 to do that")
