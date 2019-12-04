@@ -180,6 +180,19 @@ $ nimph lock works with latest npeg
 👌locked nimph-#0.0.26 as `works with latest npeg`
 ```
 
+### Bump
+
+The `bump` tool is included as a dependency; it provides easy version and tag incrementing.
+
+```
+$ bump
+bump fixed a bug
+🎉1.0.3: fixed a bug
+🍻bumped
+```
+
+For complete `bump` documentation, see https://github.com/disruptek/bump
+
 ### Nimble Subcommands
 
 Any commands not mentioned above are passed directly to an instance of `nimble`
