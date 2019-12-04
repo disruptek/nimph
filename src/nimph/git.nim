@@ -1,3 +1,4 @@
+import std/options
 import std/strformat
 import std/bitops
 import std/os
@@ -91,6 +92,27 @@ else:
       soIncludeUnreadable     = (GIT_STATUS_OPT_INCLUDE_UNREADABLE,
                                  "include unreadable")
 
+    GitResultCode* = enum
+      grcOk          = (-1 * GIT_OK, "ok")
+      grcError       = (-1 * GIT_ERROR, "generic error")
+      grcNotFound    = (-1 * GIT_ENOTFOUND, "not found")
+      grcExists      = (-1 * GIT_EEXISTS, "object exists")
+      grcAmbiguous   = (-1 * GIT_EAMBIGUOUS, "ambiguous match")
+      grcBuffer      = (-1 * GIT_EBUFS, "buffer overflow")
+      grcUser        = (-1 * GIT_EUSER, "user-specified")
+      # ...
+
+    GitErrorClass* = enum
+      gecNone        = (GIT_ERROR_NONE, "none")
+      gecNoMemory    = (GIT_ERROR_NOMEMORY, "no memory")
+      gecOS          = (GIT_ERROR_OS, "operating system")
+      gecInvalid     = (GIT_ERROR_INVALID, "invalid")
+      gecReference   = (GIT_ERROR_REFERENCE, "reference")
+      gecZlib        = (GIT_ERROR_ZLIB, "zlib")
+      gecRepository  = (GIT_ERROR_REPOSITORY, "repository")
+      gecConfig      = (GIT_ERROR_CONFIG, "config error")
+      # ...
+
     GitObject* = ptr git_object
     GitObjectKind* = enum
       goAny         = (2 + GIT_OBJECT_ANY, "object")
@@ -133,6 +155,13 @@ type
     repo*: GitRepository
   GitTagTable* = OrderedTableRef[string, GitThing]
   GitStatus* = ptr git_status_entry
+  GitStatusList* = ptr git_status_list
+
+proc grc(code: cint): GitResultCode =
+  result = cast[GitResultCode](ord(-1 * code))
+
+proc gec(code: int): GitErrorClass =
+  result = cast[GitErrorClass](code.ord)
 
 const
   CommonDefaultStatusFlags: set[GitStatusOption] = {
@@ -157,25 +186,42 @@ const
 template dumpError() =
   let err = git_error_last()
   if err != nil:
-    error $err.message
+    error $gec(err.klass) & " error: " & $err.message
 
-template gitFail*(allocd: typed; code: int; body: untyped) =
+template gitFail*(allocd: typed; code: untyped; body: untyped) =
+  ## a version of gitTrap that expects failure; no error messages!
+  block:
+    defer:
+      if code != grcOk:
+        free(allocd)
+    if code != grcOk:
+      body
+
+template gitFail*(allocd: typed; code: untyped; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
   defer:
-    if code == 0:
+    if code != grcOk:
       free(allocd)
-  if code != 0:
+  if code != grcOk:
     body
 
-template gitTrap*(allocd: typed; code: int; body: untyped) =
-  ## trap a git call, freeing the alloc'd argument if it succeeds
-  gitFail(allocd, code):
+template gitTrap*(allocd: typed; code: untyped; body: untyped) =
+  ## a version of gitTrap that expects failure; no error messages!
+  defer:
+    if code != grcOk:
+      free(allocd)
+  if code != grcOk:
     dumpError()
     body
 
-template gitTrap*(code: int; body: untyped) =
-  if code != 0:
+template gitTrap*(code: GitResultCode; body: untyped) =
+  if code != grcOk:
     dumpError()
+    body
+
+template gitFail*(code: GitResultCode; body: untyped) =
+  var code: GitResultCode = code
+  if code != grcOk:
     body
 
 proc init*(): bool =
@@ -352,14 +398,15 @@ proc newThing(obj: GitObject): GitThing =
   except:
     result = GitThing(kind: goAny, o: obj)
 
-proc clone*(got: var GitClone; uri: Uri; path: string; branch = ""): int =
+proc clone*(got: var GitClone; uri: Uri; path: string;
+            branch = ""): GitResultCode =
   ## clone a repository
   got.options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
   when git2SetVer == "master":
-    result = git_clone_options_init(got.options, GIT_CLONE_OPTIONS_VERSION)
+    result = git_clone_options_init(got.options, GIT_CLONE_OPTIONS_VERSION).grc
   else:
-    result = git_clone_init_options(got.options, GIT_CLONE_OPTIONS_VERSION)
-  if result != 0:
+    result = git_clone_init_options(got.options, GIT_CLONE_OPTIONS_VERSION).grc
+  if result != grcOk:
     return
 
   if branch != "":
@@ -367,30 +414,30 @@ proc clone*(got: var GitClone; uri: Uri; path: string; branch = ""): int =
   got.url = $uri
   got.directory = path
 
-  result = git_clone(addr got.repo, got.url, got.directory, got.options)
+  result = git_clone(addr got.repo, got.url, got.directory, got.options).grc
 
-proc repositoryHead*(tag: var GitReference; repo: GitRepository): int =
+proc repositoryHead*(tag: var GitReference; repo: GitRepository): GitResultCode =
   ## get the reference that points to HEAD
-  result = git_repository_head(addr tag, repo)
+  result = git_repository_head(addr tag, repo).grc
 
-proc headReference*(repo: GitRepository; tag: var GitReference): int =
+proc headReference*(repo: GitRepository; tag: var GitReference): GitResultCode =
   ## get the reference that points to HEAD
   result = repositoryHead(tag, repo)
 
-proc openRepository*(got: var GitOpen; path: string): int =
+proc openRepository*(got: var GitOpen; path: string): GitResultCode =
   got.path = path
-  result = git_repository_open(addr got.repo, got.path)
+  result = git_repository_open(addr got.repo, got.path).grc
 
 proc remoteLookup*(remote: var GitRemote; repo: GitRepository;
-                   name: string): int =
+                   name: string): GitResultCode =
   ## get the remote by name
-  result = git_remote_lookup(addr remote, repo, name)
+  result = git_remote_lookup(addr remote, repo, name).grc
 
-proc remoteRename*(repo: GitRepository; prior: string; next: string): int =
+proc remoteRename*(repo: GitRepository; prior: string; next: string): GitResultCode =
   ## rename a remote
   var
     list: git_strarray
-  result = git_remote_rename(addr list, repo, prior, next)
+  result = git_remote_rename(addr list, repo, prior, next).grc
   if list.count > 0'u:
     let problems = cstringArrayToSeq(cast[cstringArray](list.strings),
                                      list.count)
@@ -399,9 +446,9 @@ proc remoteRename*(repo: GitRepository; prior: string; next: string): int =
   git_strarray_free(addr list)
 
 proc remoteCreate*(remote: var GitRemote; repo: GitRepository;
-                   name: string; url: Uri): int =
+                   name: string; url: Uri): GitResultCode =
   ## create a new remote in the repository
-  result = git_remote_create(addr remote, repo, name, $url)
+  result = git_remote_create(addr remote, repo, name, $url).grc
 
 proc url*(remote: GitRemote): Uri =
   ## retrieve the url of a remote
@@ -413,33 +460,33 @@ proc `==`*(a, b: GitOid): bool =
 proc targetId*(thing: GitThing): GitOid =
   result = git_tag_target_id(cast[GitTag](thing.o))
 
-proc target*(thing: GitThing; target: var GitThing): int =
+proc target*(thing: GitThing; target: var GitThing): GitResultCode =
   var
     obj: GitObject
 
-  result = git_tag_target(addr obj, cast[GitTag](thing.o))
-  if result != 0:
+  result = git_tag_target(addr obj, cast[GitTag](thing.o)).grc
+  if result != grcOk:
     return
   target = newThing(obj)
 
-proc tagList*(repo: GitRepository; tags: var seq[string]): int =
+proc tagList*(repo: GitRepository; tags: var seq[string]): GitResultCode =
   ## retrieve a list of tags from the repo
   var
     list: git_strarray
-  result = git_tag_list(addr list, repo)
+  result = git_tag_list(addr list, repo).grc
   if list.count > 0'u:
     tags = cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
   git_strarray_free(addr list)
 
-proc lookupThing*(thing: var GitThing; repo: GitRepository; name: string): int =
+proc lookupThing*(thing: var GitThing; repo: GitRepository; name: string): GitResultCode =
   var
     obj: GitObject
-  result = git_revparse_single(addr obj, repo, name)
-  if result != 0:
+  result = git_revparse_single(addr obj, repo, name).grc
+  if result != grcOk:
     return
   thing = newThing(obj)
 
-proc tagTable*(repo: GitRepository; tags: var GitTagTable): int =
+proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
   ## compose a table of tags and their associated references
   var
     names: seq[string]
@@ -447,32 +494,49 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): int =
   tags = newOrderedTable[string, GitThing](32)
 
   result = tagList(repo, names)
-  if result != 0:
+  if result != grcOk:
     return
 
   for name in names.items:
     var
       thing, target: GitThing
     result = lookupThing(thing, repo, name)
-    if result != 0:
+    if result != grcOk:
       return
 
     if thing.kind == goTag:
       result = thing.target(target)
       free(thing)
-      if result != 0:
+      if result != grcOk:
         return
     else:
       target = thing
     tags.add name, target
 
-proc getHeadOid*(repository: GitRepository): GitOid =
+proc getHeadOid*(repository: GitRepository): Option[GitOid] =
   var
     head: GitReference
-  gitTrap head, repositoryHead(head, repository):
-    warn "error fetching repo head"
+  gitFail head, repositoryHead(head, repository):
+    var code: GitResultCode
+    case code:
+    of grcOk, grcNotFound:
+      discard
+    else:
+      error "hey: ", $code.ord
+      dumpError()
+      error "hey: ", $code.ord
     return
-  result = head.oid
+  result = head.oid.some
+
+proc getHeadOid*(path: string): Option[GitOid] =
+  ## retrieve the #head oid from a repository at the given path
+  var
+    open: GitOpen
+  withGit:
+    gitTrap open, openRepository(open, path):
+      let emsg = &"error opening repository {path}"
+      raise newException(IOError, emsg)
+    result = open.repo.getHeadOid
 
 proc repositoryState*(repository: GitRepository): GitRepoState =
   result = cast[GitRepoState](git_repository_state(repository))
@@ -491,7 +555,7 @@ when git2SetVer == "master":
                    flags = DefaultStatusFlags): GitStatus =
     ## iterate over files in the repo using the given search flags
     var
-      statum: ptr git_status_list
+      statum: GitStatusList
       options: ptr git_status_options = cast[ptr git_status_options](sizeof(git_status_options).alloc)
     block:
       if 0 != git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION):

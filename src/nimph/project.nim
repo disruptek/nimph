@@ -235,17 +235,7 @@ proc newProject*(nimble: Target): Project =
   result.name = splat.name
   result.config = newNimphConfig(splat.dir / configFile)
 
-proc getHeadOid(path: string): GitOid =
-  ## retrieve the #head oid from a repository at the given path
-  var
-    open: GitOpen
-  withGit:
-    gitTrap openRepository(open, path):
-      warn &"error opening repository {path}"
-      return
-    result = open.repo.getHeadOid
-
-proc getHeadOid*(project: Project): GitOid =
+proc getHeadOid*(project: Project): Option[GitOid] =
   ## retrieve the #head oid from the project's repository
   if project.dist != Git:
     let emsg = &"{project} lacks a git repository to load" # noqa
@@ -318,7 +308,7 @@ proc releaseSummary*(project: Project): string =
   if not project.release.isValid:
     return "⚠️(invalid release)"
   if project.release.kind != Tag:
-    return "⚠️(not tagged)"
+    return $project.release
   withGit:
     var
       thing: GitThing
@@ -337,16 +327,18 @@ proc cuteRelease*(project: Project): string =
   if project.dist == Git and project.release.isValid:
     let
       head = project.getHeadOid
-    if project.tags == nil:
+    if head.isNone:
+      result = ""
+    elif project.tags == nil:
       error "unable to determine tags without fetching them from git"
-      result = head.short(6)
+      result = head.get.short(6)
     else:
       block search:
         for tag, target in project.tags.pairs:
-          if target.oid == head:
+          if target.oid == head.get:
             result = $tag
             break search
-        result = head.short(6)
+        result = head.get.short(6)
   elif project.version.isValid:
     result = $project.version
   else:
@@ -358,16 +350,18 @@ proc findCurrentTag*(project: Project): Release =
     head = project.getHeadOid
   var
     name: string
-  if project.tags == nil:
+  if head.isNone:
+    name = ""
+  elif project.tags == nil:
     error "unable to determine tags without fetching them from git"
-    name = $head
+    name = $head.get
   else:
     block search:
       for tag, target in project.tags.pairs:
-        if target.oid == head:
+        if target.oid == head.get:
           name = $tag
           break search
-      name = $head
+      name = $head.get
   result = newRelease(name, operator = Tag)
 
 proc findCurrentTag*(project: var Project): Release =
@@ -380,26 +374,30 @@ proc findCurrentTag*(project: var Project): Release =
 
 proc inventRelease(project: var Project): Release {.discardable.} =
   ## compute the most accurate release specification for the project
-  if project.dist == Git:
-    project.release = project.findCurrentTag
-  elif project.url.anchor.len > 0:
-    project.release = newRelease(project.url.anchor, operator = Tag)
-  elif project.version.isValid:
-    project.release = newRelease(project.version)
-  else:
-    # grab the directory name
-    let name = repo(project).lastPathPart
-    # maybe it's package-something
-    var prefix = project.name & "-"
-    if name.startsWith(prefix):
-      # i'm lazy
-      let release = newRelease(name.split(prefix)[^1])
-      if release.kind in {Tag, Equal}:
-        warn &"had to resort to parsing reference from directory `{name}`"
-        project.release = release
-      else:
-        warn &"unable to parse reference from directory `{name}`"
-  result = project.release
+  block found:
+    if project.dist == Git:
+      result = project.findCurrentTag
+      if result.isValid:
+        project.release = result
+        break
+    if project.url.anchor.len > 0:
+      project.release = newRelease(project.url.anchor, operator = Tag)
+    elif project.version.isValid:
+      project.release = newRelease(project.version)
+    else:
+      # grab the directory name
+      let name = repo(project).lastPathPart
+      # maybe it's package-something
+      var prefix = project.name & "-"
+      if name.startsWith(prefix):
+        # i'm lazy
+        result = newRelease(name.split(prefix)[^1])
+        if result.kind in {Tag, Equal}:
+          warn &"had to resort to parsing reference from directory `{name}`"
+          project.release = result
+        else:
+          warn &"unable to parse reference from directory `{name}`"
+    result = project.release
 
 proc guessDist(project: Project): DistMethod =
   ## guess at the distribution method used to deposit the assets
@@ -462,10 +460,19 @@ proc findRepositoryUrl*(path: string; name = defaultRemote): Option[Uri] =
     gitTrap openRepository(open, path):
       warn &"error opening repository {path}"
       return
-    gitTrap remote, remoteLookup(remote, open.repo, name):
-      warn &"unable to fetch remote `{name}` from repo in {path}"
+    block found:
+      let r = remoteLookup(remote, open.repo, name)
+      case r:
+      of grcOk:
+        break found
+      of grcNotFound:
+        discard
+      else:
+        warn &"{r}: unable to fetch remote `{name}` from repo in {path}"
       result = Uri(scheme: "file", path: path.absolutePath / "").some
       return
+
+    defer: remote.free
     try:
       let url = remote.url
       if url.isValid:
@@ -715,10 +722,15 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
   withGit:
     var
       got: GitClone
+      head: Option[GitOid]
     gitTrap got, clone(got, bare, directory):
       return
 
-    oid = $getHeadOid(got.repo)
+    head = getHeadOid(got.repo)
+    if head.isNone:
+      oid = ""
+    else:
+      oid = $head.get
 
   var
     proj: Project
