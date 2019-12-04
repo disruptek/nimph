@@ -81,6 +81,23 @@ proc add*(room: var LockerRoom; req: Requirement; name: string;
         break found
     room.add name, locker
 
+proc repoLockReady(project: Project): bool =
+  result = true
+  withGit:
+    var open: GitOpen
+    gitTrap open, openRepository(open, project.repo):
+      result = false
+      warn &"unable to read {project} repository"
+      return
+    let state = repositoryState(open.repo)
+    if state != GitRepoState.rsNone:
+      result = false
+      warn &"{project} repository in invalid {state} state"
+    for n in status(project.repo, ssIndexAndWorkdir):
+      result = false
+      warn &"{project} repository has been modified"
+      break
+
 proc populate(room: var LockerRoom; dependencies: DependencyGroup): bool =
   ## fill a lockerroom with lockers
   result = true
