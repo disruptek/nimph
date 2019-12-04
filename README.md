@@ -50,6 +50,17 @@ flexible enough to operate on local dependencies, global packages, and anything
 in-between.  You can run it on any package, anywhere, and it will provide useful
 output (and optional repair) of the environment it finds itself in.
 
+- [Searching for New Nim Packages](https://github.com/disruptek/nimph#search)
+- [Adding Packages to the Environment](https://github.com/disruptek/nimph#clone)
+- [Checking the Environment for Errors](https://github.com/disruptek/nimph#doctor)
+- [Quickly Forking an Installed Package](https://github.com/disruptek/nimph#fork)
+- [Finding a Path via Nim Import Name](https://github.com/disruptek/nimph#path)
+- [Locking the Dependency Tree by Name](https://github.com/disruptek/nimph#lock)
+- [Rolling the Dependency Tree by Name](https://github.com/disruptek/nimph#unlock)
+- [Cutting New Release Versions+Tags](https://github.com/disruptek/nimph#bump)
+- [Tweaking Nimph Behavior Constants](https://github.com/disruptek/nimph#hacking)
+- [Nimph Module Documentation](https://github.com/disruptek/nimph#documentation)
+
 ### Search
 
 The `search` subcommand is used to query GitHub for packages.  Arguments should
