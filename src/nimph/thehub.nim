@@ -176,7 +176,7 @@ proc add*(group: var HubGroup; hub: HubResult) =
   {.warning: "nim bug #12818".}
   add[Uri, HubResult](group, hub.htmlUrl, hub)
 
-proc authorize*(request: var Recallable): bool =
+proc authorize*(request: Recallable): bool =
   let token = findGithubToken()
   result = token.isSome
   if result:
@@ -185,18 +185,15 @@ proc authorize*(request: var Recallable): bool =
   else:
     error "unable to find a github authorization token"
 
-proc forkHub*(owner: string; repo: string): Future[Option[HubResult]] {.async.} =
-  ## attempt to fork an existing repository
-  var
-    req = postReposOwnerRepoForks.call(repo, owner, body = newJObject())
-  debug &"forking owner `{owner}` repo `{repo}`"
+proc queryOne(recallable: Recallable; kind: HubKind): Future[Option[HubResult]]
+  {.async.} =
+  ## issue a recallable query and parse the response
 
-  # add our credentials
-  if not req.authorize:
+  # start with our credentials
+  if not recallable.authorize:
     return
 
-  let
-    response = await req.issueRequest()
+  let response = await recallable.issueRequest()
   if not response.code.is2xx:
     notice &"got response code {response.code} from github"
     return
@@ -204,9 +201,23 @@ proc forkHub*(owner: string; repo: string): Future[Option[HubResult]] {.async.} 
     body = await response.body
     js = parseJson(body)
   try:
-    result = newHubResult(HubRepo, js).some
+    result = newHubResult(kind, js).some
   except Exception as e:
-    warn "error parsing repo: " & e.msg
+    warn "error parsing github: " & e.msg
+
+proc getGitHubUser*(): Future[Option[HubResult]] {.async.} =
+  ## attempt to retrieve the authorized user
+  var
+    req = getUser.call()
+  debug &"fetching github user"
+  result = await req.queryOne(HubUser)
+
+proc forkHub*(owner: string; repo: string): Future[Option[HubResult]] {.async.} =
+  ## attempt to fork an existing repository
+  var
+    req = postReposOwnerRepoForks.call(repo, owner, body = newJObject())
+  debug &"forking owner `{owner}` repo `{repo}`"
+  result = await req.queryOne(HubRepo)
 
 proc searchHub*(keywords: seq[string]; sort = Best;
                 order = Descending): Future[Option[HubGroup]] {.async.} =

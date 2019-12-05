@@ -16,3 +16,15 @@ suite "spec":
     check $sshUrl.convertToSsh == $sshUrl
     check $gitUrl.convertToSsh == $sshUrl
     check $webUrl.convertToSsh == $sshUrl
+
+  test "fork targets":
+    for url in [
+      parseUri"git@github.com:disruptek/nimph.git",
+      parseUri"git://github.com/disruptek/nimph.git",
+      parseUri"https://github.com/disruptek/nimph",
+    ].items:
+      let fork {.used.} = url.forkTarget
+      checkpoint $url
+      checkpoint fork.repr
+      check fork.ok
+      check fork.owner == "disruptek" and fork.repo == "nimph"

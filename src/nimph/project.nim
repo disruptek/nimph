@@ -32,6 +32,7 @@ import std/os
 import std/osproc
 import std/sequtils
 import std/strtabs
+import std/asyncdispatch
 
 import bump
 
@@ -75,13 +76,6 @@ type
     via: LinkedSearchResult
     source: string
     search: SearchResult
-
-  ForkTargetResult* = object
-    ok*: bool
-    why*: string
-    owner*: string
-    repo*: string
-    url*: Uri
 
 template repo*(project: Project): string = project.nimble.repo
 template gitDir*(project: Project): string = project.repo / dotGit
@@ -683,7 +677,8 @@ iterator missingSearchPaths*(project: Project; target: var Project): string =
   for path in parent.missingSearchPaths(readonly):
     yield path
 
-proc clone*(project: var Project; url: Uri; name: string): bool =
+proc clone*(project: var Project; url: Uri; name: string;
+            cloned: var Project): bool =
   ## clone a package into the project's nimbleDir
   var
     bare = url
@@ -732,16 +727,14 @@ proc clone*(project: var Project; url: Uri; name: string): bool =
     else:
       oid = $head.get
 
-  var
-    proj: Project
-  if findProject(proj, directory, parent = project) and
-                 proj.repo == directory:
+  if findProject(cloned, directory, parent = project) and
+                 cloned.repo == directory:
     if not writeNimbleMeta(directory, bare, oid):
       warn &"unable to write {nimbleMeta} in {directory}"
-    proj.relocateDependency(oid)
+    cloned.relocateDependency(oid)
     # reload the project's config to see if we capture a new search path
     project.cfg = loadAllCfgs(project.repo)
-    for path in project.missingSearchPaths(proj):
+    for path in project.missingSearchPaths(cloned):
       if project.addSearchPath(path):
         info &"added path `{path}` to `{project.nimcfg}`"
       else:
@@ -814,27 +807,6 @@ proc numberOfNimblePaths*(project: Project): int =
   ## simpler count of effective --nimblePaths
   result = project.countNimblePaths.paths.len
 
-proc forkTarget*(url: Uri): ForkTargetResult =
-  result.url = url
-  block success:
-    if not url.isValid:
-      result.why = &"url is invalid"
-      break
-    if result.url.hostname.toLowerAscii != "github.com":
-      result.why = &"url {result.url} does not point to github"
-      break
-    if result.url.path.len < 1:
-      result.why = &"unable to parse url {result.url}"
-      break
-    # split /foo/bar into (bar, foo)
-    (result.owner, result.repo) = result.url.path[1..^1].splitPath
-    # strip .git
-    if result.repo.endsWith(".git"):
-      result.repo = result.repo[0..^len("git+2")]
-    result.ok = result.owner.len > 0 and result.repo.len > 0
-    if not result.ok:
-      result.why = &"unable to parse url {result.url}"
-
 proc forkTarget*(project: Project): ForkTargetResult =
   ## try to determine a github source of a project so that we can fork it
   result.ok = false
@@ -852,13 +824,20 @@ proc forkTarget*(project: Project): ForkTargetResult =
 proc `==`(x, y: ForkTargetResult): bool =
   result = x.ok == y.ok and x.owner == y.owner and x.repo == y.repo
 
-proc promoteFork*(project: Project; repo: HubResult; name: string): bool =
-  ## true if we were able to promote a repo to be our new origin
+proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool =
+  ## true if we were able to promote a url to be our new ssh origin
   var
     remote, upstream: GitRemote
     open: GitOpen
   let
     path = project.repo
+    ssh = url.convertToSsh
+    target = ssh.forkTarget
+
+  # make sure the programmer isn't an idiot
+  if project.dist != Git:
+    let emsg = &"nonsensical promotion on {project.dist} distribution" # noqa
+    raise newException(Defect, emsg)
 
   withGit:
     gitTrap openRepository(open, project.repo):
@@ -867,22 +846,32 @@ proc promoteFork*(project: Project; repo: HubResult; name: string): bool =
     gitTrap remote, remoteLookup(remote, open.repo, name):
       warn &"unable to fetch remote `{name}` from repo in {path}"
       return
+
     block donehere:
       try:
-        # maybe we've already pointed at the repo?
-        if remote.url.forkTarget == repo.git.forkTarget:
+        # maybe we've already pointed at the repo via ssh?
+        if remote.url == ssh:
           result = true
           break
+        # maybe we've already pointed at the repo, but we wanna upgrade the url
+        if remote.url.forkTarget == target:
+          info &"upgrading remote to ssh..."
       except:
         warn &"unparseable remote `{name}` from repo in {path}"
       gitFail upstream, remoteLookup(upstream, open.repo, upstreamRemote):
-        # there's no upstream remote; rename origin to upstream
-        gitTrap open.repo.remoteRename(name, upstreamRemote):
-          # this should issue warnings of any problems...
-          break
+        # there's no upstream remote; what do we do with origin?
+        if remote.url.forkTarget == target:
+          # the origin isn't an ssh remote; remove it
+          gitTrap open.repo.remoteDelete(name):
+            # this should issue warnings of any problems...
+            break
+        else:
+          # there's no upstream remote; rename origin to upstream
+          gitTrap open.repo.remoteRename(name, upstreamRemote):
+            # this should issue warnings of any problems...
+            break
         # and make a new origin remote using the hubrepo's url
-        gitTrap upstream, remoteCreate(upstream, open.repo,
-                                       defaultRemote, repo.git.convertToSsh):
+        gitTrap upstream, remoteCreate(upstream, open.repo, defaultRemote, ssh):
           # this'll issue some errors for us, too...
           break
         # success
@@ -898,3 +887,23 @@ proc promoteFork*(project: Project; repo: HubResult; name: string): bool =
           warn &"remote `{upstreamRemote}` is the same as `{name}` in {path}"
       except:
         warn &"unparseable remote `{upstreamRemote}` from repo in {path}"
+
+proc promote*(project: Project; name = defaultRemote;
+             user: HubResult = nil): bool =
+  var
+    user: HubResult = user
+  try:
+    let gotUser = waitfor getGitHubUser()
+    if gotUser.isSome:
+      user = gotUser.get
+    else:
+      debug &"unable to fetch github user"
+      return
+  except Exception as e:
+    warn e.msg
+    return
+
+  let
+    target = project.url.forkTarget
+  if target.ok and target.owner == user.login:
+    result = project.promoteRemoteLike(project.url, name = name)

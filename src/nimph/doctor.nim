@@ -202,7 +202,8 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         elif true or iteration == 0:
           block cloneokay:
             for package in dependency.packages.values:
-              if project.clone(package.url, package.name):
+              var cloned: Project
+              if project.clone(package.url, package.name, cloned):
                 tryAgain = true
                 break cloneokay
               else:

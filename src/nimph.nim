@@ -206,7 +206,7 @@ proc forker*(names: seq[string]; log_level = logLevel): int =
     fatal &"🔱{forked.get.web}"
     if child.dist == Git:
       let name = defaultRemote
-      if not child.promoteFork(forked.get, defaultRemote):
+      if not child.promoteRemoteLike(forked.get.git, name = name):
         notice &"unable to promote new fork to {name}"
     else:
       {.warning: "optionally upgrade a gitless install to clone".}
@@ -254,8 +254,14 @@ proc cloner*(args: seq[string]; log_level = logLevel): int =
   if not url.isValid:
     crash &"unable to determine a valid url to clone"
 
-  if not project.clone(url, name):
+  var
+    cloned: Project
+  if not project.clone(url, name, cloned):
     crash &"unable to clone {url}"
+
+  # try to point it at github if it looks like it's our repo
+  if not cloned.promote:
+    notice &"unable to promote url to ssh"
 
 when isMainModule:
   import cligen

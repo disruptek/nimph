@@ -1,3 +1,4 @@
+import std/strformat
 import std/options
 import std/strutils
 import std/hashes
@@ -16,6 +17,13 @@ type
     Strict
     Force
     Dry
+
+  ForkTargetResult* = object
+    ok*: bool
+    why*: string
+    owner*: string
+    repo*: string
+    url*: Uri
 
 const
   dotNimble* {.strdefine.} = "".addFileExt("nimble")
@@ -136,3 +144,25 @@ proc importName*(url: Uri): string =
     result = url.path.importName
   else:
     result = url.packageName.importName
+
+proc forkTarget*(url: Uri): ForkTargetResult =
+  result.url = url.normalizeUrl
+  block success:
+    if not result.url.isValid:
+      result.why = &"url is invalid"
+      break
+    if result.url.hostname.toLowerAscii != "github.com":
+      result.why = &"url {result.url} does not point to github"
+      break
+    if result.url.path.len < 1:
+      result.why = &"unable to parse url {result.url}"
+      break
+    # split /foo/bar into (bar, foo)
+    let start = if result.url.path.startsWith("/"): 1 else: 0
+    (result.owner, result.repo) = result.url.path[start..^1].splitPath
+    # strip .git
+    if result.repo.endsWith(".git"):
+      result.repo = result.repo[0..^len("git+2")]
+    result.ok = result.owner.len > 0 and result.repo.len > 0
+    if not result.ok:
+      result.why = &"unable to parse url {result.url}"
