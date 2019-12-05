@@ -127,7 +127,7 @@ proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
   of HubPull:
     result = HubResult(kind: HubPull)
     result.htmlUrl = js["pull_request"]["html_url"].getStr.parseUri
-    result.merged = js["merged"].getBool
+    result.merged = js.getOrDefault("merged").getBool
     if "merged_by" in js:
       result.mergedBy = HubUser.newHubResult(js["merged_by"])
   of HubRepo:
