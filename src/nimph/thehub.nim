@@ -147,7 +147,11 @@ proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
     result.issues = js["open_issues_count"].getInt
     result.clone = js["clone_url"].getStr.parseUri
     result.git = js["git_url"].getStr.parseUri
-    result.ssh = js["git_url"].getStr.parseUri
+    result.ssh = js["ssh_url"].getStr.parseUri
+    if "homepage" in js and $js["homepage"] notin ["null", ""]:
+      result.web = js["homepage"].getStr.parseUri
+    if not result.web.isValid:
+      result.web = result.htmlUrl
     result.license = js["license"].getOrDefault("name").getStr
     result.branch = js["default_branch"].getStr
     result.original = not js["fork"].getBool
