@@ -117,7 +117,13 @@ proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
   ## instantiate a new hub object using a jsonnode
   let
     tz = utc()
-    kind = if "pull_request" in js: HubPull else: kind
+    kind = block:
+      if "pull_request" in js:
+        HubPull
+      elif kind == HubPull:
+        HubIssue
+      else:
+        kind
   case kind:
   of HubIssue:
     result = HubResult(kind: HubIssue)
