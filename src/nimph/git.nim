@@ -494,6 +494,10 @@ proc remoteRename*(repo: GitRepository; prior: string; next: string): GitResultC
       warn problem
   git_strarray_free(addr list)
 
+proc remoteDelete*(repo: GitRepository; name: string): GitResultCode =
+  ## delete a remote from the repository
+  result = git_remote_delete(repo, name).grc
+
 proc remoteCreate*(remote: var GitRemote; repo: GitRepository;
                    name: string; url: Uri): GitResultCode =
   ## create a new remote in the repository
