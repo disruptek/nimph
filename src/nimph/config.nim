@@ -393,6 +393,9 @@ iterator pathSubsFor(config: ConfigRef; sub: string; conf: string): string =
   ## a convenience to work around the compiler's broken pathSubs
   if sub.toLowerAscii in ["nimbledir", "nimblepath"]:
     when declaredInScope nimbleSubs:
+      for path in config.nimbleSubs(&"${sub}"):
+        yield path / ""
+    else:
       # we have to pick the first lazy path because that's what Nimble does
       block found:
         for search in config.lazyPaths:
@@ -403,9 +406,6 @@ iterator pathSubsFor(config: ConfigRef; sub: string; conf: string): string =
             yield search
           break found
         raise newException(ValueError, "unable to compute $" & sub)
-    else:
-      for path in config.nimbleSubs(&"${sub}"):
-        yield path / ""
   else:
     yield config.pathSubs(&"${sub}", conf) / ""
 
