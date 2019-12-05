@@ -16,35 +16,57 @@ import rest
 import github
 
 import nimph/spec
+import nimph/group
 
 const
   hubTime* = initTimeFormat "yyyy-MM-dd\'T\'HH:mm:ss\'Z\'"
 
 type
-  HubRepo* = ref object
-    fullname*: string
-    owner*: string
-    name*: string
-    description*: string
-    created*: DateTime
-    updated*: DateTime
-    pushed*: DateTime
-    size*: int
-    stars*: int
-    watchers*: int
-    forks*: int
-    issues*: int
-    clone*: Uri
-    git*: Uri
-    ssh*: Uri
-    web*: Uri
-    license*: string
-    branch*: string
-    original*: bool
-    score*: float
+  HubKind* = enum
+    HubRepo
+    HubIssue
+    HubPull
+    HubUser
 
-  HubGroup* = ref object
-    repos*: OrderedTableRef[string, HubRepo]
+  HubResult* = ref object
+    htmlUrl*: Uri
+    id*: int
+    number*: int
+    title*: string
+    body*: string
+    state*: string
+    user*: HubResult
+    case kind*: HubKind:
+    of HubUser:
+      login*: string
+    of HubIssue:
+      closedBy*: HubResult
+    of HubPull:
+      mergedBy*: HubResult
+      merged*: bool
+    of HubRepo:
+      fullname*: string
+      description*: string
+      watchers*: int
+      stars*: int
+      forks*: int
+      name*: string
+      owner*: string
+      size*: int
+      created*: DateTime
+      updated*: DateTime
+      pushed*: DateTime
+      issues*: int
+      clone*: Uri
+      git*: Uri
+      ssh*: Uri
+      web*: Uri
+      license*: string
+      branch*: string
+      original*: bool
+      score*: float
+
+  HubGroup* = ref object of Group[Uri, HubResult]
 
   HubSort* {.pure.} = enum
     Ascending = "asc"
@@ -60,11 +82,7 @@ proc shortly(stamp: DateTime): string =
   ## render a date shortly
   result = stamp.format(shortDate)
 
-iterator values*(group: HubGroup): HubRepo =
-  for value in group.repos.values:
-    yield value
-
-proc renderShortly*(r: HubRepo): string =
+proc renderShortly*(r: HubResult): string =
   result = &"""
 {r.web:<65} pushed {r.pushed.shortly}
 {r.size:>5} {"kb":<10} {r.issues:>4} {"issues":<10} {r.stars:>4} {"stars":<10} {r.forks:>4} {"forks":<10} created {r.created.shortly}
@@ -95,51 +113,64 @@ proc findGithubToken*(): Option[string] =
   if token != "":
     result = token.some
 
-proc add(group: HubGroup; repo: HubRepo) =
-  ## add a repo to the group
-  group.repos.add repo.fullname, repo
-
-proc newHubRepo(js: JsonNode): HubRepo =
-  ## instantiate a new repo using a jsonnode
+proc newHubResult(kind: HubKind; js: JsonNode): HubResult =
+  ## instantiate a new hub object using a jsonnode
   let
     tz = utc()
-  result = HubRepo(
-    fullname: js["full_name"].getStr,
-    owner: js["owner"].getStr,
-    name: js["name"].getStr,
-    description: js["description"].getStr,
-    created: js["created_at"].getStr.parse(hubTime, zone = tz),
-    updated: js["updated_at"].getStr.parse(hubTime, zone = tz),
-    pushed: js["pushed_at"].getStr.parse(hubTime, zone = tz),
-    size: js["size"].getInt,
-    stars: js["stargazers_count"].getInt,
-    watchers: js["watchers_count"].getInt,
-    forks: js["forks_count"].getInt,
-    issues: js["open_issues_count"].getInt,
-    clone: js["clone_url"].getStr.parseUri,
-    git: js["git_url"].getStr.parseUri,
-    ssh: js["git_url"].getStr.parseUri,
-    web: js["html_url"].getStr.parseUri,
-    license: js["license"].getOrDefault("name").getStr,
-    branch: js["default_branch"].getStr,
-    original: not js["fork"].getBool,
-    score: js.getOrDefault("score").getFloat,
-  )
+    kind = if "pull_request" in js: HubPull else: kind
+  case kind:
+  of HubIssue:
+    result = HubResult(kind: HubIssue)
+    result.htmlUrl = js["html_url"].getStr.parseUri
+    if "closed_by" in js:
+      result.closedBy = HubUser.newHubResult(js["closed_by"])
+  of HubPull:
+    result = HubResult(kind: HubPull)
+    result.htmlUrl = js["pull_request"]["html_url"].getStr.parseUri
+    result.merged = js["merged"].getBool
+    if "merged_by" in js:
+      result.mergedBy = HubUser.newHubResult(js["merged_by"])
+  of HubRepo:
+    result = HubResult(kind: HubRepo,
+      created: js["created_at"].getStr.parse(hubTime, zone = tz),
+      updated: js["updated_at"].getStr.parse(hubTime, zone = tz),
+      pushed: js["pushed_at"].getStr.parse(hubTime, zone = tz),
+    )
+    result.htmlUrl = js["html_url"].getStr.parseUri
+    result.fullname = js["full_name"].getStr
+    result.owner = js["owner"].getStr
+    result.name = js["name"].getStr
+    result.description = js["description"].getStr
+    result.stars = js["stargazers_count"].getInt
+    result.watchers = js.getOrDefault("subscriber_count").getInt
+    result.forks = js["forks_count"].getInt
+    result.issues = js["open_issues_count"].getInt
+    result.clone = js["clone_url"].getStr.parseUri
+    result.git = js["git_url"].getStr.parseUri
+    result.ssh = js["git_url"].getStr.parseUri
+    result.license = js["license"].getOrDefault("name").getStr
+    result.branch = js["default_branch"].getStr
+    result.original = not js["fork"].getBool
+    result.score = js.getOrDefault("score").getFloat
+  of HubUser:
+    result = HubResult(kind: HubUser)
+    result.login = js["login"].getStr
+  result.id = js["id"].getInt
+  if "title" in js:
+    result.body = js["body"].getStr
+    result.number = js["number"].getInt
+    result.title = js["title"].getStr
+    result.state = js["state"].getStr
+  if "user" in js:
+    result.user = HubUser.newHubResult(js["user"])
 
-proc newHubGroup(): HubGroup =
-  result = HubGroup()
-  result.repos = newOrderedTable[string, HubRepo]()
+proc newHubGroup(flags: set[Flag] = defaultFlags): HubGroup =
+  result = HubGroup(flags: flags)
+  result.init(flags, mode = modeCaseSensitive)
 
-proc len*(group: HubGroup): int =
-  result = group.repos.len
-
-iterator reversed*(group: HubGroup): HubRepo =
-  ## yield repos in reverse order of entry
-  let
-    repos = toSeq group.values
-
-  for i in countDown(repos.high, repos.low):
-    yield repos[i]
+proc add*(group: var HubGroup; hub: HubResult) =
+  {.warning: "nim bug #12818".}
+  add[Uri, HubResult](group, hub.htmlUrl, hub)
 
 proc authorize*(request: var Recallable): bool =
   let token = findGithubToken()
@@ -150,7 +181,7 @@ proc authorize*(request: var Recallable): bool =
   else:
     error "unable to find a github authorization token"
 
-proc forkHub*(owner: string; repo: string): Future[Option[HubRepo]] {.async.} =
+proc forkHub*(owner: string; repo: string): Future[Option[HubResult]] {.async.} =
   ## attempt to fork an existing repository
   var
     req = postReposOwnerRepoForks.call(repo, owner, body = newJObject())
@@ -169,7 +200,7 @@ proc forkHub*(owner: string; repo: string): Future[Option[HubRepo]] {.async.} =
     body = await response.body
     js = parseJson(body)
   try:
-    result = newHubRepo(js).some
+    result = newHubResult(HubRepo, js).some
   except Exception as e:
     warn "error parsing repo: " & e.msg
 
@@ -197,7 +228,7 @@ proc searchHub*(keywords: seq[string]; sort = Best;
     group = newHubGroup()
   for node in js["items"].items:
     try:
-      let repo = newHubRepo(node)
+      let repo = newHubResult(HubRepo, node)
       if repo.original:
         group.add repo
     except Exception as e:

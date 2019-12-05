@@ -1,6 +1,7 @@
 import std/os
 import std/strtabs
 import std/tables
+from std/sequtils import toSeq
 import std/uri except Url
 
 export strtabs.StringTableMode
@@ -143,3 +144,11 @@ proc contains*[K, V](group: Group[K, V]; value: V): bool =
     if v == value:
       result = true
       break
+
+iterator reversed*[K, V](group: Group[K, V]): V =
+  ## yield values in reverse order of entry
+  let
+    elems = toSeq group.values
+
+  for index in countDown(elems.high, elems.low):
+    yield elems[index]

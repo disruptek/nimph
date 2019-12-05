@@ -1,4 +1,4 @@
-import std/uri
+import std/uri except Url
 import std/tables
 import std/os
 import std/strutils
@@ -17,6 +17,7 @@ import nimph/config
 import nimph/package
 import nimph/dependency
 import nimph/locker
+import nimph/group
 
 template crash(why: string) =
   ## a good way to exit nimph
@@ -241,7 +242,7 @@ proc cloner*(args: seq[string]; log_level = logLevel): int =
       crash &"unable to retrieve search results from github"
 
     var
-      repository: HubRepo
+      repository: HubResult
     block found:
       for repos in group.get.values:
         repository = repos

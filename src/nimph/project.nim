@@ -852,7 +852,7 @@ proc forkTarget*(project: Project): ForkTargetResult =
 proc `==`(x, y: ForkTargetResult): bool =
   result = x.ok == y.ok and x.owner == y.owner and x.repo == y.repo
 
-proc promoteFork*(project: Project; repo: HubRepo; name: string): bool =
+proc promoteFork*(project: Project; repo: HubResult; name: string): bool =
   ## true if we were able to promote a repo to be our new origin
   var
     remote, upstream: GitRemote
