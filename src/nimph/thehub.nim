@@ -113,7 +113,7 @@ proc findGithubToken*(): Option[string] =
   if token != "":
     result = token.some
 
-proc newHubResult(kind: HubKind; js: JsonNode): HubResult =
+proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
   ## instantiate a new hub object using a jsonnode
   let
     tz = utc()
@@ -164,7 +164,7 @@ proc newHubResult(kind: HubKind; js: JsonNode): HubResult =
   if "user" in js:
     result.user = HubUser.newHubResult(js["user"])
 
-proc newHubGroup(flags: set[Flag] = defaultFlags): HubGroup =
+proc newHubGroup*(flags: set[Flag] = defaultFlags): HubGroup =
   result = HubGroup(flags: flags)
   result.init(flags, mode = modeCaseSensitive)
 
