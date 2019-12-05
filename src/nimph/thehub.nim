@@ -115,10 +115,15 @@ proc findGithubToken*(): Option[string] =
 
 proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
   ## instantiate a new hub object using a jsonnode
+
+  # impart a bit of sanity
+  if js == nil or js.kind != JObject:
+    return nil
+
   let
     tz = utc()
     kind = block:
-      if "pull_request" in js:
+      if "head" in js:
         HubPull
       elif kind == HubPull:
         HubIssue
@@ -128,13 +133,13 @@ proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
   of HubIssue:
     result = HubResult(kind: HubIssue)
     result.htmlUrl = js["html_url"].getStr.parseUri
-    if "closed_by" in js and js.kind == JObject:
+    if "closed_by" in js and js["closed_by"].kind == JObject:
       result.closedBy = HubUser.newHubResult(js["closed_by"])
   of HubPull:
     result = HubResult(kind: HubPull)
-    result.htmlUrl = js["pull_request"]["html_url"].getStr.parseUri
+    result.htmlUrl = js["html_url"].getStr.parseUri
     result.merged = js.getOrDefault("merged").getBool
-    if "merged_by" in js and js.kind == JObject:
+    if "merged_by" in js and js["merged_by"].kind == JObject:
       result.mergedBy = HubUser.newHubResult(js["merged_by"])
   of HubRepo:
     result = HubResult(kind: HubRepo,
@@ -171,7 +176,7 @@ proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
     result.number = js["number"].getInt
     result.title = js["title"].getStr
     result.state = js["state"].getStr
-  if "user" in js and js.kind == JObject:
+  if "user" in js and js["user"].kind == JObject:
     result.user = HubUser.newHubResult(js["user"])
 
 proc newHubGroup*(flags: set[Flag] = defaultFlags): HubGroup =
