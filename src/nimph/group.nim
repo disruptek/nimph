@@ -1,7 +1,9 @@
 import std/os
 import std/strtabs
 import std/tables
-import std/uri
+import std/uri except Url
+
+export strtabs.StringTableMode
 
 import nimph/spec
 
@@ -14,14 +16,24 @@ type
 proc init*[K, V](group: Group[K, V]; flags: set[Flag]; mode = modeStyleInsensitive) =
   ## initialize the table and name cache
   group.table = newOrderedTable[K, V]()
-  group.imports = newStringTable(mode)
+  when K is Uri:
+    group.imports = newStringTable(modeCaseSensitive)
+  else:
+    group.imports = newStringTable(mode)
   group.flags = flags
 
-proc addName[K: string, V](group: Group[K, V];
-                           name: K; value: string) =
+proc addName[K: string, V](group: Group[K, V]; name: K; value: string) =
   ## add a name to the group, which points to value
   assert group.table.hasKey(value)
   group.imports[name] = value
+
+proc addName[K: Uri, V](group: Group[K, V]; url: K) =
+  ## add a url to the group, which points to value
+  assert group.table.hasKey(url)
+  group.imports[$url] = $url
+  when defined(debug):
+    assert $url.bare notin group.imports
+  group.imports[$url.bare] = $url
 
 proc delName(group: Group; key: string) =
   ## remove a name from the group
@@ -34,9 +46,17 @@ proc delName(group: Group; key: string) =
   for name in remove:
     group.imports.del name
 
-proc del*(group: Group; name: string) =
+proc del*[K: string, V](group: Group[K, V]; name: K) =
   group.table.del name
   group.delName name
+
+proc del*[K: Uri, V](group: Group[K, V]; url: K) =
+  group.table.del url
+  group.delName $url
+
+{.warning: "nim bug #12818".}
+proc len*[K, V](group: Group[K, V]): int =
+  result = group.table.len
 
 proc len*(group: Group): int =
   result = group.table.len
@@ -82,6 +102,12 @@ proc add*[K: string, V](group: Group[K, V]; url: Uri; value: V) =
   # this gets picked up during instant-instantiation of a package from
   # a project's url, a la asPackage(project: Project): Package ...
   group.addName naked.importName, key
+
+{.warning: "nim bug #12818".}
+proc add*[K: Uri, V](group: Group[K, V]; url: Uri; value: V) =
+  ## add a (full) url as a key
+  group.table.add url, value
+  group.addName url
 
 iterator pairs*[K, V](group: Group[K, V]): tuple[key: K; val: V] =
   for key, value in group.table.pairs:
