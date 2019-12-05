@@ -241,7 +241,7 @@ template gitFail*(allocd: typed; code: untyped; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
   block:
     defer:
-      if code != grcOk:
+      if code == grcOk:
         free(allocd)
     if code != grcOk:
       body
@@ -249,7 +249,7 @@ template gitFail*(allocd: typed; code: untyped; body: untyped) =
 template gitFail*(allocd: typed; code: untyped; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
   defer:
-    if code != grcOk:
+    if code == grcOk:
       free(allocd)
   if code != grcOk:
     body
@@ -257,7 +257,7 @@ template gitFail*(allocd: typed; code: untyped; body: untyped) =
 template gitTrap*(allocd: typed; code: untyped; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
   defer:
-    if code != grcOk:
+    if code == grcOk:
       free(allocd)
   if code != grcOk:
     dumpError()
