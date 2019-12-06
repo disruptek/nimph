@@ -61,7 +61,7 @@ template setupLocalProject(project: var Project) =
   except Exception as e:
     crash "unable to parse nim configuration: " & e.msg
 
-proc searcher*(args: seq[string]; log_level = logLevel): int =
+proc searcher*(args: seq[string]; log_level = logLevel; dry_run = false): int =
   # user's choice, our default
   setLogFilter(log_level)
 
@@ -76,7 +76,7 @@ proc searcher*(args: seq[string]; log_level = logLevel): int =
   if group.get.len == 0:
     fatal &"😢no results"
 
-proc fixer*(dry_run = false; log_level = logLevel): int =
+proc fixer*(log_level = logLevel; dry_run = false): int =
   # user's choice, our default
   setLogFilter(log_level)
 
@@ -91,7 +91,7 @@ proc fixer*(dry_run = false; log_level = logLevel): int =
     else:
       warn "run `nimph doctor` to fix this stuff"
 
-proc nimbler*(args: seq[string]; log_level = logLevel): int =
+proc nimbler*(args: seq[string]; log_level = logLevel; dry_run = false): int =
   # user's choice, our default
   setLogFilter(log_level)
 
@@ -103,7 +103,7 @@ proc nimbler*(args: seq[string]; log_level = logLevel): int =
   if not nimble.ok:
     crash &"nimble didn't like that"
 
-proc pather*(names: seq[string]; log_level = logLevel): int =
+proc pather*(names: seq[string]; log_level = logLevel; dry_run = false): int =
   # user's choice, our default
   setLogFilter(log_level)
 
@@ -135,7 +135,7 @@ proc dumpLockList(project: Project) =
       fatal &"here's a list of available locks:"
     fatal &"\t{room.name}"
 
-proc lockfiler*(names: seq[string]; log_level = logLevel): int =
+proc lockfiler*(names: seq[string]; log_level = logLevel; dry_run = false): int =
   # user's choice, our default
   setLogFilter(log_level)
 
@@ -154,7 +154,7 @@ proc lockfiler*(names: seq[string]; log_level = logLevel): int =
     else:
       result = 1
 
-proc unlockfiler*(names: seq[string]; log_level = logLevel): int =
+proc unlockfiler*(names: seq[string]; log_level = logLevel; dry_run = false): int =
   # user's choice, our default
   setLogFilter(log_level)
 
@@ -173,7 +173,7 @@ proc unlockfiler*(names: seq[string]; log_level = logLevel): int =
     else:
       result = 1
 
-proc forker*(names: seq[string]; log_level = logLevel): int =
+proc forker*(names: seq[string]; log_level = logLevel; dry_run = false): int =
   # user's choice, our default
   setLogFilter(log_level)
 
@@ -211,7 +211,7 @@ proc forker*(names: seq[string]; log_level = logLevel): int =
     else:
       {.warning: "optionally upgrade a gitless install to clone".}
 
-proc cloner*(args: seq[string]; log_level = logLevel): int =
+proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
   # user's choice, our default
   setLogFilter(log_level)
 
