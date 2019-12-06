@@ -8,7 +8,7 @@ requires "github >= 1.0.2"
 requires "cligen >= 0.9.41"
 requires "bump >= 1.8.12"
 requires "nimgit2 >= 0.1.1"
-requires "npeg >= 0.21.2"
+requires "npeg >= 0.21.3"
 requires "git://github.com/disruptek/cutelog.git >= 1.1.1"
 requires "git://github.com/stefantalpalaru/nim-unittest2.git >= 0.0.1"
 

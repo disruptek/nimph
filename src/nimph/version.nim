@@ -226,6 +226,8 @@ proc specifically*(release: Release): Version =
 
 proc isSatisfiedBy(requirement: Requirement; version: Version): bool =
   ## true if the version satisfies the requirement
+  {.warning: "this needs to handle non-wild requirements".}
+  assert requirement.operator in Wildlings
   let
     op = requirement.operator
     accepts = requirement.release.accepts
@@ -504,7 +506,7 @@ proc parseVersionLoosely*(content: string): Option[Release] =
 
   let
     peggy = peg "document":
-      ver <- +Digit * ('.' * +Digit)[0..1]
+      ver <- +Digit * ('.' * +Digit)[0..2]
       record <- >ver * (!Digit | !1):
         if not release.isValid:
           release = newRelease($1, operator = Equal)
