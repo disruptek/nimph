@@ -76,10 +76,10 @@ suite "package":
       check req.identity == "dogs"
     for req in parsed12.get.values:
       check req.identity == "owls"
-      check newRelease"1.8.8" notin req
+      check not req.isSatisfiedBy newRelease"1.8.8"
     for req in parsed13.get.values:
       check $req.release == anyRelease
-      check newRelease"1.8.8" in req
+      check req.isSatisfiedBy newRelease"1.8.8"
 
   test "parse nimph requires statement":
     project.fetchDump()
@@ -124,6 +124,22 @@ suite "package":
       ]
       one23 = newRelease("1.2.3")
     for req in works.items:
-      check one23 in req
+      check req.isSatisfiedBy one23
     for req in breaks.items:
-      check one23 notin req
+      check not req.isSatisfiedBy one23
+
+  test "parse version loosely":
+    let
+      works = [
+        "v1.2.3",
+        "V. 1.2.3",
+        "1.2.3-rc2",
+        "1.2.3a",
+        "1.2.3",
+        "1.2.3.4",
+        "mary had a little l1.2.3mb whose fleece... ah you get the picture"
+      ]
+    for v in works.items:
+      let parsed = v.parseVersionLoosely
+      check parsed.isSome
+      check $parsed.get == "1.2.3"

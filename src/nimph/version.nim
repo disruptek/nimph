@@ -484,3 +484,35 @@ proc importName*(requirement: Requirement): string =
         result = url.get.importName
         break
     result = requirement.identity.importName
+
+iterator likelyTags*(version: Version): string =
+  ## produce tags with/without silly `v` prefixes
+  let v = $version
+  yield        v
+  yield "v"  & v
+  yield "V"  & v
+  yield "v." & v
+  yield "V." & v
+
+proc parseVersionLoosely*(content: string): Option[Release] =
+  ## a very relaxed parser for versions found in tags, etc.
+  var
+    release: Release
+
+  if content == "":
+    return
+
+  let
+    peggy = peg "document":
+      ver <- +Digit * ('.' * +Digit)[0..1]
+      record <- >ver * (!Digit | !1):
+        if not release.isValid:
+          release = newRelease($1, operator = Equal)
+      document <- +(record | 1) * !1
+    parsed = peggy.match(content)
+  try:
+    if parsed.ok and release.isValid:
+      result = release.some
+  except Exception as e:
+    let emsg = &"parse error in `{content}`: {e.msg}" # noqa
+    warn emsg
