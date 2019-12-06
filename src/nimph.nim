@@ -263,6 +263,12 @@ proc cloner*(args: seq[string]; log_level = logLevel): int =
   if not cloned.promote:
     notice &"unable to promote url to ssh"
 
+template dumpHelp(fun: typed; use: string) =
+  try:
+    discard fun(cmdline = @["--help"], prefix = "    ", usage = use)
+  except HelpOnly:
+    discard
+
 when isMainModule:
   import cligen
   type
@@ -371,13 +377,11 @@ when isMainModule:
       echo clCfg.version
     of scHelp:
       # yield some help
-      echo "run `nimph` for a non-destructive report, or use a subcommand:"
+      echo "run `nimph` for a non-destructive report, or use a subcommand;"
       for fun in dispatchees.items:
-        let use = "\n$command $args\n$doc$options"
-        try:
-          discard fun(cmdline = @["--help"], prefix = "    ", usage = use)
-        except HelpOnly:
-          discard
+        once:
+          fun.dumpHelp("all subcommands accept (at least) the following options:\n$options")
+        fun.dumpHelp("\n$command $args\n$doc")
       echo ""
       echo "    " & passthrough.join(", ")
       let nimbleUse = "    $args\n$doc"
