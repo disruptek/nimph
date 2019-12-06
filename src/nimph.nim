@@ -266,8 +266,6 @@ proc cloner*(args: seq[string]; log_level = logLevel): int =
 when isMainModule:
   import cligen
   type
-    CommandType = proc (cmdline: seq[string], usage: string, prefix: string,
-                        parseOnly: bool): int
     SubCommand = enum
       scDoctor = "doctor"
       scSearch = "search"
