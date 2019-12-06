@@ -33,7 +33,7 @@ These are the contents of the included `bootstrap.sh`; you'll see that
 we're setting up a local dependency tree with which to build nimph and its
 dependencies. If successful, the full path to the binary is output.
 
-```
+```sh
 #!/bin/sh
 
 if ! test -f src/nimph.nim; then
