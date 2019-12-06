@@ -543,6 +543,15 @@ proc lookupThing*(thing: var GitThing; repo: GitRepository; name: string): GitRe
     return
   thing = newThing(obj)
 
+proc lookupThing*(thing: var GitThing; path: string; name: string): GitResultCode =
+  var
+    open: GitOpen
+  withGit:
+    gitTrap open, openRepository(open, path):
+      let emsg = &"error opening repository {path}"
+      raise newException(IOError, emsg)
+    result = lookupThing(thing, open.repo, name)
+
 proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
   ## compose a table of tags and their associated references
   var
