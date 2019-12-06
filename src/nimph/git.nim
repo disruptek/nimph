@@ -475,7 +475,7 @@ proc headReference*(repo: GitRepository; tag: var GitReference): GitResultCode =
 
 proc setHeadDetached*(repo: GitRepository; oid: GitOid): GitResultCode =
   ## detach the HEAD and point it at the given OID
-  result = git_repository_set_head_detached(repo, oid)
+  result = git_repository_set_head_detached(repo, oid).grc
 
 proc openRepository*(got: var GitOpen; path: string): GitResultCode =
   got.path = path
