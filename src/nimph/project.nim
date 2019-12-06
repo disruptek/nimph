@@ -144,14 +144,14 @@ proc fetchConfig*(project: var Project; force = false): bool =
       notice &"unnecessary config fetch for {project}"
 
 proc runNimble*(project: Project; args: seq[string];
-                opts = {poParentStreams}): RunNimbleOutput =
+                opts = {poParentStreams}): NimbleOutput =
   ## run nimble against a particular project
   let
     nimbleDir = project.nimbleDir
   result = runNimble(args, opts, nimbleDir = nimbleDir)
 
 proc runNimble*(project: var Project; args: seq[string];
-                opts = {poParentStreams}): RunNimbleOutput =
+                opts = {poParentStreams}): NimbleOutput =
   ## run nimble against a particular project, fetching its config first
   let
     readonly = project

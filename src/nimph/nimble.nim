@@ -18,23 +18,24 @@ type
     why*: string
     ok*: bool
 
-  RunNimbleOutput* = tuple
-    output: string
-    ok: bool
+  NimbleOutput* = object
+    arguments*: seq[string]
+    output*: string
+    ok*: bool
 
   NimbleMeta* = ref object
     js: JsonNode
     link: seq[string]
 
 proc runNimble*(args: seq[string]; options: set[ProcessOption];
-                nimbleDir = ""): RunNimbleOutput =
+                nimbleDir = ""): NimbleOutput =
   ## run nimble
   var
     command = findExe("nimble")
     arguments = args
     opts = options
   if command == "":
-    result = (output: "unable to find nimble in path", ok: false)
+    result = NimbleOutput(output: "unable to find nimble in path")
     warn result.output
     return
 
@@ -57,7 +58,7 @@ proc runNimble*(args: seq[string]; options: set[ProcessOption];
       debug command, arguments.join(" ")
     let
       process = startProcess(command, args = arguments, options = opts)
-    result = (output: "", ok: process.waitForExit == 0)
+    result = NimbleOutput(ok: process.waitForExit == 0)
   else:
     # the user wants to capture output
     command &= " " & quoteShellCommand(arguments)
@@ -65,7 +66,14 @@ proc runNimble*(args: seq[string]; options: set[ProcessOption];
       debug command
     let
       (output, code) = execCmdEx(command, opts)
-    result = (output: output, ok: code == 0)
+    result = NimbleOutput(output: output, ok: code == 0)
+
+  # for utility, also return the arguments we used
+  result.arguments = arguments
+
+  # a nimble failure is worth noticing
+  if not result.ok:
+    notice "nimble " & arguments.join(" ")
 
 proc parseNimbleDump*(input: string): Option[StringTableRef] =
   ## parse output from `nimble dump`
