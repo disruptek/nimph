@@ -214,8 +214,7 @@ $ nimph lock works with latest npeg
 The `bump` tool is included as a dependency; it provides easy version and tag incrementing.
 
 ```
-$ bump
-bump fixed a bug
+$ bump fixed a bug
 🎉1.0.3: fixed a bug
 🍻bumped
 ```
