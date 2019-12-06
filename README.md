@@ -29,8 +29,40 @@ much as possible.
 
 ## Installation
 
+These are the contents of the included `bootstrap.bash`; if you can follow what
+it's doing here, you'll see that we're setting up a local dependency tree with
+which to build nimph and its dependencies.
+
+First, we clone the repository if necessary.
+
+Next, we download Nimble's package list and use it to install the dependencies.
+
+Then we simply run the compiler to build `nimph` in the current directory.
+
+If successful, the full path to the binary is output.
+
 ```
-$ nimble install https://github.com/disruptek/nimph
+#!/bin/bash
+
+if ! test -f src/nimph.nim; then
+  git clone --depth 1 git://github.com/disruptek/nimph.git
+  cd nimph
+fi
+
+mkdir -p deps
+
+export NIMBLE_DIR=`pwd`/deps
+export NIMPH=`pwd`/src
+
+nimble --accept refresh
+nimble install --depsOnly
+
+echo "--clearNimblePath"                 > nim.cfg
+echo '--nimblePath="$config/deps/pkgs"' >> nim.cfg
+echo '--path="$config/src"'             >> nim.cfg
+echo "--outdir=\"`pwd`\""               >> nim.cfg
+
+nim c src/nimph.nim && realpath nimph
 ```
 
 You may want to [create a new GitHub personal access token here](https://github.com/settings/tokens) and then add it to your environment as `NIMPH_TOKEN` or `GITHUB_TOKEN`.
