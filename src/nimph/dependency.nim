@@ -161,6 +161,7 @@ proc symbolicMatch(project: Project; req: Requirement): bool =
   if project.dist == Git:
     if project.tags == nil:
       warn &"i wanted to examine tags for {project} but they were empty"
+      raise newException(Defect, "seems like a programmer error to me")
     result = symbolicMatch(req, project.release, $project.getHeadOid,
                            tags = project.tags)
   else:
