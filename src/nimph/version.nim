@@ -321,6 +321,7 @@ proc parseDottedVersion(input: string): Version =
     discard
 
 proc newRelease*(version: Version): Release =
+  ## create a new release using a version
   if not version.isValid:
     raise newException(ValueError, &"invalid version `{version}`")
   result = Release(kind: Equal, version: version)
@@ -388,6 +389,7 @@ proc hash*(req: Requirement): Hash =
   result = !$h
 
 proc toMask*(version: Version): VersionMask =
+  ## populate a versionmask with values from a version
   for i, field in version.pairs:
     result[i] = field.some
 
@@ -454,9 +456,11 @@ proc parseRequires*(input: string): Option[Requires] =
     result = requires.some
 
 proc isVirtual*(requirement: Requirement): bool =
+  ## is the requirement something we should overlook?
   result = requirement.identity.toLowerAscii in ["nim"]
 
 proc isUrl*(requirement: Requirement): bool =
+  ## a terrible way to determine if the requirement is a url
   result = ':' in requirement.identity
 
 proc toUrl*(requirement: Requirement): Option[Uri] =
@@ -479,6 +483,7 @@ proc importName*(target: Target): string =
   result = target.repo.importName
 
 proc importName*(requirement: Requirement): string =
+  ## guess the import name given only a requirement
   block:
     if requirement.isUrl:
       let url = requirement.toUrl
@@ -498,12 +503,9 @@ iterator likelyTags*(version: Version): string =
 
 proc parseVersionLoosely*(content: string): Option[Release] =
   ## a very relaxed parser for versions found in tags, etc.
+  ## only valid releases are emitted, however
   var
     release: Release
-
-  if content == "":
-    return
-
   let
     peggy = peg "document":
       ver <- +Digit * ('.' * +Digit)[0..2]

@@ -143,3 +143,4 @@ suite "package":
       let parsed = v.parseVersionLoosely
       check parsed.isSome
       check $parsed.get == "1.2.3"
+    check "".parseVersionLoosely.isNone
