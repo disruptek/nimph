@@ -118,43 +118,44 @@ proc determineDeps*(project: var Project): Option[Requires] =
     immutable = project
   result = determineDeps(immutable)
 
-proc releaseSymbols(release: Release; head = "";
-                    tags: GitTagTable = nil): HashSet[Hash] =
-  ## compute a set of hashes that could match this release; ie.
-  ## tags, oids, version numbers, etc.
-  if release.kind == Tag:
-    if release.reference.toLowerAscii == "head":
+iterator matchingReleases(requirement: Requirement; head = "";
+                        tags: GitTagTable = nil): Release =
+  ## yield releases that satisfy the requirement, using the head and tags
+  case requirement.release.kind:
+  of Tag:
+    let reference = requirement.release.reference
+    # recognize "head" as matching a provided head oid
+    if reference.toLowerAscii == "head":
+      # if it exists, i mean
       if head != "":
-        result.incl head.hash
+        yield newRelease(head, operator = Tag)
     else:
-      result.incl release.reference.hash
-    if tags != nil:
-      if tags.hasKey(release.reference):
-        result.incl hash($tags[release.reference].oid)
+      # if we have tags to work with, then we try to match
+      # against the tag and include the hash of the tag's oid
+      if tags != nil:
+        # this could be looking for `head`, by the way...
+        if tags.hasKey(reference):
+          if reference.toLowerAscii != "head":
+            yield newRelease($tags[reference].oid, operator = Tag)
+          else:
+            debug "found `head` in the tags table"
+        # now see if the specified reference matches a tag
+        for name, thing in tags.pairs:
+          if reference.toLowerAscii == $thing.oid:
+            yield newRelease($thing.oid, operator = Tag)
+        # we won't actually lookup a missing reference here; that really
+        # should be done in a proc that has access to the project
   else:
-    if not release.isSpecific:
-      return
-
-    # stuff some version strings into
-    # the hash that might match a tag
-    var version = release.specifically
-    result.incl hash(       $version)
-    result.incl hash("v"  & $version)
-    result.incl hash("V"  & $version)
-    result.incl hash("v." & $version)
-    result.incl hash("V." & $version)
-
-proc symbolicMatch(req: Requirement; release: Release; head = "";
-                   tags: GitTagTable = nil): bool =
-  ## see if a requirement's symbolic need is met by a release's
-  ## symbolic value
-  if req.operator notin {Equal, Tag} or release.kind != Tag:
-    return
-
-  let
-    required = releaseSymbols(req.release, head, tags = tags)
-    provided = releaseSymbols(release, head, tags = tags)
-  result = len(required * provided) > 0
+    # we just iterate over all the tags and see any can be
+    # converted to a version which satisfies the requirement
+    if tags != nil:
+      for name, thing in tags.pairs:
+        let parsed = name.parseVersionLoosely
+        if parsed.isNone:
+          debug &"could not parse tag `{name}`"
+          continue
+        if requirement.isSatisfiedBy(parsed.get):
+          yield newRelease($thing.oid, operator = Tag)
 
 proc symbolicMatch(project: Project; req: Requirement): bool =
   ## see if a project can match a given requirement symbolically
@@ -162,11 +163,28 @@ proc symbolicMatch(project: Project; req: Requirement): bool =
     if project.tags == nil:
       warn &"i wanted to examine tags for {project} but they were empty"
       raise newException(Defect, "seems like a programmer error to me")
-    result = symbolicMatch(req, project.release, $project.getHeadOid,
-                           tags = project.tags)
+    let
+      gotHead = project.getHeadOid
+      head = if gotHead.isSome: $gotHead.get else: ""
+    for release in req.matchingReleases(head = head, tags = project.tags):
+      debug &"release match {release} for {req}"
+      result = true
+      when defined(debug):
+        continue
+      else:
+        break
+    # here we will try to lookup any random reference requirement, just in case
+    if not result and req.release.kind == Tag:
+      var thing: GitThing
+      if grcOk == lookupThing(thing, project.repo, req.release.reference):
+        result = true
+        notice &"found {req.release.reference} in {project}"
+      else:
+        notice &"could not find {req.release.reference} in {project}"
   else:
     debug &"without a repo for {project.name}, i cannot match {req}"
-    result = symbolicMatch(req, project.release)
+    # if we don't have any tags or the head, it's a simple test
+    result = req.isSatisfiedBy(project.release)
 
 proc isSatisfiedBy(req: Requirement; project: Project): bool =
   ## true if a requirement is satisfied by the given project
@@ -181,18 +199,32 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
         x = project.url.convertToGit
         y = url.get.convertToGit
       result = x == y or bareUrlsAreEqual(x, y)
-  # if it does, check that the version matches
-  if result:
-    if req.operator == Tag:
+  # if the name doesn't match, let's just bomb early
+  if not result:
+    return
+  # now we need to confirm that the version will work
+  block:
+    if req.release.kind == Tag:
+      # the requirement is for a particular tag...
       # compare tags, head, and versions
       result = project.symbolicMatch(req)
-    else:
+      debug &"project symbolic match {result} {req}"
+      break
+    if project.release.isSpecific:
       # try to use our release
-      if project.release.isSpecific:
-        result = req.isSatisfiedBy newRelease(project.release.specifically)
+      result = req.isSatisfiedBy newRelease(project.release.specifically)
+      debug &"project release match {result} {req}"
+      if result:
+        break
+    result = project.symbolicMatch(req)
+    # maybe a different tag in the project will match?
+    debug &"project symbolic match {result} {req}"
+    if result:
+      break
+    if project.version.isValid:
       # fallback to the version indicated by nimble
-      elif project.version.isValid:
-        result = req.isSatisfiedBy newRelease(project.version)
+      result = req.isSatisfiedBy newRelease(project.version)
+      debug &"project version match {result} {req}"
 
 proc get*[K: Requirement, V](group: Group[K, V]; key: K): V =
   ## fetch a package from the group using style-insensitive lookup
