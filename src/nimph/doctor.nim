@@ -182,6 +182,9 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         notice &"unable to resolve all dependencies for {project}"
       for requirement, dependency in group.pairs:
         if dependency.isHappy:
+          if not dependency.isHappyWithVersion:
+            for project in dependency.projects.values:
+              notice &"{dependency.requirement} unmet by {project}"
           for proj in dependency.projects.mvalues:
             for path in project.missingSearchPaths(proj):
               if dry:

@@ -118,6 +118,25 @@ proc determineDeps*(project: var Project): Option[Requires] =
     immutable = project
   result = determineDeps(immutable)
 
+proc peelRelease*(project: Project; release: Release): Release =
+  var
+    thing: GitThing
+  result = release
+
+  # if there's no way to peel it, just bail
+  if project.dist != Git or result.kind != Tag:
+    return
+
+  # else, look up the reference
+  withGit:
+    if grcOk == lookupThing(thing, project.repo, result.reference):
+      result = newRelease($thing.oid, operator = Tag)
+    else:
+      debug &"unable to find release reference `{result.reference}`"
+
+proc peelRelease*(project: Project): Release =
+  result = project.peelRelease(project.release)
+
 iterator matchingReleases(requirement: Requirement; head = "";
                         tags: GitTagTable = nil): Release =
   ## yield releases that satisfy the requirement, using the head and tags
@@ -157,7 +176,7 @@ iterator matchingReleases(requirement: Requirement; head = "";
         if requirement.isSatisfiedBy(parsed.get):
           yield newRelease($thing.oid, operator = Tag)
 
-proc symbolicMatch(project: Project; req: Requirement): bool =
+iterator symbolicMatch*(project: Project; req: Requirement): Release =
   ## see if a project can match a given requirement symbolically
   if project.dist == Git:
     if project.tags == nil:
@@ -168,23 +187,58 @@ proc symbolicMatch(project: Project; req: Requirement): bool =
       head = if gotHead.isSome: $gotHead.get else: ""
     for release in req.matchingReleases(head = head, tags = project.tags):
       debug &"release match {release} for {req}"
-      result = true
-      when defined(debug):
-        continue
-      else:
-        break
+      yield release
     # here we will try to lookup any random reference requirement, just in case
-    if not result and req.release.kind == Tag:
+    #
+    # this currently could duplicate a release emitted above, but that's okay
+    if req.release.kind == Tag:
       var thing: GitThing
       if grcOk == lookupThing(thing, project.repo, req.release.reference):
-        result = true
-        notice &"found {req.release.reference} in {project}"
+        yield newRelease($thing.oid, operator = Tag)
+        debug &"found {req.release.reference} in {project}"
       else:
-        notice &"could not find {req.release.reference} in {project}"
+        debug &"could not find {req.release.reference} in {project}"
   else:
     debug &"without a repo for {project.name}, i cannot match {req}"
     # if we don't have any tags or the head, it's a simple test
-    result = req.isSatisfiedBy(project.release)
+    if req.isSatisfiedBy(project.release):
+      yield project.release
+
+proc symbolicMatch*(project: Project; req: Requirement; release: Release): bool =
+  ## convenience
+  let release = project.peelRelease(release)
+  for match in project.symbolicMatch(req):
+    result = match == release
+    if result:
+      break
+
+proc symbolicMatch*(project: Project; req: Requirement): bool =
+  ## convenience
+  for match in project.symbolicMatch(req):
+    result = true
+    break
+
+proc isSatisfiedBy(req: Requirement; project: Project; release: Release): bool =
+  result = true
+  block satisfied:
+    if req.release.kind == Tag:
+      # the requirement is for a particular tag...
+      # compare tags, head, and versions
+      result = project.symbolicMatch(req, release)
+      debug &"project symbolic match {result} {req}"
+      break satisfied
+    if release.isSpecific:
+      # try to use our release
+      result = req.isSatisfiedBy newRelease(release.specifically)
+      debug &"release {release} match {result} {req}"
+      if result:
+        break satisfied
+    # maybe there's a scenario where we can retrieve a tag that isn't our
+    # release, but does match the requirement?
+    result = project.symbolicMatch(req)
+    debug &"release {release} symbolic match {result} {req}"
+    if result:
+      break satisfied
 
 proc isSatisfiedBy(req: Requirement; project: Project): bool =
   ## true if a requirement is satisfied by the given project
@@ -355,6 +409,18 @@ proc projectForName*(group: DependencyGroup; name: string): Option[Project] =
 proc isHappy*(dependency: Dependency): bool =
   ## true if the dependency is being met successfully
   result = dependency.projects.len > 0
+
+proc isHappyWithVersion*(dependency: Dependency): bool =
+  ## true if the dependency is happy with the version of the project
+  for project in dependency.projects.values:
+    let
+      req = dependency.requirement
+      peeled = project.peelRelease
+    result = req.isSatisfiedBy(project, project.release)
+    result = result or req.isSatisfiedBy(project, peeled)
+    result = result or req.isSatisfiedBy(project, newRelease(project.version))
+    if result:
+      break
 
 proc resolveDependency*(project: Project;
                         projects: ProjectGroup;
