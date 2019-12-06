@@ -473,6 +473,10 @@ proc headReference*(repo: GitRepository; tag: var GitReference): GitResultCode =
   ## get the reference that points to HEAD
   result = git_repository_head(addr tag, repo).grc
 
+proc setHeadDetached*(repo: GitRepository; oid: GitOid): GitResultCode =
+  ## detach the HEAD and point it at the given OID
+  result = git_repository_set_head_detached(repo, oid)
+
 proc openRepository*(got: var GitOpen; path: string): GitResultCode =
   got.path = path
   result = git_repository_open(addr got.repo, got.path).grc
