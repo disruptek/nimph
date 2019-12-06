@@ -14,9 +14,9 @@ when git2SetVer == "master":
 elif git2SetVer == "v0.28.3":
   discard
 else:
-  {.error: "libgit2 version " & git2SetVer & " unsupported".}
+  {.error: "libgit2 version `" & git2SetVer & "` unsupported".}
 
-{.hint: "libgit2 version " & git2SetVer.}
+{.hint: "libgit2 version `" & git2SetVer & "`".}
 
 import nimph/spec
 
@@ -559,15 +559,17 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
       thing, target: GitThing
     result = lookupThing(thing, repo, name)
     if result != grcOk:
+      debug &"failed lookup for `{name}`"
       return
 
-    if thing.kind == goTag:
+    if thing.kind != goTag:
+      target = thing
+    else:
       result = thing.target(target)
       free(thing)
       if result != grcOk:
+        debug &"failed target for `{name}`"
         return
-    else:
-      target = thing
     tags.add name, target
 
 proc getHeadOid*(repository: GitRepository): Option[GitOid] =
