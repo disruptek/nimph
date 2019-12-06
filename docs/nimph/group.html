@@ -832,56 +832,65 @@ function main() {
 <li>
   <a class="reference reference-toplevel" href="#7" id="57">Types</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#NimphGroup"
-    title="NimphGroup[K; V] = ref object of RootObj
+      <li><a class="reference" href="#Group"
+    title="Group[K; V] = ref object of RootObj
   table*: OrderedTableRef[K, V]
-  imports*: StringTableRef"><wbr />Nimph<wbr />Group<span class="attachedType"></span></a></li>
+  imports*: StringTableRef
+  flags*: set[Flag]"><wbr />Group<span class="attachedType"></span></a></li>
 
   </ul>
 </li>
 <li>
   <a class="reference reference-toplevel" href="#12" id="62">Procs</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#init%2CNimphGroup%5BK%2CV%5D"
-    title="init[K, V](group: NimphGroup[K, V]; mode = modeStyleInsensitive)"><wbr />init<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#del%2CNimphGroup%2Cstring"
-    title="del(group: NimphGroup; name: string)"><wbr />del<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#len%2CNimphGroup"
-    title="len(group: NimphGroup): int"><wbr />len<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#get%2CNimphGroup%5BK%3A+string%2CV%5D%2CK"
-    title="get[K: string; V](group: NimphGroup[K, V]; key: K): V"><wbr />get<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#mget%2CNimphGroup%5BK%3A+string%2CV%5D%2CK"
-    title="mget[K: string; V](group: var NimphGroup[K, V]; key: K): var V"><wbr />mget<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#%5B%5D%2CNimphGroup%5BK%2CV%5D%2CK"
-    title="`[]`[K, V](group: var NimphGroup[K, V]; key: K): var V"><wbr />`[]`<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#%5B%5D%2CNimphGroup%5BK%2CV%5D%2CK_2"
-    title="`[]`[K, V](group: NimphGroup[K, V]; key: K): V"><wbr />`[]`<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#add%2CNimphGroup%5BK%3A+string%2CV%5D%2CK%2CV"
-    title="add[K: string; V](group: NimphGroup[K, V]; key: K; value: V)"><wbr />add<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#add%2CNimphGroup%5BK%3A+string%2CV%5D%2CUri%2CV"
-    title="add[K: string; V](group: NimphGroup[K, V]; url: Uri; value: V)"><wbr />add<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#hasKey%2CNimphGroup%5BK%2CV%5D%2CK"
-    title="hasKey[K, V](group: NimphGroup[K, V]; key: K): bool"><wbr />has<wbr />Key<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#contains%2CNimphGroup%5BK%2CV%5D%2CK"
-    title="contains[K, V](group: NimphGroup[K, V]; key: K): bool"><wbr />contains<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#contains%2CNimphGroup%5BK%2CV%5D%2CUri"
-    title="contains[K, V](group: NimphGroup[K, V]; url: Uri): bool"><wbr />contains<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#contains%2CNimphGroup%5BK%2CV%5D%2CV"
-    title="contains[K, V](group: NimphGroup[K, V]; value: V): bool"><wbr />contains<span class="attachedType">NimphGroup</span></a></li>
+      <li><a class="reference" href="#init%2CGroup%5BK%2CV%5D%2Cset%5BFlag%5D"
+    title="init[K, V](group: Group[K, V]; flags: set[Flag]; mode = modeStyleInsensitive)"><wbr />init<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#del%2CGroup%5BK%3A+string%2CV%5D%2CK"
+    title="del[K: string; V](group: Group[K, V]; name: K)"><wbr />del<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#del%2CGroup%5BK%3A+Uri%2CV%5D%2CK"
+    title="del[K: Uri; V](group: Group[K, V]; url: K)"><wbr />del<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#len%2CGroup%5BK%2CV%5D"
+    title="len[K, V](group: Group[K, V]): int"><wbr />len<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#len%2CGroup"
+    title="len(group: Group): int"><wbr />len<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#get%2CGroup%5BK%3A+string%2CV%5D%2CK"
+    title="get[K: string; V](group: Group[K, V]; key: K): V"><wbr />get<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#mget%2CGroup%5BK%3A+string%2CV%5D%2CK"
+    title="mget[K: string; V](group: var Group[K, V]; key: K): var V"><wbr />mget<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#%5B%5D%2CGroup%5BK%2CV%5D%2CK"
+    title="`[]`[K, V](group: var Group[K, V]; key: K): var V"><wbr />`[]`<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#%5B%5D%2CGroup%5BK%2CV%5D%2CK_2"
+    title="`[]`[K, V](group: Group[K, V]; key: K): V"><wbr />`[]`<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#add%2CGroup%5BK%3A+string%2CV%5D%2CK%2CV"
+    title="add[K: string; V](group: Group[K, V]; key: K; value: V)"><wbr />add<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#add%2CGroup%5BK%3A+string%2CV%5D%2CUri%2CV"
+    title="add[K: string; V](group: Group[K, V]; url: Uri; value: V)"><wbr />add<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#add%2CGroup%5BK%3A+Uri%2CV%5D%2CUri%2CV"
+    title="add[K: Uri; V](group: Group[K, V]; url: Uri; value: V)"><wbr />add<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#hasKey%2CGroup%5BK%2CV%5D%2CK"
+    title="hasKey[K, V](group: Group[K, V]; key: K): bool"><wbr />has<wbr />Key<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#contains%2CGroup%5BK%2CV%5D%2CK"
+    title="contains[K, V](group: Group[K, V]; key: K): bool"><wbr />contains<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#contains%2CGroup%5BK%2CV%5D%2CUri"
+    title="contains[K, V](group: Group[K, V]; url: Uri): bool"><wbr />contains<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#contains%2CGroup%5BK%2CV%5D%2CV"
+    title="contains[K, V](group: Group[K, V]; value: V): bool"><wbr />contains<span class="attachedType">Group</span></a></li>
 
   </ul>
 </li>
 <li>
   <a class="reference reference-toplevel" href="#15" id="65">Iterators</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#pairs.i%2CNimphGroup%5BK%2CV%5D"
-    title="pairs[K, V](group: NimphGroup[K, V]): tuple[key: K, val: V]"><wbr />pairs<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#mpairs.i%2CNimphGroup%5BK%2CV%5D"
-    title="mpairs[K, V](group: NimphGroup[K, V]): tuple[key: K, val: V]"><wbr />mpairs<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#values.i%2CNimphGroup%5BK%2CV%5D"
-    title="values[K, V](group: NimphGroup[K, V]): V"><wbr />values<span class="attachedType">NimphGroup</span></a></li>
-  <li><a class="reference" href="#mvalues.i%2CNimphGroup%5BK%2CV%5D"
-    title="mvalues[K, V](group: NimphGroup[K, V]): var V"><wbr />mvalues<span class="attachedType">NimphGroup</span></a></li>
+      <li><a class="reference" href="#pairs.i%2CGroup%5BK%2CV%5D"
+    title="pairs[K, V](group: Group[K, V]): tuple[key: K, val: V]"><wbr />pairs<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#mpairs.i%2CGroup%5BK%2CV%5D"
+    title="mpairs[K, V](group: Group[K, V]): tuple[key: K, val: V]"><wbr />mpairs<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#values.i%2CGroup%5BK%2CV%5D"
+    title="values[K, V](group: Group[K, V]): V"><wbr />values<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#mvalues.i%2CGroup%5BK%2CV%5D"
+    title="mvalues[K, V](group: Group[K, V]): var V"><wbr />mvalues<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#reversed.i%2CGroup%5BK%2CV%5D"
+    title="reversed[K, V](group: Group[K, V]): V"><wbr />reversed<span class="attachedType">Group</span></a></li>
 
   </ul>
 </li>
@@ -901,10 +910,11 @@ function main() {
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
 <dl class="item">
-<a id="NimphGroup"></a>
-<dt><pre><a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span> <span class="Keyword">of</span> <span class="Identifier">RootObj</span>
+<a id="Group"></a>
+<dt><pre><a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span> <span class="Keyword">of</span> <span class="Identifier">RootObj</span>
   <span class="Identifier">table</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">OrderedTableRef</span><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span>
   <span class="Identifier">imports</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">StringTableRef</span>
+  <span class="Identifier">flags</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">set</span><span class="Other">[</span><a href="spec.html#Flag"><span class="Identifier">Flag</span></a><span class="Other">]</span>
 </pre></dt>
 <dd>
 
@@ -916,92 +926,113 @@ function main() {
 <div class="section" id="12">
 <h1><a class="toc-backref" href="#12">Procs</a></h1>
 <dl class="item">
-<a id="init,NimphGroup[K,V]"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#init%2CNimphGroup%5BK%2CV%5D"><span class="Identifier">init</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">mode</span> <span class="Other">=</span> <span class="Identifier">modeStyleInsensitive</span><span class="Other">)</span></pre></dt>
+<a id="init,Group[K,V],set[Flag]"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#init%2CGroup%5BK%2CV%5D%2Cset%5BFlag%5D"><span class="Identifier">init</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">flags</span><span class="Other">:</span> <span class="Identifier">set</span><span class="Other">[</span><a href="spec.html#Flag"><span class="Identifier">Flag</span></a><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">mode</span> <span class="Other">=</span> <span class="Identifier">modeStyleInsensitive</span><span class="Other">)</span></pre></dt>
 <dd>
 
 initialize the table and name cache
 
 </dd>
-<a id="del,NimphGroup,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#del%2CNimphGroup%2Cstring"><span class="Identifier">del</span></a><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span></pre></dt>
+<a id="del,Group[K: string,V],K"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#del%2CGroup%5BK%3A+string%2CV%5D%2CK"><span class="Identifier">del</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="len,NimphGroup"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#len%2CNimphGroup"><span class="Identifier">len</span></a><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
+<a id="del,Group[K: Uri,V],K"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#del%2CGroup%5BK%3A+Uri%2CV%5D%2CK"><span class="Identifier">del</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="get,NimphGroup[K: string,V],K"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#get%2CNimphGroup%5BK%3A+string%2CV%5D%2CK"><span class="Identifier">get</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">V</span></pre></dt>
+<a id="len,Group[K,V]"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#len%2CGroup%5BK%2CV%5D"><span class="Identifier">len</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
 <dd>
 
-fetch a package from the group using style-insensitive lookup
+
 
 </dd>
-<a id="mget,NimphGroup[K: string,V],K"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#mget%2CNimphGroup%5BK%3A+string%2CV%5D%2CK"><span class="Identifier">mget</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">V</span></pre></dt>
+<a id="len,Group"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#len%2CGroup"><span class="Identifier">len</span></a><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
 <dd>
 
-fetch a package from the group using style-insensitive lookup
+
 
 </dd>
-<a id="[],NimphGroup[K,V],K"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%2CNimphGroup%5BK%2CV%5D%2CK"><span class="Identifier">`[]`</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">V</span></pre></dt>
-<dd>
-
-fetch a package from the group using style-insensitive lookup
-
-</dd>
-<a id="[],NimphGroup[K,V],K_2"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%2CNimphGroup%5BK%2CV%5D%2CK_2"><span class="Identifier">`[]`</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">V</span></pre></dt>
+<a id="get,Group[K: string,V],K"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#get%2CGroup%5BK%3A+string%2CV%5D%2CK"><span class="Identifier">get</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">V</span></pre></dt>
 <dd>
 
 fetch a package from the group using style-insensitive lookup
 
 </dd>
-<a id="add,NimphGroup[K: string,V],K,V"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#add%2CNimphGroup%5BK%3A+string%2CV%5D%2CK%2CV"><span class="Identifier">add</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">;</span> <span class="Identifier">value</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">)</span></pre></dt>
+<a id="mget,Group[K: string,V],K"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#mget%2CGroup%5BK%3A+string%2CV%5D%2CK"><span class="Identifier">mget</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">V</span></pre></dt>
+<dd>
+
+fetch a package from the group using style-insensitive lookup
+
+</dd>
+<a id="[],Group[K,V],K"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%2CGroup%5BK%2CV%5D%2CK"><span class="Identifier">`[]`</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">V</span></pre></dt>
+<dd>
+
+fetch a package from the group using style-insensitive lookup
+
+</dd>
+<a id="[],Group[K,V],K_2"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%2CGroup%5BK%2CV%5D%2CK_2"><span class="Identifier">`[]`</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">V</span></pre></dt>
+<dd>
+
+fetch a package from the group using style-insensitive lookup
+
+</dd>
+<a id="add,Group[K: string,V],K,V"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#add%2CGroup%5BK%3A+string%2CV%5D%2CK%2CV"><span class="Identifier">add</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">;</span> <span class="Identifier">value</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">)</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="add,NimphGroup[K: string,V],Uri,V"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#add%2CNimphGroup%5BK%3A+string%2CV%5D%2CUri%2CV"><span class="Identifier">add</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">;</span> <span class="Identifier">value</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">)</span></pre></dt>
+<a id="add,Group[K: string,V],Uri,V"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#add%2CGroup%5BK%3A+string%2CV%5D%2CUri%2CV"><span class="Identifier">add</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">;</span> <span class="Identifier">value</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">)</span></pre></dt>
 <dd>
 
 add a (bare) url as a key
 
 </dd>
-<a id="hasKey,NimphGroup[K,V],K"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#hasKey%2CNimphGroup%5BK%2CV%5D%2CK"><span class="Identifier">hasKey</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
+<a id="add,Group[K: Uri,V],Uri,V"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#add%2CGroup%5BK%3A+Uri%2CV%5D%2CUri%2CV"><span class="Identifier">add</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">;</span> <span class="Identifier">value</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">)</span></pre></dt>
+<dd>
+
+add a (full) url as a key
+
+</dd>
+<a id="hasKey,Group[K,V],K"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#hasKey%2CGroup%5BK%2CV%5D%2CK"><span class="Identifier">hasKey</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="contains,NimphGroup[K,V],K"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#contains%2CNimphGroup%5BK%2CV%5D%2CK"><span class="Identifier">contains</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
+<a id="contains,Group[K,V],K"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#contains%2CGroup%5BK%2CV%5D%2CK"><span class="Identifier">contains</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="contains,NimphGroup[K,V],Uri"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#contains%2CNimphGroup%5BK%2CV%5D%2CUri"><span class="Identifier">contains</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
+<a id="contains,Group[K,V],Uri"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#contains%2CGroup%5BK%2CV%5D%2CUri"><span class="Identifier">contains</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
 <dd>
 
 true if a member of the group has the same (bare) url
 
 </dd>
-<a id="contains,NimphGroup[K,V],V"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#contains%2CNimphGroup%5BK%2CV%5D%2CV"><span class="Identifier">contains</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">value</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
+<a id="contains,Group[K,V],V"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#contains%2CGroup%5BK%2CV%5D%2CV"><span class="Identifier">contains</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">value</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
 <dd>
 
 
@@ -1012,32 +1043,39 @@ true if a member of the group has the same (bare) url
 <div class="section" id="15">
 <h1><a class="toc-backref" href="#15">Iterators</a></h1>
 <dl class="item">
-<a id="pairs.i,NimphGroup[K,V]"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#pairs.i%2CNimphGroup%5BK%2CV%5D"><span class="Identifier">pairs</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">val</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">]</span></pre></dt>
+<a id="pairs.i,Group[K,V]"></a>
+<dt><pre><span class="Keyword">iterator</span> <a href="#pairs.i%2CGroup%5BK%2CV%5D"><span class="Identifier">pairs</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">val</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">]</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="mpairs.i,NimphGroup[K,V]"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#mpairs.i%2CNimphGroup%5BK%2CV%5D"><span class="Identifier">mpairs</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">val</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">]</span></pre></dt>
+<a id="mpairs.i,Group[K,V]"></a>
+<dt><pre><span class="Keyword">iterator</span> <a href="#mpairs.i%2CGroup%5BK%2CV%5D"><span class="Identifier">mpairs</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">val</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">]</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="values.i,NimphGroup[K,V]"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#values.i%2CNimphGroup%5BK%2CV%5D"><span class="Identifier">values</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">V</span></pre></dt>
+<a id="values.i,Group[K,V]"></a>
+<dt><pre><span class="Keyword">iterator</span> <a href="#values.i%2CGroup%5BK%2CV%5D"><span class="Identifier">values</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">V</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="mvalues.i,NimphGroup[K,V]"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#mvalues.i%2CNimphGroup%5BK%2CV%5D"><span class="Identifier">mvalues</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">V</span></pre></dt>
+<a id="mvalues.i,Group[K,V]"></a>
+<dt><pre><span class="Keyword">iterator</span> <a href="#mvalues.i%2CGroup%5BK%2CV%5D"><span class="Identifier">mvalues</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">V</span></pre></dt>
 <dd>
 
 
+
+</dd>
+<a id="reversed.i,Group[K,V]"></a>
+<dt><pre><span class="Keyword">iterator</span> <a href="#reversed.i%2CGroup%5BK%2CV%5D"><span class="Identifier">reversed</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">V</span></pre></dt>
+<dd>
+
+yield values in reverse order of entry
 
 </dd>
 
@@ -1050,7 +1088,7 @@ true if a member of the group has the same (bare) url
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-03 03:27:28 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-06 03:17:09 UTC</small>
       </div>
     </div>
   </div>

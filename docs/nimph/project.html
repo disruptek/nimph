@@ -849,7 +849,7 @@ function main() {
   parent*: Project
   develop*: LinkedSearchResult"><wbr />Project<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#ProjectGroup"
-    title="ProjectGroup = NimphGroup[string, Project]"><wbr />Project<wbr />Group<span class="attachedType"></span></a></li>
+    title="ProjectGroup = Group[string, Project]"><wbr />Project<wbr />Group<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#Dependency"
     title="Dependency = object
   url*: Uri
@@ -861,13 +861,6 @@ function main() {
   via: LinkedSearchResult
   source: string
   search: SearchResult"><wbr />Linked<wbr />Search<wbr />Result<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#ForkTargetResult"
-    title="ForkTargetResult = object
-  ok*: bool
-  why*: string
-  owner*: string
-  repo*: string
-  url*: Uri"><wbr />Fork<wbr />Target<wbr />Result<span class="attachedType"></span></a></li>
 
   </ul>
 </li>
@@ -895,7 +888,7 @@ function main() {
   <li><a class="reference" href="#newProject%2CTarget"
     title="newProject(nimble: Target): Project"><wbr />new<wbr />Project<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#getHeadOid%2CProject"
-    title="getHeadOid(project: Project): GitOid"><wbr />get<wbr />Head<wbr />Oid<span class="attachedType">Project</span></a></li>
+    title="getHeadOid(project: Project): Option[GitOid]"><wbr />get<wbr />Head<wbr />Oid<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#fetchTagTable%2CProject"
     title="fetchTagTable(project: var Project): GitTagTable"><wbr />fetch<wbr />Tag<wbr />Table<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#releaseSummary%2CProject"
@@ -914,8 +907,8 @@ function main() {
     title="createUrl(project: var Project): Uri"><wbr />create<wbr />Url<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#findProject%2CProject%2Cstring%2CProject"
     title="findProject(project: var Project; dir: string; parent: Project = nil): bool"><wbr />find<wbr />Project<span class="attachedType">Project</span></a></li>
-  <li><a class="reference" href="#newProjectGroup"
-    title="newProjectGroup(): ProjectGroup"><wbr />new<wbr />Project<wbr />Group<span class="attachedType">ProjectGroup</span></a></li>
+  <li><a class="reference" href="#newProjectGroup%2Cset%5BFlag%5D"
+    title="newProjectGroup(flags: set[Flag] = defaultFlags): ProjectGroup"><wbr />new<wbr />Project<wbr />Group<span class="attachedType">ProjectGroup</span></a></li>
   <li><a class="reference" href="#importName%2CLinkedSearchResult"
     title="importName(linked: LinkedSearchResult): string"><wbr />import<wbr />Name<span class="attachedType">LinkedSearchResult</span></a></li>
   <li><a class="reference" href="#importName%2CProject"
@@ -936,8 +929,8 @@ function main() {
     title="excludeSearchPath(project: Project; path: string): bool"><wbr />exclude<wbr />Search<wbr />Path<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#addSearchPath%2CProject%2Cstring"
     title="addSearchPath(project: Project; path: string): bool"><wbr />add<wbr />Search<wbr />Path<span class="attachedType">Project</span></a></li>
-  <li><a class="reference" href="#clone%2CProject%2CUri%2Cstring"
-    title="clone(project: var Project; url: Uri; name: string): bool"><wbr />clone<span class="attachedType">Project</span></a></li>
+  <li><a class="reference" href="#clone%2CProject%2CUri%2Cstring%2CProject"
+    title="clone(project: var Project; url: Uri; name: string; cloned: var Project): bool"><wbr />clone<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#allImportTargets%2CConfigRef%2Cstring"
     title="allImportTargets(config: ConfigRef; repo: string): OrderedTableRef[Target,
     LinkedSearchResult]"><wbr />all<wbr />Import<wbr />Targets<span class="attachedType">LinkedSearchResult</span></a></li>
@@ -945,12 +938,12 @@ function main() {
     title="countNimblePaths(project: Project): tuple[local: int, global: int, paths: seq[string]]"><wbr />count<wbr />Nimble<wbr />Paths<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#numberOfNimblePaths%2CProject"
     title="numberOfNimblePaths(project: Project): int"><wbr />number<wbr />Of<wbr />Nimble<wbr />Paths<span class="attachedType">Project</span></a></li>
-  <li><a class="reference" href="#forkTarget%2CUri"
-    title="forkTarget(url: Uri): ForkTargetResult"><wbr />fork<wbr />Target<span class="attachedType">ForkTargetResult</span></a></li>
   <li><a class="reference" href="#forkTarget%2CProject"
     title="forkTarget(project: Project): ForkTargetResult"><wbr />fork<wbr />Target<span class="attachedType">Project</span></a></li>
-  <li><a class="reference" href="#promoteFork%2CProject%2CHubRepo%2Cstring"
-    title="promoteFork(project: Project; repo: HubRepo; name: string): bool"><wbr />promote<wbr />Fork<span class="attachedType">Project</span></a></li>
+  <li><a class="reference" href="#promoteRemoteLike%2CProject%2CUri"
+    title="promoteRemoteLike(project: Project; url: Uri; name = defaultRemote): bool"><wbr />promote<wbr />Remote<wbr />Like<span class="attachedType">Project</span></a></li>
+  <li><a class="reference" href="#promote%2CProject%2CHubResult"
+    title="promote(project: Project; name = defaultRemote; user: HubResult = nil): bool"><wbr />promote<span class="attachedType">Project</span></a></li>
 
   </ul>
 </li>
@@ -1041,7 +1034,7 @@ function main() {
 
 </dd>
 <a id="ProjectGroup"></a>
-<dt><pre><a href="project.html#ProjectGroup"><span class="Identifier">ProjectGroup</span></a> <span class="Other">=</span> <a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">]</span></pre></dt>
+<dt><pre><a href="project.html#ProjectGroup"><span class="Identifier">ProjectGroup</span></a> <span class="Other">=</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">]</span></pre></dt>
 <dd>
 
 
@@ -1069,19 +1062,6 @@ function main() {
   <span class="Identifier">via</span><span class="Other">:</span> <a href="project.html#LinkedSearchResult"><span class="Identifier">LinkedSearchResult</span></a>
   <span class="Identifier">source</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">search</span><span class="Other">:</span> <span class="Identifier">SearchResult</span>
-</pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="ForkTargetResult"></a>
-<dt><pre><a href="project.html#ForkTargetResult"><span class="Identifier">ForkTargetResult</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">ok</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
-  <span class="Identifier">why</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">owner</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">repo</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">url</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Uri</span>
 </pre></dt>
 <dd>
 
@@ -1187,8 +1167,9 @@ instantiate a new project from the given .nimble
 
 </dd>
 <a id="getHeadOid,Project"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#getHeadOid%2CProject"><span class="Identifier">getHeadOid</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitOid"><span class="Identifier">GitOid</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span>
-    <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#getHeadOid%2CProject"><span class="Identifier">getHeadOid</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="git.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 retrieve the #head oid from the project's repository
@@ -1204,7 +1185,7 @@ retrieve the tags for a project from its git repository
 </dd>
 <a id="releaseSummary,Project"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#releaseSummary%2CProject"><span class="Identifier">releaseSummary</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 summarize a project's tree using whatever we can
@@ -1212,7 +1193,8 @@ summarize a project's tree using whatever we can
 </dd>
 <a id="cuteRelease,Project"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#cuteRelease%2CProject"><span class="Identifier">cuteRelease</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 a very short summary of a release; ie. a git commit or version
@@ -1220,7 +1202,8 @@ a very short summary of a release; ie. a git commit or version
 </dd>
 <a id="findCurrentTag,Project"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#findCurrentTag%2CProject"><span class="Identifier">findCurrentTag</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 find the current release tag of a project
@@ -1228,7 +1211,8 @@ find the current release tag of a project
 </dd>
 <a id="findCurrentTag,Project_2"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#findCurrentTag%2CProject_2"><span class="Identifier">findCurrentTag</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 find the current release tag of a project
@@ -1270,8 +1254,9 @@ determine the source url for a project which may be local
 locate a project starting from <tt class="docutils literal"><span class="pre">dir</span></tt>
 
 </dd>
-<a id="newProjectGroup"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#newProjectGroup"><span class="Identifier">newProjectGroup</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="project.html#ProjectGroup"><span class="Identifier">ProjectGroup</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="newProjectGroup,set[Flag]"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#newProjectGroup%2Cset%5BFlag%5D"><span class="Identifier">newProjectGroup</span></a><span class="Other">(</span><span class="Identifier">flags</span><span class="Other">:</span> <span class="Identifier">set</span><span class="Other">[</span><a href="spec.html#Flag"><span class="Identifier">Flag</span></a><span class="Other">]</span> <span class="Other">=</span> <span class="Identifier">defaultFlags</span><span class="Other">)</span><span class="Other">:</span> <a href="project.html#ProjectGroup"><span class="Identifier">ProjectGroup</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
@@ -1366,9 +1351,9 @@ exclude a search path from the project's nim.cfg
 add a search path to the given project's configuration
 
 </dd>
-<a id="clone,Project,Uri,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#clone%2CProject%2CUri%2Cstring"><span class="Identifier">clone</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span>
-    <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ERecoverableError</span><span class="Other">,</span>
+<a id="clone,Project,Uri,string,Project"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#clone%2CProject%2CUri%2Cstring%2CProject"><span class="Identifier">clone</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">cloned</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
+    <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ERecoverableError</span><span class="Other">,</span>
     <span class="Identifier">EOFError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span>
     <span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">WriteDirEffect</span><span class="Other">,</span>
     <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
@@ -1404,27 +1389,29 @@ try to count the effective number of --nimblePaths
 simpler count of effective --nimblePaths
 
 </dd>
-<a id="forkTarget,Uri"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#forkTarget%2CUri"><span class="Identifier">forkTarget</span></a><span class="Other">(</span><span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">)</span><span class="Other">:</span> <a href="project.html#ForkTargetResult"><span class="Identifier">ForkTargetResult</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-
-
-</dd>
 <a id="forkTarget,Project"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#forkTarget%2CProject"><span class="Identifier">forkTarget</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <a href="project.html#ForkTargetResult"><span class="Identifier">ForkTargetResult</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#forkTarget%2CProject"><span class="Identifier">forkTarget</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <a href="spec.html#ForkTargetResult"><span class="Identifier">ForkTargetResult</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 try to determine a github source of a project so that we can fork it
 
 </dd>
-<a id="promoteFork,Project,HubRepo,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#promoteFork%2CProject%2CHubRepo%2Cstring"><span class="Identifier">promoteFork</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="thehub.html#HubRepo"><span class="Identifier">HubRepo</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span>
-    <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="promoteRemoteLike,Project,Uri"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#promoteRemoteLike%2CProject%2CUri"><span class="Identifier">promoteRemoteLike</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">;</span> <span class="Identifier">name</span> <span class="Other">=</span> <span class="Identifier">defaultRemote</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
+    <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span>
+    <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-true if we were able to promote a repo to be our new origin
+true if we were able to promote a url to be our new ssh origin
+
+</dd>
+<a id="promote,Project,HubResult"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#promote%2CProject%2CHubResult"><span class="Identifier">promote</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">name</span> <span class="Other">=</span> <span class="Identifier">defaultRemote</span><span class="Other">;</span> <span class="Identifier">user</span><span class="Other">:</span> <a href="thehub.html#HubResult"><span class="Identifier">HubResult</span></a> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">TimeEffect</span><span class="Other">,</span>
+    <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
 
 </dd>
 
@@ -1434,7 +1421,8 @@ true if we were able to promote a repo to be our new origin
 <dl class="item">
 <a id="missingSearchPaths.i,Project,Project"></a>
 <dt><pre><span class="Keyword">iterator</span> <a href="#missingSearchPaths.i%2CProject%2CProject"><span class="Identifier">missingSearchPaths</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">target</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 one (or more?) paths to the target package which are apparently missing from the project's search paths
@@ -1556,7 +1544,7 @@ yield projects from the group in the same order that they may be resolved by the
 <div class="section" id="19">
 <h1><a class="toc-backref" href="#19">Exports</a></h1>
 <dl class="item">
-<a href="group.html#NimphGroup"><span class="Identifier">NimphGroup</span></a>, <a class="reference external" href="group.html">group</a>, <a href="group.html#add"><span class="Identifier">add</span></a>, <a href="group.html#mpairs"><span class="Identifier">mpairs</span></a>, <a href="group.html#mvalues"><span class="Identifier">mvalues</span></a>, <a href="group.html#len"><span class="Identifier">len</span></a>, <a href="group.html#init"><span class="Identifier">init</span></a>, <a href="group.html#contains"><span class="Identifier">contains</span></a>, <a href="group.html#values"><span class="Identifier">values</span></a>, <a href="group.html#add"><span class="Identifier">add</span></a>, <a href="group.html#get"><span class="Identifier">get</span></a>, <a href="group.html#contains"><span class="Identifier">contains</span></a>, <a href="group.html#del"><span class="Identifier">del</span></a>, <a href="group.html#hasKey"><span class="Identifier">hasKey</span></a>, <a href="group.html#mget"><span class="Identifier">mget</span></a>, <a href="group.html#[]"><span class="Identifier">[]</span></a>, <a href="group.html#contains"><span class="Identifier">contains</span></a>, <a href="group.html#pairs"><span class="Identifier">pairs</span></a>, <a href="group.html#[]"><span class="Identifier">[]</span></a>
+<a href="group.html#init"><span class="Identifier">init</span></a>, <a href="group.html#contains"><span class="Identifier">contains</span></a>, <a href="group.html#values"><span class="Identifier">values</span></a>, <a href="group.html#contains"><span class="Identifier">contains</span></a>, <a href="group.html#hasKey"><span class="Identifier">hasKey</span></a>, <a href="group.html#add"><span class="Identifier">add</span></a>, <a href="group.html#mget"><span class="Identifier">mget</span></a>, <a href="group.html#contains"><span class="Identifier">contains</span></a>, <a href="group.html#len"><span class="Identifier">len</span></a>, <a class="reference external" href="group.html">group</a>, <a href="group.html#add"><span class="Identifier">add</span></a>, <a href="group.html#mpairs"><span class="Identifier">mpairs</span></a>, <a href="group.html#mvalues"><span class="Identifier">mvalues</span></a>, <a href="group.html#Group"><span class="Identifier">Group</span></a>, <a href="group.html#reversed"><span class="Identifier">reversed</span></a>, <a href="group.html#add"><span class="Identifier">add</span></a>, <a href="group.html#get"><span class="Identifier">get</span></a>, <a href="group.html#[]"><span class="Identifier">[]</span></a>, <a href="group.html#del"><span class="Identifier">del</span></a>, <a href="group.html#del"><span class="Identifier">del</span></a>, <a href="group.html#len"><span class="Identifier">len</span></a>, <a href="group.html#pairs"><span class="Identifier">pairs</span></a>, <a href="group.html#[]"><span class="Identifier">[]</span></a>
 </dl></div>
 
   </div>
@@ -1566,7 +1554,7 @@ yield projects from the group in the same order that they may be resolved by the
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-03 03:27:29 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-06 03:17:09 UTC</small>
       </div>
     </div>
   </div>
