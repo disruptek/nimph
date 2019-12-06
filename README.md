@@ -29,13 +29,12 @@ much as possible.
 
 ## Installation
 
-These are the contents of the included `bootstrap.bash`; if you can follow what
-it's doing here, you'll see that we're setting up a local dependency tree with
-which to build nimph and its dependencies.
+These are the contents of the included `bootstrap.sh`; you'll see that
+we're setting up a local dependency tree with which to build nimph and its
+dependencies. If successful, the full path to the binary is output.
 
-If successful, the full path to the binary is output.
 ```
-#!/bin/bash
+#!/bin/sh
 
 if ! test -f src/nimph.nim; then
   git clone --depth 1 git://github.com/disruptek/nimph.git

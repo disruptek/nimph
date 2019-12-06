@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if ! test -f src/nimph.nim; then
   git clone --depth 1 git://github.com/disruptek/nimph.git
