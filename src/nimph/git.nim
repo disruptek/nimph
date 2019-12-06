@@ -465,13 +465,13 @@ proc clone*(got: var GitClone; uri: Uri; path: string;
 
   result = git_clone(addr got.repo, got.url, got.directory, got.options).grc
 
-proc repositoryHead*(tag: var GitReference; repo: GitRepository): GitResultCode =
+proc repositoryHead*(tag: var GitReference; repo: GitRepository): GitResultCode {.deprecated.} =
   ## get the reference that points to HEAD
   result = git_repository_head(addr tag, repo).grc
 
 proc headReference*(repo: GitRepository; tag: var GitReference): GitResultCode =
   ## get the reference that points to HEAD
-  result = repositoryHead(tag, repo)
+  result = git_repository_head(addr tag, repo).grc
 
 proc openRepository*(got: var GitOpen; path: string): GitResultCode =
   got.path = path
