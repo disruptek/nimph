@@ -224,7 +224,7 @@ proc specifically*(release: Release): Version =
   else:
     raise newException(ValueError, &"release {release} is not specific")
 
-proc contains(requirement: Requirement; version: Version): bool =
+proc isSatisfiedBy(requirement: Requirement; version: Version): bool =
   ## true if the version satisfies the requirement
   let
     op = requirement.operator
@@ -259,9 +259,9 @@ proc contains(requirement: Requirement; version: Version): bool =
 
 proc contains*(kinds: set[Operator]; spec: Release): bool =
   ## convenience
-  result = spec.kind in kinds
+  result = kinds.contains(spec.kind)
 
-proc contains*(req: Requirement; spec: Release): bool =
+proc isSatisfiedBy*(req: Requirement; spec: Release): bool =
   ## true if the requirement is satisfied by the specification
   case req.operator:
   of Tag:
@@ -282,7 +282,7 @@ proc contains*(req: Requirement; spec: Release): bool =
       result = true
     # otherwise, we have to compare it to a version
     elif spec.isSpecific:
-      result = spec.version in req
+      result = req.isSatisfiedBy spec.version
     else:
       raise newException(Defect, &"unimplemented for {spec.kind} release")
 

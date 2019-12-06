@@ -189,10 +189,10 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
     else:
       # try to use our release
       if project.release.isSpecific:
-        result = newRelease(project.release.specifically) in req
+        result = req.isSatisfiedBy newRelease(project.release.specifically)
       # fallback to the version indicated by nimble
       elif project.version.isValid:
-        result = newRelease(project.version) in req
+        result = req.isSatisfiedBy newRelease(project.version)
 
 proc get*[K: Requirement, V](group: Group[K, V]; key: K): V =
   ## fetch a package from the group using style-insensitive lookup
