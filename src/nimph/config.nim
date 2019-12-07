@@ -375,7 +375,7 @@ proc suggestNimbleDir*(config: ConfigRef; local = ""; global = ""): string =
     # nim 1.1.1 supports nimblePath storage in the config;
     # we follow a "standard" that we expect Nimble to use,
     # too, wherein the last-added --nimblePath wins
-    when declaredInScope(config.nimblePaths):
+    when NimMajor >= 1 and NimMinor >= 1:
       if config.nimblePaths.len > 0:
         result = config.nimblePaths[0].string
         break either
