@@ -894,6 +894,7 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
 
 proc promote*(project: Project; name = defaultRemote;
              user: HubResult = nil): bool =
+  ## promote a project's remote to a user's repo, if it's theirs
   var
     user: HubResult = user
   try:
