@@ -477,6 +477,14 @@ proc setHeadDetached*(repo: GitRepository; oid: GitOid): GitResultCode =
   ## detach the HEAD and point it at the given OID
   result = git_repository_set_head_detached(repo, oid).grc
 
+proc setHeadDetached*(repo: GitRepository; reference: string): GitResultCode =
+  var
+    oid: ptr git_oid = cast[ptr git_oid](sizeof(git_oid).alloc)
+  result = git_oid_fromstr(oid, reference).grc
+  if result == grcOk:
+    result = repo.setHeadDetached(oid)
+  dealloc(oid)
+
 proc openRepository*(got: var GitOpen; path: string): GitResultCode =
   got.path = path
   result = git_repository_open(addr got.repo, got.path).grc
