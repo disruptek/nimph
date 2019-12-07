@@ -365,17 +365,23 @@ proc suggestNimbleDir*(config: ConfigRef; local = ""; global = ""): string =
 
   block either:
     # if a local directory is suggested, see if we can confirm its use
-    if local != "":
+    if local != "" and local.dirExists:
       assert local.endsWith(DirSep)
-      {.warning: "look for a nimble packages file here?".}
       for search in config.likelySearch(libsToo = false):
         if search.startsWith(local):
           result = local
           break either
 
+    # nim 1.1.1 supports nimblePath storage in the config;
+    # we follow a "standard" that we expect Nimble to use,
+    # too, wherein the last-added --nimblePath wins
+    when declaredInScope(config.nimblePaths):
+      if config.nimblePaths.len > 0:
+        result = config.nimblePaths[0].string
+        break either
+
     # otherwise, try to pick a global .nimble directory based upon lazy paths
     for search in config.likelyLazy:
-      {.warning: "maybe we should look for some nimble debris?".}
       if search.endsWith(PkgDir & DirSep):
         result = search.parentDir  # ie. the parent of pkgs
       else:

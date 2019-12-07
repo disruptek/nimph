@@ -45,6 +45,9 @@ proc runNimble*(args: seq[string]; options: set[ProcessOption];
     arguments = @["--debug"].concat arguments
 
   if nimbleDir != "":
+    if not nimbleDir.dirExists:
+      let emsg = &"bogus nimbleDir: {nimbleDir}" # noqa
+      raise newException(IOError, emsg)
     # the ol' belt-and-suspenders approach to specifying nimbleDir
     arguments = @["--nimbleDir=" & nimbleDir].concat arguments
     putEnv("NIMBLE_DIR", nimbleDir)

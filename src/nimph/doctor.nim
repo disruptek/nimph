@@ -180,11 +180,13 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
 
       if not project.resolveDependencies(group):
         notice &"unable to resolve all dependencies for {project}"
+        result = false
       for requirement, dependency in group.pairs:
         if dependency.isHappy:
           if not dependency.isHappyWithVersion:
             for project in dependency.projects.values:
               notice &"{dependency.requirement} unmet by {project}"
+              result = false
           for proj in dependency.projects.mvalues:
             for path in project.missingSearchPaths(proj):
               if dry:

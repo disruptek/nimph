@@ -455,9 +455,6 @@ proc resolveDependency*(project: Project;
         result.add findurl.get
         break success
 
-    let emsg = &"dunno where to get requirement {requirement}" # noqa
-    raise newException(ValueError, emsg)
-
 proc isUsing*(dependencies: DependencyGroup; target: Target;
               outside: Dependency = nil): bool =
   ## true if the target points to a repo we're importing
