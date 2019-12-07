@@ -465,7 +465,7 @@ proc newRequirement*(id: string; operator: Operator;
   when defined(debug):
     if id != id.strip:
       warn &"whitespace around requirement identity: `{id}`"
-  if result.identity == "":
+  if id == "":
     raise newException(ValueError, "requirements must have length, if not girth")
   result.identity = id.strip
   result.release = release
