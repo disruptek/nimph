@@ -837,8 +837,11 @@ function main() {
   table*: StringTableRef
   why*: string
   ok*: bool"><wbr />Dump<wbr />Result<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#RunNimbleOutput"
-    title="RunNimbleOutput = tuple[output: string, ok: bool]"><wbr />Run<wbr />Nimble<wbr />Output<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#NimbleOutput"
+    title="NimbleOutput = object
+  arguments*: seq[string]
+  output*: string
+  ok*: bool"><wbr />Nimble<wbr />Output<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#NimbleMeta"
     title="NimbleMeta = ref object
   js: JsonNode
@@ -850,7 +853,7 @@ function main() {
   <a class="reference reference-toplevel" href="#12" id="62">Procs</a>
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#runNimble%2Cseq%5BT%5D%5Bstring%5D%2Cset%5BProcessOption%5D%2Cstring"
-    title="runNimble(args: seq[string]; options: set[ProcessOption]; nimbleDir = &quot;&quot;): RunNimbleOutput"><wbr />run<wbr />Nimble<span class="attachedType">RunNimbleOutput</span></a></li>
+    title="runNimble(args: seq[string]; options: set[ProcessOption]; nimbleDir = &quot;&quot;): NimbleOutput"><wbr />run<wbr />Nimble<span class="attachedType">NimbleOutput</span></a></li>
   <li><a class="reference" href="#parseNimbleDump%2Cstring"
     title="parseNimbleDump(input: string): Option[StringTableRef]"><wbr />parse<wbr />Nimble<wbr />Dump<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#fetchNimbleDump%2Cstring%2Cstring"
@@ -897,8 +900,12 @@ function main() {
 
 
 </dd>
-<a id="RunNimbleOutput"></a>
-<dt><pre><a href="nimble.html#RunNimbleOutput"><span class="Identifier">RunNimbleOutput</span></a> <span class="Other">=</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">output</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">ok</span><span class="Other">:</span> <span class="Identifier">bool</span><span class="Other">]</span></pre></dt>
+<a id="NimbleOutput"></a>
+<dt><pre><a href="nimble.html#NimbleOutput"><span class="Identifier">NimbleOutput</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">arguments</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span>
+  <span class="Identifier">output</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">ok</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+</pre></dt>
 <dd>
 
 
@@ -920,7 +927,7 @@ function main() {
 <h1><a class="toc-backref" href="#12">Procs</a></h1>
 <dl class="item">
 <a id="runNimble,seq[T][string],set[ProcessOption],string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#runNimble%2Cseq%5BT%5D%5Bstring%5D%2Cset%5BProcessOption%5D%2Cstring"><span class="Identifier">runNimble</span></a><span class="Other">(</span><span class="Identifier">args</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">options</span><span class="Other">:</span> <span class="Identifier">set</span><span class="Other">[</span><span class="Identifier">ProcessOption</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">nimbleDir</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">)</span><span class="Other">:</span> <a href="nimble.html#RunNimbleOutput"><span class="Identifier">RunNimbleOutput</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+<dt><pre><span class="Keyword">proc</span> <a href="#runNimble%2Cseq%5BT%5D%5Bstring%5D%2Cset%5BProcessOption%5D%2Cstring"><span class="Identifier">runNimble</span></a><span class="Other">(</span><span class="Identifier">args</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">options</span><span class="Other">:</span> <span class="Identifier">set</span><span class="Other">[</span><span class="Identifier">ProcessOption</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">nimbleDir</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">)</span><span class="Other">:</span> <a href="nimble.html#NimbleOutput"><span class="Identifier">NimbleOutput</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span>
     <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
@@ -947,14 +954,14 @@ parse nimble dump output into a string table
 
 </dd>
 <a id="hasUrl,NimbleMeta"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#hasUrl%2CNimbleMeta"><span class="Identifier">hasUrl</span></a><span class="Other">(</span><span class="Identifier">meta</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#hasUrl%2CNimbleMeta"><span class="Identifier">hasUrl</span></a><span class="Other">(</span><span class="Identifier">meta</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 true if the metadata includes a url
 
 </dd>
 <a id="url,NimbleMeta"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#url%2CNimbleMeta"><span class="Identifier">url</span></a><span class="Other">(</span><span class="Identifier">meta</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Uri</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#url%2CNimbleMeta"><span class="Identifier">url</span></a><span class="Other">(</span><span class="Identifier">meta</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Uri</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 return the url associated with the package
@@ -1001,7 +1008,7 @@ parse the nimblemeta.json file if it exists
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-06 03:17:07 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-07 15:13:00 UTC</small>
       </div>
     </div>
   </div>

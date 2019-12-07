@@ -1020,6 +1020,8 @@ function main() {
     title="repositoryHead(tag: var GitReference; repo: GitRepository): GitResultCode"><wbr />repository<wbr />Head<span class="attachedType">GitReference</span></a></li>
   <li><a class="reference" href="#headReference%2CGitRepository%2CGitReference"
     title="headReference(repo: GitRepository; tag: var GitReference): GitResultCode"><wbr />head<wbr />Reference<span class="attachedType">GitRepository</span></a></li>
+  <li><a class="reference" href="#setHeadDetached%2CGitRepository%2CGitOid"
+    title="setHeadDetached(repo: GitRepository; oid: GitOid): GitResultCode"><wbr />set<wbr />Head<wbr />Detached<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#openRepository%2CGitOpen%2Cstring"
     title="openRepository(got: var GitOpen; path: string): GitResultCode"><wbr />open<wbr />Repository<span class="attachedType">GitOpen</span></a></li>
   <li><a class="reference" href="#remoteLookup%2CGitRemote%2CGitRepository%2Cstring"
@@ -1042,6 +1044,8 @@ function main() {
     title="tagList(repo: GitRepository; tags: var seq[string]): GitResultCode"><wbr />tag<wbr />List<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#lookupThing%2CGitThing%2CGitRepository%2Cstring"
     title="lookupThing(thing: var GitThing; repo: GitRepository; name: string): GitResultCode"><wbr />lookup<wbr />Thing<span class="attachedType">GitThing</span></a></li>
+  <li><a class="reference" href="#lookupThing%2CGitThing%2Cstring%2Cstring"
+    title="lookupThing(thing: var GitThing; path: string; name: string): GitResultCode"><wbr />lookup<wbr />Thing<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#tagTable%2CGitRepository%2CGitTagTable"
     title="tagTable(repo: GitRepository; tags: var GitTagTable): GitResultCode"><wbr />tag<wbr />Table<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#getHeadOid%2CGitRepository"
@@ -1533,8 +1537,11 @@ clone a repository
 </dd>
 <a id="repositoryHead,GitReference,GitRepository"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#repositoryHead%2CGitReference%2CGitRepository"><span class="Identifier">repositoryHead</span></a><span class="Other">(</span><span class="Identifier">tag</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="git.html#GitReference"><span class="Identifier">GitReference</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="git.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 get the reference that points to HEAD
 
@@ -1545,6 +1552,14 @@ get the reference that points to HEAD
 <dd>
 
 get the reference that points to HEAD
+
+</dd>
+<a id="setHeadDetached,GitRepository,GitOid"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#setHeadDetached%2CGitRepository%2CGitOid"><span class="Identifier">setHeadDetached</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="git.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">oid</span><span class="Other">:</span> <a href="git.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+detach the HEAD and point it at the given OID
 
 </dd>
 <a id="openRepository,GitOpen,string"></a>
@@ -1630,9 +1645,17 @@ retrieve a list of tags from the repo
 
 
 </dd>
+<a id="lookupThing,GitThing,string,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#lookupThing%2CGitThing%2Cstring%2Cstring"><span class="Identifier">lookupThing</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="git.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
 <a id="tagTable,GitRepository,GitTagTable"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#tagTable%2CGitRepository%2CGitTagTable"><span class="Identifier">tagTable</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="git.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#tagTable%2CGitRepository%2CGitTagTable"><span class="Identifier">tagTable</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="git.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 compose a table of tags and their associated references
@@ -1747,7 +1770,7 @@ a version of gitTrap that expects failure; no error messages!
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-06 03:17:09 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-07 15:13:01 UTC</small>
       </div>
     </div>
   </div>

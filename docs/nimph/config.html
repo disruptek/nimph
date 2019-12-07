@@ -1015,7 +1015,7 @@ instantiate a new nimph config using the given path
 </dd>
 <a id="suggestNimbleDir,ConfigRef,string,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#suggestNimbleDir%2CConfigRef%2Cstring%2Cstring"><span class="Identifier">suggestNimbleDir</span></a><span class="Other">(</span><span class="Identifier">config</span><span class="Other">:</span> <span class="Identifier">ConfigRef</span><span class="Other">;</span> <span class="Identifier">local</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span> <span class="Identifier">global</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 come up with a useful nimbleDir based upon what we find in the current configuration, the location of the project, and the provided suggestions for local or global package directories
@@ -1156,7 +1156,7 @@ yield existing search paths from the configuration as /-terminated strings
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-06 03:17:07 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-07 15:13:00 UTC</small>
       </div>
     </div>
   </div>

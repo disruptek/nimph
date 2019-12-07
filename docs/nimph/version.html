@@ -911,8 +911,8 @@ function main() {
     title="specifically(release: Release): Version"><wbr />specifically<span class="attachedType">Release</span></a></li>
   <li><a class="reference" href="#contains%2Cset%5BOperator%5D%2CRelease"
     title="contains(kinds: set[Operator]; spec: Release): bool"><wbr />contains<span class="attachedType">Operator</span></a></li>
-  <li><a class="reference" href="#contains%2CRequirement%2CRelease"
-    title="contains(req: Requirement; spec: Release): bool"><wbr />contains<span class="attachedType">Requirement</span></a></li>
+  <li><a class="reference" href="#isSatisfiedBy%2CRequirement%2CRelease"
+    title="isSatisfiedBy(req: Requirement; spec: Release): bool"><wbr />is<wbr />Satisfied<wbr />By<span class="attachedType">Requirement</span></a></li>
   <li><a class="reference" href="#newRelease%2CVersion"
     title="newRelease(version: Version): Release"><wbr />new<wbr />Release<span class="attachedType">Release</span></a></li>
   <li><a class="reference" href="#newRelease%2Cstring"
@@ -943,6 +943,8 @@ function main() {
     title="importName(target: Target): string"><wbr />import<wbr />Name<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#importName%2CRequirement"
     title="importName(requirement: Requirement): string"><wbr />import<wbr />Name<span class="attachedType">Requirement</span></a></li>
+  <li><a class="reference" href="#parseVersionLoosely%2Cstring"
+    title="parseVersionLoosely(content: string): Option[Release]"><wbr />parse<wbr />Version<wbr />Loosely<span class="attachedType">Release</span></a></li>
 
   </ul>
 </li>
@@ -953,6 +955,8 @@ function main() {
     title="items[T: Version | VersionMask](version: T): auto"><wbr />items<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#pairs.i%2CT"
     title="pairs[T: Version | VersionMask](version: T): auto"><wbr />pairs<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#likelyTags.i%2CVersion"
+    title="likelyTags(version: Version): string"><wbr />likely<wbr />Tags<span class="attachedType"></span></a></li>
 
   </ul>
 </li>
@@ -1183,8 +1187,8 @@ if the version/match specifies a full X.Y.Z version
 
 </dd>
 <a id="specifically,Release"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#specifically%2CRelease"><span class="Identifier">specifically</span></a><span class="Other">(</span><span class="Identifier">release</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Version</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#specifically%2CRelease"><span class="Identifier">specifically</span></a><span class="Other">(</span><span class="Identifier">release</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Version</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 a full X.Y.Z version the release will match
@@ -1197,8 +1201,8 @@ a full X.Y.Z version the release will match
 convenience
 
 </dd>
-<a id="contains,Requirement,Release"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#contains%2CRequirement%2CRelease"><span class="Identifier">contains</span></a><span class="Other">(</span><span class="Identifier">req</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">;</span> <span class="Identifier">spec</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+<a id="isSatisfiedBy,Requirement,Release"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#isSatisfiedBy%2CRequirement%2CRelease"><span class="Identifier">isSatisfiedBy</span></a><span class="Other">(</span><span class="Identifier">req</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">;</span> <span class="Identifier">spec</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
@@ -1209,7 +1213,7 @@ true if the requirement is satisfied by the specification
 <dt><pre><span class="Keyword">proc</span> <a href="#newRelease%2CVersion"><span class="Identifier">newRelease</span></a><span class="Other">(</span><span class="Identifier">version</span><span class="Other">:</span> <span class="Identifier">Version</span><span class="Other">)</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+create a new release using a version
 
 </dd>
 <a id="newRelease,string"></a>
@@ -1252,7 +1256,7 @@ uniquely identify a requirement
 <dt><pre><span class="Keyword">proc</span> <a href="#toMask%2CVersion"><span class="Identifier">toMask</span></a><span class="Other">(</span><span class="Identifier">version</span><span class="Other">:</span> <span class="Identifier">Version</span><span class="Other">)</span><span class="Other">:</span> <a href="version.html#VersionMask"><span class="Identifier">VersionMask</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+populate a versionmask with values from a version
 
 </dd>
 <a id="newRequirement,string,Operator,Release"></a>
@@ -1283,14 +1287,14 @@ parse a <tt class="docutils literal"><span class="pre">requires</span></tt> stri
 <dt><pre><span class="Keyword">proc</span> <a href="#isVirtual%2CRequirement"><span class="Identifier">isVirtual</span></a><span class="Other">(</span><span class="Identifier">requirement</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+is the requirement something we should overlook?
 
 </dd>
 <a id="isUrl,Requirement"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#isUrl%2CRequirement"><span class="Identifier">isUrl</span></a><span class="Other">(</span><span class="Identifier">requirement</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+a terrible way to determine if the requirement is a url
 
 </dd>
 <a id="toUrl,Requirement"></a>
@@ -1314,7 +1318,15 @@ a uniform name usable in code for imports
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
+guess the import name given only a requirement
 
+</dd>
+<a id="parseVersionLoosely,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#parseVersionLoosely%2Cstring"><span class="Identifier">parseVersionLoosely</span></a><span class="Other">(</span><span class="Identifier">content</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="version.html#Release"><span class="Identifier">Release</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+a very relaxed parser for versions found in tags, etc. only valid releases are emitted, however
 
 </dd>
 
@@ -1336,6 +1348,13 @@ a uniform name usable in code for imports
 
 
 </dd>
+<a id="likelyTags.i,Version"></a>
+<dt><pre><span class="Keyword">iterator</span> <a href="#likelyTags.i%2CVersion"><span class="Identifier">likelyTags</span></a><span class="Other">(</span><span class="Identifier">version</span><span class="Other">:</span> <span class="Identifier">Version</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+produce tags with/without silly <tt class="docutils literal"><span class="pre">v</span></tt> prefixes
+
+</dd>
 
 </dl></div>
 
@@ -1346,7 +1365,7 @@ a uniform name usable in code for imports
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-06 03:17:09 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-07 15:13:01 UTC</small>
       </div>
     </div>
   </div>
