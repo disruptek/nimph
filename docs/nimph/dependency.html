@@ -904,6 +904,8 @@ function main() {
                     packages: PackageGroup; dependencies: var DependencyGroup): bool"><wbr />resolve<wbr />Dependencies<span class="attachedType">DependencyGroup</span></a></li>
   <li><a class="reference" href="#resolveDependencies%2CProject%2CDependencyGroup"
     title="resolveDependencies(project: var Project; dependencies: var DependencyGroup): bool"><wbr />resolve<wbr />Dependencies<span class="attachedType">DependencyGroup</span></a></li>
+  <li><a class="reference" href="#rollTowards%2CProject%2CRequirement"
+    title="rollTowards(project: var Project; requirement: Requirement): bool"><wbr />roll<wbr />Towards<span class="attachedType"></span></a></li>
 
   </ul>
 </li>
@@ -1100,7 +1102,7 @@ fetch a package from the group using style-insensitive lookup
 </dd>
 <a id="newDependency,Project"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#newDependency%2CProject"><span class="Identifier">newDependency</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <a href="dependency.html#Dependency"><span class="Identifier">Dependency</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">ReadDirEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
@@ -1158,7 +1160,7 @@ true if the dependency is happy with the version of the project
 <a id="resolveDependency,Project,ProjectGroup,PackageGroup,Requirement"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#resolveDependency%2CProject%2CProjectGroup%2CPackageGroup%2CRequirement"><span class="Identifier">resolveDependency</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">projects</span><span class="Other">:</span> <a href="project.html#ProjectGroup"><span class="Identifier">ProjectGroup</span></a><span class="Other">;</span>
                       <span class="Identifier">packages</span><span class="Other">:</span> <a href="package.html#PackageGroup"><span class="Identifier">PackageGroup</span></a><span class="Other">;</span> <span class="Identifier">requirement</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">)</span><span class="Other">:</span> <a href="dependency.html#Dependency"><span class="Identifier">Dependency</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
-    <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span>
+    <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span>
     <span class="Identifier">NPegException</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">ReadDirEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
@@ -1196,6 +1198,15 @@ resolve a project's dependencies recursively; store result in dependencies
 entrance to the recursive dependency resolution
 
 </dd>
+<a id="rollTowards,Project,Requirement"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#rollTowards%2CProject%2CRequirement"><span class="Identifier">rollTowards</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">requirement</span><span class="Other">:</span> <a href="version.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
+    <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span>
+    <span class="Identifier">NPegException</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+advance the head of a project to meet a given requirement
+
+</dd>
 
 </dl></div>
 <div class="section" id="15">
@@ -1225,7 +1236,7 @@ see if a project can match a given requirement symbolically
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-07 15:13:02 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-07 19:57:34 UTC</small>
       </div>
     </div>
   </div>

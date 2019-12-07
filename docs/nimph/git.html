@@ -1022,6 +1022,8 @@ function main() {
     title="headReference(repo: GitRepository; tag: var GitReference): GitResultCode"><wbr />head<wbr />Reference<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#setHeadDetached%2CGitRepository%2CGitOid"
     title="setHeadDetached(repo: GitRepository; oid: GitOid): GitResultCode"><wbr />set<wbr />Head<wbr />Detached<span class="attachedType">GitRepository</span></a></li>
+  <li><a class="reference" href="#setHeadDetached%2CGitRepository%2Cstring"
+    title="setHeadDetached(repo: GitRepository; reference: string): GitResultCode"><wbr />set<wbr />Head<wbr />Detached<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#openRepository%2CGitOpen%2Cstring"
     title="openRepository(got: var GitOpen; path: string): GitResultCode"><wbr />open<wbr />Repository<span class="attachedType">GitOpen</span></a></li>
   <li><a class="reference" href="#remoteLookup%2CGitRemote%2CGitRepository%2Cstring"
@@ -1562,6 +1564,14 @@ get the reference that points to HEAD
 detach the HEAD and point it at the given OID
 
 </dd>
+<a id="setHeadDetached,GitRepository,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#setHeadDetached%2CGitRepository%2Cstring"><span class="Identifier">setHeadDetached</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="git.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">reference</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
 <a id="openRepository,GitOpen,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#openRepository%2CGitOpen%2Cstring"><span class="Identifier">openRepository</span></a><span class="Other">(</span><span class="Identifier">got</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="git.html#GitOpen"><span class="Identifier">GitOpen</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
@@ -1770,7 +1780,7 @@ a version of gitTrap that expects failure; no error messages!
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-07 15:13:01 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-07 19:57:33 UTC</small>
       </div>
     </div>
   </div>
