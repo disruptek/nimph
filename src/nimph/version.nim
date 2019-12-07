@@ -226,12 +226,10 @@ proc `==`*(a, b: Release): bool =
     case a.kind
     of Tag:
       result = a.reference == b.reference
-    of Equal:
-      result = a.version == b.version
     of Wild, Caret, Tilde:
       result = a.accepts == b.accepts
     else:
-      raise newException(ValueError, "inconceivable!")
+      result = a.version == b.version
 
 proc `<`*(a, b: Release): bool =
   if a.kind == b.kind and a.isValid and b.isValid:
@@ -307,7 +305,7 @@ proc specifically*(release: Release): Version =
   else:
     result = release.version
 
-proc effectively(mask: VersionMask): Version =
+proc effectively*(mask: VersionMask): Version =
   ## replace * with 0 in wildcard masks
   if mask.major.isNone:
     result = (0'u, 0'u, 0'u)
@@ -318,7 +316,7 @@ proc effectively(mask: VersionMask): Version =
   else:
     result = (mask.major.get, mask.minor.get, mask.patch.get)
 
-proc effectively(release: Release): Version =
+proc effectively*(release: Release): Version =
   ## convert a release to a version for rough comparisons
   case release.kind
   of Tag:
