@@ -234,7 +234,7 @@ proc isSatisfiedBy(req: Requirement; project: Project; release: Release): bool =
     if req.release.kind == Tag:
       # the requirement is for a particular tag...
       # compare tags, head, and versions
-      result = project.symbolicMatch(req)
+      result = project.symbolicMatch(req, release)
       debug &"project symbolic match {result} {req}"
       # if the tag doesn't match, make sure we fail hard here
       break
@@ -422,18 +422,9 @@ proc isHappy*(dependency: Dependency): bool =
 proc isHappyWithVersion*(dependency: Dependency): bool =
   ## true if the dependency is happy with the version of the project
   for project in dependency.projects.values:
-    let
-      req = dependency.requirement
-    if req.isSatisfiedBy(project, project.release):
-      discard
-    elif req.isSatisfiedBy(project, project.peelRelease):
-      discard
-    elif req.isSatisfiedBy(project, newRelease(project.version)):
-      discard
-    else:
-      continue
-    result = true
-    break
+    if dependency.requirement.isSatisfiedBy(project, project.release):
+      result = true
+      break
 
 proc resolveDependency*(project: Project;
                         projects: ProjectGroup;
