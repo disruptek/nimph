@@ -184,8 +184,12 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
       for requirement, dependency in group.pairs:
         if dependency.isHappy:
           if not dependency.isHappyWithVersion:
-            for project in dependency.projects.values:
-              notice &"{dependency.requirement} unmet by {project}"
+            for project in dependency.projects.mvalues:
+              if not dry:
+                if project.rollTowards(requirement):
+                  notice &"rolled to {project.release} to meet {requirement}"
+                  break
+              notice &"{requirement} unmet by {project}"
               result = false
           for proj in dependency.projects.mvalues:
             for path in project.missingSearchPaths(proj):

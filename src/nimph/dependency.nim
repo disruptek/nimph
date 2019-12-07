@@ -546,3 +546,33 @@ proc resolveDependencies*(project: var Project;
     packages = findPacks.packages
 
   result = project.resolveDependencies(projects, packages, dependencies)
+
+proc setHeadToRelease(project: Project; release: Release): bool =
+  ## advance the head of a project to a particular release
+  if project.dist != Git:
+    return
+  if not release.isValid or release.kind != Tag:
+    return
+  var
+    open: GitOpen
+  withGit:
+    gitTrap open, openRepository(open, project.repo):
+      error &"unable to open git repository `{project.repo}`"
+      return
+    gitTrap setHeadDetached(open.repo, release.reference):
+      error &"unable to set {project.name} head to {release}"
+      return
+    debug &"set head of {project.name} to {release}"
+    result = true
+
+proc rollTowards*(project: var Project; requirement: Requirement): bool =
+  ## advance the head of a project to meet a given requirement
+  if project.dist != Git:
+    return
+  if project.tags == nil:
+    project.fetchTagTable
+  for match in project.symbolicMatch(requirement):
+    result = project.setHeadToRelease(match)
+    if result:
+      project.release = match
+      break
