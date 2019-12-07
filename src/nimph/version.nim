@@ -465,6 +465,8 @@ proc newRequirement*(id: string; operator: Operator;
   when defined(debug):
     if id != id.strip:
       warn &"whitespace around requirement identity: `{id}`"
+  if result.identity == "":
+    raise newException(ValueError, "requirements must have length, if not girth")
   result.identity = id.strip
   result.release = release
   # if it parsed as Caret, Tilde, or Wild, then paint the requirement as such
@@ -495,6 +497,7 @@ proc parseRequires*(input: string): Option[Requires] =
   ## also supports `~` and `^` operators a la cargo
   var
     requires = Requires()
+    lastname: string
 
   let
     peggy = peg "document":
@@ -504,18 +507,24 @@ proc parseRequires*(input: string): Option[Requires] =
       ops <- ">=" | "<=" | ">" | "<" | "==" | "~" | "^" | 0
       dstar <- +Digit | '*'
       ver <- (dstar * ('.' * dstar)[0..2]) | "any version"
-      ending <- ", " | !1
+      ending <- (*white * "," * *white) | (*white * "&" * *white) | !1
       tag <- '#' * +(1 - ending)
       spec <- tag | ver
       anyrecord <- >name:
+        lastname = $1
         let req = newRequirement(id = $1, operator = Wild, spec = "*")
         if req notin requires:
           requires[req] = req
+      andrecord <- *white * >ops * *white * >spec:
+        let req = newRequirement(id = lastname, operator = $1, spec = $2)
+        if req notin requires:
+          requires[req] = req
       inrecord <- >name * *white * >ops * *white * >spec:
+        lastname = $1
         let req = newRequirement(id = $1, operator = $2, spec = $3)
         if req notin requires:
           requires[req] = req
-      record <- (inrecord | anyrecord) * ending
+      record <- (inrecord | andrecord | anyrecord) * ending
       document <- *record
     parsed = peggy.match(input)
   if parsed.ok:

@@ -37,6 +37,7 @@ suite "package":
       text11 = "dogs ^3.2"
       text12 = "owls ~4"
       text13 = "owls any version"
+      text14 = "owls >=1.0.0 &< 2"
       parsed1 = parseRequires(text1)
       parsed2 = parseRequires(text2)
       parsed3 = parseRequires(text3)
@@ -50,6 +51,7 @@ suite "package":
       parsed11 = parseRequires(text11)
       parsed12 = parseRequires(text12)
       parsed13 = parseRequires(text13)
+      parsed14 = parseRequires(text14)
     check parsed1.isSome
     check parsed2.isSome
     check parsed3.isSome
@@ -80,6 +82,9 @@ suite "package":
     for req in parsed13.get.values:
       check $req.release == anyRelease
       check req.isSatisfiedBy newRelease"1.8.8"
+    check parsed14.get.len == 2
+    for req in parsed14.get.values:
+      checkpoint $req
 
   test "parse nimph requires statement":
     project.fetchDump()
