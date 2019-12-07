@@ -62,7 +62,8 @@ proc newPackage*(name: string; dist: DistMethod; url: Uri): Package =
 
 proc newPackage*(url: Uri): Package =
   ## create a new package with only a url
-  result = newPackage(name = url.importName, dist = Git, url = url)
+  result = newPackage(name = url.importName, dist = Git,
+                      url = url.convertToGit)
   # flag this package as not necessarily named correctly;
   # we had to guess at what the final name might be...
   result.naive = true
@@ -231,7 +232,8 @@ proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
       let emsg = &"couldn't parse url for requirement {req}" # noqa
       raise newException(ValueError, emsg)
     for name, package in group.pairs:
-      if bareUrlsAreEqual(package.url, findurl.get):
+      if bareUrlsAreEqual(package.url.convertToGit,
+                          findurl.get.convertToGit):
         result.add name, package.aimAt(req)
         when defined(debug):
           debug "matched the url in packages", $package.url
