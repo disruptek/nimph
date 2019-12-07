@@ -236,49 +236,28 @@ proc getHeadOid*(project: Project): Option[GitOid] =
     raise newException(Defect, emsg)
   result = getHeadOid(project.gitDir)
 
-proc parseVersionFromTag(tag: string): Version =
-  {.warning: "need to parse v. prefixes out of this".}
-  let isVersion = parseVersion(&"""version = "{tag}"""")
-  if isVersion.isSome:
-    result = isVersion.get
-
 proc nameMyRepo(project: Project; head: string): string =
   ## name a repository directory in such a way that the compiler can grok it
-  result = project.name & "-" & $project.release
-  if project.release in {Tag}:
-    let tag = project.release.reference
-    # use the nimble style of project-#head when appropriate
-    if head == project.release.reference:
-      result = project.name & "-" & "#head"
-    else:
-      # try to use a version number if it matches our tag
-      let version = parseVersionFromTag(tag)
-      if version.isValid:
-        result = project.name & "-" & $version
+  block:
+    # the release is a tag, so we might be able to simplify it
+    if project.release in {Tag} and project.dist == Git:
+      let tag = project.tags.shortestTag(project.release.reference)
+      # use the nimble style of project-#head when appropriate
+      if tag == head:
+        result = project.name & "-" & "#head"
       else:
-        result = project.name & "-#" & tag
-  elif project.version.isValid:
-    result = project.name & "-" & $project.version
-  else:
-    result = project.name
+        let loose = parseVersionLoosely(tag)
+        if loose.isSome:
+          result = project.name & "-" & $loose.get
+        else:
+          result = project.name & "-#" & tag
+      break
 
-proc relocateDependency*(project: var Project; head: string) =
-  ## try to rename a project to more accurately reflect tag or version
-  let
-    repository = project.repo
-    current = repository.lastPathPart
-    name = project.nameMyRepo(head)
-  if current == name:
-    return
-  let
-    splat = repository.splitFile
-    future = splat.dir / name
-  if dirExists(future):
-    warn &"cannot rename `{current}` to `{name}` -- already exists"
-  else:
-    moveDir(repository, future)
-  let nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
-  project.nimble = newTarget(nimble)
+    # fallback to version
+    if project.version.isValid:
+      result = project.name & "-" & $project.version
+    else:
+      result = project.name & "-0"  # something the compiler can grok?
 
 proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
   ## retrieve the tags for a project from its git repository
@@ -294,6 +273,27 @@ proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
       warn &"unable to fetch tags from repo in {path}"
       return
     project.tags = result
+
+proc relocateDependency*(project: var Project; head: string) =
+  ## try to rename a project to more accurately reflect tag or version
+  assert project.dist == Git
+  let
+    repository = project.repo
+    current = repository.lastPathPart
+  discard project.fetchTagTable
+  let
+    name = project.nameMyRepo(head)
+  if current == name:
+    return
+  let
+    splat = repository.splitFile
+    future = splat.dir / name
+  if dirExists(future):
+    warn &"cannot rename `{current}` to `{name}` -- already exists"
+  else:
+    moveDir(repository, future)
+  let nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
+  project.nimble = newTarget(nimble)
 
 proc releaseSummary*(project: Project): string =
   ## summarize a project's tree using whatever we can
@@ -702,13 +702,17 @@ proc clone*(project: var Project; url: Uri; name: string;
   else:
     # we have to strip the # from a version tag for the compiler's benefit
     #
-    let version = parseVersionFromTag(tag)
-    if version.isValid:
-      directory = directory / name & "-" & $version
+    let loose = parseVersionLoosely(tag)
+    if loose.isSome and loose.get.isValid:
+      directory = directory / name & "-" & $loose.get
     elif tag.len != 0:
       directory = directory / name & "-#" & tag
     else:
       directory = directory / name & "-#head"
+
+  if directory.dirExists:
+    error "i wanted to clone into {directory}, but it already exists"
+    return
 
   # don't clone the compiler when we're debugging nimph
   when defined(debug):
