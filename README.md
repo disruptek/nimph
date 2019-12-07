@@ -108,14 +108,11 @@ Pass this subcommand some GitHub search syntax and it will download the best
 matching package, or you can supply a URL directly.  Local URLs are fine, too.
 
 Where the package ends up is a function of your existing compiler settings
-as recorded in relevant `nim.cfg` files; we'll search any `--nimblePath`
-statements to find increasingly distant directories with decreasing quantities
-of packages, with the following exception:
+as recorded in relevant `nim.cfg` files; we'll search all `--nimblePath`
+statements, but according to a convention also adopted by Nimble...
 
-- if you have a `deps` directory in your project, we'll use that instead
-
-_This behavior will be changed shortly to simply clone into the last-specified
-`nimblePath`, for consistency with Nimble._
+_The last specified --nimblePath, as processed by the `nim.cfg` files, is the
+"default" for the purposes of new package additions._
 
 ```
 $ nimph clone npeg
