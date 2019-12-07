@@ -89,7 +89,7 @@ suite "package":
     check parsed.isSome
 
   test "naive package naming":
-    check "somepack" == importName(parseUri"/some/nim-somepack.git")
+    check "somepack" == importName(parseUri"git@github.com:some/nim-somepack.git")
     check "somepack" == importName("/some/other/somepack-1.2.3")
 
   test "get the official packages list":
