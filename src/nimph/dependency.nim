@@ -415,9 +415,8 @@ proc isHappyWithVersion*(dependency: Dependency): bool =
   for project in dependency.projects.values:
     let
       req = dependency.requirement
-      peeled = project.peelRelease
     result = req.isSatisfiedBy(project, project.release)
-    result = result or req.isSatisfiedBy(project, peeled)
+    result = result or req.isSatisfiedBy(project, project.peelRelease)
     result = result or req.isSatisfiedBy(project, newRelease(project.version))
     if result:
       break
