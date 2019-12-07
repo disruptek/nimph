@@ -130,7 +130,18 @@ proc peelRelease*(project: Project; release: Release): Release =
   # else, look up the reference
   withGit:
     if grcOk == lookupThing(thing, project.repo, result.reference):
-      result = newRelease($thing.oid, operator = Tag)
+      case thing.kind:
+      of goTag:
+        # the reference is a tag, so we need to resolve the target oid
+        result = project.peelRelease newRelease($thing.targetId,
+                                                operator = Tag)
+      of goCommit:
+        # good; we found a matching commit
+        result = newRelease($thing.oid, operator = Tag)
+      else:
+        # otherwise, it's some kinda git object we don't grok
+        let emsg = &"{thing.kind} references unimplemented" # noqa
+        raise newException(ValueError, emsg)
     else:
       debug &"unable to find release reference `{result.reference}`"
 
@@ -194,8 +205,8 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
     if req.release.kind == Tag:
       var thing: GitThing
       if grcOk == lookupThing(thing, project.repo, req.release.reference):
-        yield newRelease($thing.oid, operator = Tag)
         debug &"found {req.release.reference} in {project}"
+        yield newRelease($thing.oid, operator = Tag)
       else:
         debug &"could not find {req.release.reference} in {project}"
   else:
@@ -219,29 +230,39 @@ proc symbolicMatch*(project: Project; req: Requirement): bool =
     break
 
 proc isSatisfiedBy(req: Requirement; project: Project; release: Release): bool =
-  result = true
   block satisfied:
     if req.release.kind == Tag:
       # the requirement is for a particular tag...
       # compare tags, head, and versions
-      result = project.symbolicMatch(req, release)
+      result = project.symbolicMatch(req)
       debug &"project symbolic match {result} {req}"
-      break satisfied
-    if release.isSpecific:
+      # if the tag doesn't match, make sure we fail hard here
+      break
+
+    # otherwise, if all we have is a tag but the requirement is for
+    # something version-like, then we have to just use the version;
+    # ditto if we don't even have a valid release, of course
+    elif not project.release.isValid or project.release.kind == Tag:
+      if project.version.isValid:
+        # fallback to the version indicated by nimble
+        result = req.isSatisfiedBy newRelease(project.version)
+        debug &"project version match {result} {req}"
+      # we did our best
+      break
+
+    # the project.release is valid and it's not a tag.
+    #
+    # first we wanna see if our version is specific; if it is, we
+    # will just see if that specific incarnation satisfies the req
+    if project.release.isSpecific:
       # try to use our release
-      result = req.isSatisfiedBy newRelease(release.specifically)
-      debug &"release {release} match {result} {req}"
-      if result:
-        break satisfied
-    # maybe there's a scenario where we can retrieve a tag that isn't our
-    # release, but does match the requirement?
-    result = project.symbolicMatch(req)
-    debug &"release {release} symbolic match {result} {req}"
-    if result:
-      break satisfied
+      result = req.isSatisfiedBy newRelease(project.release.specifically)
+      debug &"project release match {result} {req}"
+      break
 
 proc isSatisfiedBy(req: Requirement; project: Project): bool =
-  ## true if a requirement is satisfied by the given project
+  ## true if a requirement is satisfied by the given project,
+  ## at any known/available version for the project
   # first, check that the identity matches
   if project.name == req.identity:
     result = true
@@ -257,28 +278,16 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
   if not result:
     return
   # now we need to confirm that the version will work
-  block:
-    if req.release.kind == Tag:
-      # the requirement is for a particular tag...
-      # compare tags, head, and versions
-      result = project.symbolicMatch(req)
-      debug &"project symbolic match {result} {req}"
-      break
-    if project.release.isSpecific:
-      # try to use our release
-      result = req.isSatisfiedBy newRelease(project.release.specifically)
-      debug &"project release match {result} {req}"
-      if result:
-        break
-    result = project.symbolicMatch(req)
-    # maybe a different tag in the project will match?
-    debug &"project symbolic match {result} {req}"
-    if result:
-      break
-    if project.version.isValid:
-      # fallback to the version indicated by nimble
-      result = req.isSatisfiedBy newRelease(project.version)
-      debug &"project version match {result} {req}"
+  result = block:
+    # if the project's release satisfies the requirement, great
+    if req.isSatisfiedBy(project, project.release):
+      true
+    # it's also fine if the project can symbolically satisfy the requirement
+    elif project.symbolicMatch(req):
+      true
+    # else we really have no reason to think we can satisfy the requirement
+    else:
+      false
 
 proc get*[K: Requirement, V](group: Group[K, V]; key: K): V =
   ## fetch a package from the group using style-insensitive lookup
@@ -415,11 +424,16 @@ proc isHappyWithVersion*(dependency: Dependency): bool =
   for project in dependency.projects.values:
     let
       req = dependency.requirement
-    result = req.isSatisfiedBy(project, project.release)
-    result = result or req.isSatisfiedBy(project, project.peelRelease)
-    result = result or req.isSatisfiedBy(project, newRelease(project.version))
-    if result:
-      break
+    if req.isSatisfiedBy(project, project.release):
+      discard
+    elif req.isSatisfiedBy(project, project.peelRelease):
+      discard
+    elif req.isSatisfiedBy(project, newRelease(project.version)):
+      discard
+    else:
+      continue
+    result = true
+    break
 
 proc resolveDependency*(project: Project;
                         projects: ProjectGroup;
