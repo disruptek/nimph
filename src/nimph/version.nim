@@ -51,6 +51,68 @@ type
 const
   Wildlings = {Wild, Caret, Tilde}
 
+template starOrDigits(s: string): VersionMaskField =
+  ## parse a star or digit as in a version mask
+  if s == "*":
+    # VersionMaskField is Option[VersionField]
+    none(VersionField)
+  else:
+    some(s.parseUInt)
+
+proc parseDottedVersion(input: string): Version =
+  ## try to parse `1.2.3` into a `Version`
+  let
+    dotted = input.split('.')
+  if dotted.len != 3:
+    return
+  try:
+    result = (major: dotted[0].parseUInt,
+              minor: dotted[1].parseUInt,
+              patch: dotted[2].parseUInt)
+  except ValueError:
+    discard
+
+proc newVersionMask(input: string): VersionMask =
+  ## try to parse `1.2` or `1.2.*` into a `VersionMask`
+  let
+    dotted = input.split('.')
+  if dotted.len > 0:
+    result.major = dotted[0].starOrDigits
+  if dotted.len > 1:
+    result.minor = dotted[1].starOrDigits
+  if dotted.len > 2:
+    result.patch = dotted[2].starOrDigits
+
+proc newRelease*(version: Version): Release =
+  ## create a new release using a version
+  if not version.isValid:
+    raise newException(ValueError, &"invalid version `{version}`")
+  result = Release(kind: Equal, version: version)
+
+proc newRelease*(reference: string; operator = Equal): Release =
+  ## parse a version, mask, or tag with an operator hint from the requirement
+  if reference.startsWith("#") or operator == Tag:
+    result = Release(kind: Tag, reference: reference)
+    removePrefix(result.reference, {'#'})
+  elif reference in ["", "any version"]:
+    result = Release(kind: Wild, accepts: newVersionMask("*"))
+  elif "*" in reference:
+    result = Release(kind: Wild, accepts: newVersionMask(reference))
+  elif operator in Wildlings:
+    # thanks, jasper
+    case operator:
+    of Wildlings:
+      result = Release(kind: operator, accepts: newVersionMask(reference))
+    else:
+      raise newException(Defect, "inconceivable!")
+  elif count(reference, '.') < 2:
+    result = Release(kind: Wild, accepts: newVersionMask(reference))
+  else:
+    try:
+      result = newRelease(parseDottedVersion(reference))
+    except ValueError:
+      raise newException(ValueError, &"parse error on version `{reference}`")
+
 proc `$`*(field: VersionMaskField): string =
   if field.isNone:
     result = "*"
@@ -123,6 +185,26 @@ proc isValid*(req: Requirement): bool =
   # else it can only be a relative comparison to a complete version spec
   else:
     result = req.release.kind in {Equal}
+
+proc parseVersionLoosely*(content: string): Option[Release] =
+  ## a very relaxed parser for versions found in tags, etc.
+  ## only valid releases are emitted, however
+  var
+    release: Release
+  let
+    peggy = peg "document":
+      ver <- +Digit * ('.' * +Digit)[0..2]
+      record <- >ver * (!Digit | !1):
+        if not release.isValid:
+          release = newRelease($1, operator = Equal)
+      document <- +(record | 1) * !1
+    parsed = peggy.match(content)
+  try:
+    if parsed.ok and release.isValid:
+      result = release.some
+  except Exception as e:
+    let emsg = &"parse error in `{content}`: {e.msg}" # noqa
+    warn emsg
 
 proc `==`*(a, b: VersionMaskField): bool =
   result = a.isNone == b.isNone
@@ -209,55 +291,103 @@ iterator pairs*[T: Version | VersionMask](version: T): auto =
 
 proc isSpecific*(release: Release): bool =
   ## if the version/match specifies a full X.Y.Z version
-  result = release.kind in {Equal, AtLeast, NotMore} and release.isValid
-  result = result or (release.kind in Wildlings and release.accepts.patch.isSome)
+  if release.kind in {Equal, AtLeast, NotMore} and release.isValid:
+    result = true
+  elif release.kind in Wildlings and release.accepts.patch.isSome:
+    result = true
 
 proc specifically*(release: Release): Version =
   ## a full X.Y.Z version the release will match
-  if release.isSpecific:
-    if release.kind in Wildlings:
-      result = (major: release.accepts.major.get,
-                minor: release.accepts.minor.get,
-                patch: release.accepts.patch.get)
-    else:
-      result = release.version
+  if not release.isSpecific:
+    raise newException(Defect, &"release {release} is not specific")
+  if release.kind in Wildlings:
+    result = (major: release.accepts.major.get,
+              minor: release.accepts.minor.get,
+              patch: release.accepts.patch.get)
   else:
-    raise newException(ValueError, &"release {release} is not specific")
+    result = release.version
+
+proc effectively(mask: VersionMask): Version =
+  ## replace * with 0 in wildcard masks
+  if mask.major.isNone:
+    result = (0'u, 0'u, 0'u)
+  elif mask.minor.isNone:
+    result = (mask.major.get, 0'u, 0'u)
+  elif mask.patch.isNone:
+    result = (mask.major.get, mask.minor.get, 0'u)
+  else:
+    result = (mask.major.get, mask.minor.get, mask.patch.get)
+
+proc effectively(release: Release): Version =
+  ## convert a release to a version for rough comparisons
+  case release.kind
+  of Tag:
+    block:
+      let parsed = parseVersionLoosely(release.reference)
+      if parsed.isSome:
+        result = parsed.get.version
+        break
+      result = (0'u, 0'u, 0'u)
+  of Wildlings:
+    result = release.accepts.effectively
+  of Equal:
+    result = release.version
+  else:
+    raise newException(Defect, "not implemented")
 
 proc isSatisfiedBy(requirement: Requirement; version: Version): bool =
   ## true if the version satisfies the requirement
-  {.warning: "this needs to handle non-wild requirements".}
-  assert requirement.operator in Wildlings
   let
     op = requirement.operator
-    accepts = requirement.release.accepts
   case op:
+  of Tag:
+    result = version == requirement.release.effectively
   of Caret:
-    # i know, this looks nuts
-    for index, field in accepts.pairs:
-      if field.isNone:
-        break
-      if result == false:
-        if field.get != 0:
-          if field.get != version.at(index):
-            return false
-          result = true
-      elif field.get > version.at(index):
-        return false
+    block caret:
+      let accepts = requirement.release.accepts
+      for index, field in accepts.pairs:
+        if field.isNone:
+          break
+        if result == false:
+          if field.get != 0:
+            if field.get != version.at(index):
+              result = false
+              break caret
+            result = true
+        elif field.get > version.at(index):
+          result = false
+          break caret
   of Tilde:
-    for index, field in accepts.pairs:
-      if field.isNone or index == VersionIndex.high:
-        break
-      if field.get != version.at(index):
-        return false
-    return true
+    block tilde:
+      let accepts = requirement.release.accepts
+      for index, field in accepts.pairs:
+        if field.isNone or index == VersionIndex.high:
+          break
+        if field.get != version.at(index):
+          result = false
+          break tilde
+      result = true
   of Wild:
-    result = acceptable(accepts.major, op, version.major)
-    result = result and acceptable(accepts.minor, op, version.minor)
-    result = result and acceptable(accepts.patch, requirement.operator,
-                                   version.patch)
-  else:
-    raise newException(Defect, "unexpected (yet)")
+    block:
+      let accepts = requirement.release.accepts
+      # all the fields must be acceptable
+      if acceptable(accepts.major, op, version.major):
+        if acceptable(accepts.minor, op, version.minor):
+          if acceptable(accepts.patch, op, version.patch):
+            result = true
+            break
+      # or it's a failure
+      result = false
+  of Equal:
+    result = version == requirement.release.version
+  of AtLeast:
+    result = version >= requirement.release.version
+  of NotMore:
+    result = version <= requirement.release.version
+  of Under:
+    result = version < requirement.release.version
+  of Over:
+    result = version > requirement.release.version
 
 proc contains*(kinds: set[Operator]; spec: Release): bool =
   ## convenience
@@ -284,71 +414,9 @@ proc isSatisfiedBy*(req: Requirement; spec: Release): bool =
       result = true
     # otherwise, we have to compare it to a version
     elif spec.isSpecific:
-      result = req.isSatisfiedBy spec.version
+      result = req.isSatisfiedBy spec.specifically
     else:
-      raise newException(Defect, &"unimplemented for {spec.kind} release")
-
-template starOrDigits(s: string): VersionMaskField =
-  ## parse a star or digit as in a version mask
-  if s == "*":
-    # VersionMaskField is Option[VersionField]
-    none(VersionField)
-  else:
-    some(s.parseUInt)
-
-proc newVersionMask(input: string): VersionMask =
-  ## try to parse `1.2` or `1.2.*` into a `VersionMask`
-  let
-    dotted = input.split('.')
-  if dotted.len > 0:
-    result.major = dotted[0].starOrDigits
-  if dotted.len > 1:
-    result.minor = dotted[1].starOrDigits
-  if dotted.len > 2:
-    result.patch = dotted[2].starOrDigits
-
-proc parseDottedVersion(input: string): Version =
-  ## try to parse `1.2.3` into a `Version`
-  let
-    dotted = input.split('.')
-  if dotted.len != 3:
-    return
-  try:
-    result = (major: dotted[0].parseUInt,
-              minor: dotted[1].parseUInt,
-              patch: dotted[2].parseUInt)
-  except ValueError:
-    discard
-
-proc newRelease*(version: Version): Release =
-  ## create a new release using a version
-  if not version.isValid:
-    raise newException(ValueError, &"invalid version `{version}`")
-  result = Release(kind: Equal, version: version)
-
-proc newRelease*(reference: string; operator = Equal): Release =
-  ## parse a version, mask, or tag with an operator hint from the requirement
-  if reference.startsWith("#") or operator == Tag:
-    result = Release(kind: Tag, reference: reference)
-    removePrefix(result.reference, {'#'})
-  elif reference in ["", "any version"]:
-    result = Release(kind: Wild, accepts: newVersionMask("*"))
-  elif "*" in reference:
-    result = Release(kind: Wild, accepts: newVersionMask(reference))
-  elif operator in Wildlings:
-    # thanks, jasper
-    case operator:
-    of Wildlings:
-      result = Release(kind: operator, accepts: newVersionMask(reference))
-    else:
-      raise newException(Defect, "inconceivable!")
-  elif count(reference, '.') < 2:
-    result = Release(kind: Wild, accepts: newVersionMask(reference))
-  else:
-    try:
-      result = newRelease(parseDottedVersion(reference))
-    except ValueError:
-      raise newException(ValueError, &"parse error on version `{reference}`")
+      result = req.isSatisfiedBy spec.effectively
 
 proc hash*(field: VersionMaskField): Hash =
   ## help hash version masks
@@ -500,23 +568,3 @@ iterator likelyTags*(version: Version): string =
   yield "V"  & v
   yield "v." & v
   yield "V." & v
-
-proc parseVersionLoosely*(content: string): Option[Release] =
-  ## a very relaxed parser for versions found in tags, etc.
-  ## only valid releases are emitted, however
-  var
-    release: Release
-  let
-    peggy = peg "document":
-      ver <- +Digit * ('.' * +Digit)[0..2]
-      record <- >ver * (!Digit | !1):
-        if not release.isValid:
-          release = newRelease($1, operator = Equal)
-      document <- +(record | 1) * !1
-    parsed = peggy.match(content)
-  try:
-    if parsed.ok and release.isValid:
-      result = release.some
-  except Exception as e:
-    let emsg = &"parse error in `{content}`: {e.msg}" # noqa
-    warn emsg
