@@ -9,6 +9,7 @@ import std/strformat
 import bump
 
 import nimph/spec
+import nimph/git
 import nimph/nimble
 import nimph/project
 import nimph/doctor
@@ -258,6 +259,11 @@ proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
     cloned: Project
   if not project.clone(url, name, cloned):
     crash &"unable to clone {url}"
+
+  # rename the directory to match head release
+  let oid = cloned.getHeadOid
+  if oid.isSome:
+    cloned.relocateDependency($oid.get)
 
   # try to point it at github if it looks like it's our repo
   if not cloned.promote:

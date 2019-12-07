@@ -575,4 +575,5 @@ proc rollTowards*(project: var Project; requirement: Requirement): bool =
     result = project.setHeadToRelease(match)
     if result:
       project.release = match
+      project.relocateDependency(match.reference)
       break

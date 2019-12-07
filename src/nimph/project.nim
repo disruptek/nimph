@@ -262,7 +262,7 @@ proc nameMyRepo(project: Project; head: string): string =
   else:
     result = project.name
 
-proc relocateDependency(project: var Project; head: string) =
+proc relocateDependency*(project: var Project; head: string) =
   ## try to rename a project to more accurately reflect tag or version
   let
     repository = project.repo
@@ -735,9 +735,9 @@ proc clone*(project: var Project; url: Uri; name: string;
                  cloned.repo == directory:
     if not writeNimbleMeta(directory, bare, oid):
       warn &"unable to write {nimbleMeta} in {directory}"
-    cloned.relocateDependency(oid)
     # reload the project's config to see if we capture a new search path
     project.cfg = loadAllCfgs(project.repo)
+    # a future relocation will break this, of course
     for path in project.missingSearchPaths(cloned):
       if project.addSearchPath(path):
         info &"added path `{path}` to `{project.nimcfg}`"

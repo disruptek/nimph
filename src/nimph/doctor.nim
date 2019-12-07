@@ -213,6 +213,8 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
             for package in dependency.packages.values:
               var cloned: Project
               if project.clone(package.url, package.name, cloned):
+                if project.rollTowards(requirement):
+                  notice &"rolled to {project.release} to meet {requirement}"
                 tryAgain = true
                 break cloneokay
               else:
