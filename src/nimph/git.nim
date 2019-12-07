@@ -589,6 +589,16 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
         return
     tags.add name, target
 
+proc shortestTag*(table: GitTagTable; oid: string): string =
+  ## pick the shortest tag that matches the oid supplied
+  for name, thing in table.pairs:
+    if $thing.oid != oid:
+      continue
+    if result == "" or name.len < result.len:
+      result = name
+  if result == "":
+    result = oid
+
 proc getHeadOid*(repository: GitRepository): Option[GitOid] =
   var
     head: GitReference
