@@ -481,21 +481,25 @@ proc createUrl*(project: Project): Uri =
   if project.url.isValid:
     result = project.url
   else:
+    # make something up
     case project.dist:
     of Local:
+      # sometimes nimble provides a url during installation
       if project.meta.hasUrl:
+        # sometimes...
         result = project.meta.url
-      else:
-        result = Uri(scheme: "file", path: project.repo)
     of Git:
-      var
-        url = findRepositoryUrl(project.repo)
+      var url = findRepositoryUrl(project.repo)
       if url.isSome:
+        # try looking at remotes
         result = url.get
-      else:
-        result = Uri(scheme: "file", path: project.repo)
     else:
       raise newException(Defect, "not implemented")
+
+    # if something bad happens, fall back to a useful url
+    if not result.isValid:
+      result = Uri(scheme: "file", path: project.repo)
+    assert result.isValid
 
 proc createUrl*(project: var Project): Uri =
   let

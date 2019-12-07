@@ -132,6 +132,8 @@ proc packageName*(name: string): string =
 
 proc packageName*(url: Uri): string =
   ## guess the import name of a package from a url
+  when defined(debug) or defined(debugPath):
+    assert url.isValid
   result = packageName(url.path.extractFilename.changeFileExt("").split("-")[^1])
 
 proc importName*(path: string): string =
@@ -140,7 +142,10 @@ proc importName*(path: string): string =
   result = path.pathToImport.packageName
 
 proc importName*(url: Uri): string =
-  if url.scheme == "file":
+  let url = url.normalizeUrl
+  if not url.isValid:
+    raise newException(ValueError, "invalid url: " & $url)
+  elif url.scheme == "file":
     result = url.path.importName
   else:
     result = url.packageName.importName

@@ -117,6 +117,8 @@ proc fetchNimbleDump*(path: string; nimbleDir = ""): DumpResult =
 proc hasUrl*(meta: NimbleMeta): bool =
   ## true if the metadata includes a url
   result = "url" in meta.js
+  result = result and meta.js["url"].kind == JString
+  result = result and meta.js["url"].getStr != ""
 
 proc url*(meta: NimbleMeta): Uri =
   ## return the url associated with the package
