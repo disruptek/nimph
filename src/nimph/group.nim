@@ -13,14 +13,16 @@ type
     table*: OrderedTableRef[K, V]
     imports*: StringTableRef
     flags*: set[Flag]
+    mode: StringTableMode
 
 proc init*[K, V](group: Group[K, V]; flags: set[Flag]; mode = modeStyleInsensitive) =
   ## initialize the table and name cache
   group.table = newOrderedTable[K, V]()
   when K is Uri:
-    group.imports = newStringTable(modeCaseSensitive)
+    group.mode = modeCaseSensitive
   else:
-    group.imports = newStringTable(mode)
+    group.mode = mode
+  group.imports = newStringTable(group.mode)
   group.flags = flags
 
 proc addName[K: string, V](group: Group[K, V]; name: K; value: string) =
@@ -152,3 +154,8 @@ iterator reversed*[K, V](group: Group[K, V]): V =
 
   for index in countDown(elems.high, elems.low):
     yield elems[index]
+
+proc clear*[K, V](group: Group[K, V]) =
+  ## clear the group without any other disruption
+  group.table.clear
+  group.imports.clear(group.mode)
