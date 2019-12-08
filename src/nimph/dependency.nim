@@ -426,8 +426,7 @@ proc isHappyWithVersion*(dependency: Dependency): bool =
       result = true
       break
 
-proc resolveDependency*(project: Project;
-                        projects: ProjectGroup;
+proc resolveDependency*(projects: ProjectGroup;
                         packages: PackageGroup;
                         requirement: Requirement): Dependency =
   ## filter all we know about the environment, a requirement, and the
@@ -502,7 +501,7 @@ proc resolveDependencies*(project: var Project;
       continue
     if requirement in dependencies:
       continue
-    var resolved = project.resolveDependency(projects, packages, requirement)
+    var resolved = resolveDependency(projects, packages, requirement)
     case resolved.packages.len:
     of 0:
       warn &"unable to resolve requirement `{requirement}`"
