@@ -286,7 +286,7 @@ proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
 
   # try to point it at github if it looks like it's our repo
   if not cloned.promote:
-    notice &"unable to promote url to ssh"
+    debug &"did not promote remote to ssh"
 
 template dumpHelp(fun: typed; use: string) =
   try:
