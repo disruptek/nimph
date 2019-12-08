@@ -136,8 +136,10 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
   let
     filename = nimbledir / officialPackages
 
-  result = PackagesResult(ok: false, why: "", packages: nil) # explicit
+  # make sure we have a sane return value
+  result = PackagesResult(ok: false, why: "", packages: newPackageGroup())
 
+  var group = result.packages
   block parsing:
     try:
       # we might not even have to open the file; wouldn't that be wonderful?
@@ -153,10 +155,6 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
         content = readFile(filename)
         js = parseJson(content)
 
-      # setup a new group
-      var
-        group = newPackageGroup()
-
       # consume the json array
       var
         aliases: seq[tuple[name: string; alias: string]]
@@ -171,7 +169,7 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
         try:
           group.add node
         except Exception as e:
-          warn node
+          notice node
           warn &"error reading package: {e.msg}"
 
       # now add in the aliases we collected
@@ -182,7 +180,6 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
           warn &"alias `{name}` refers to a missing package `{alias}`"
 
       result.ok = true
-      result.packages = group
     except Exception as e:
       result.why = e.msg
 
