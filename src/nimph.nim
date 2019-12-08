@@ -63,6 +63,8 @@ template setupLocalProject(project: var Project) =
     crash "unable to parse nim configuration: " & e.msg
 
 proc searcher*(args: seq[string]; log_level = logLevel; dry_run = false): int =
+  ## cli entry to search github for nim packages
+
   # user's choice, our default
   setLogFilter(log_level)
 
@@ -78,10 +80,13 @@ proc searcher*(args: seq[string]; log_level = logLevel; dry_run = false): int =
     fatal &"😢no results"
 
 proc fixer*(log_level = logLevel; dry_run = false): int =
+  ## cli entry to evaluate and/or repair the environment
+
   # user's choice, our default
   setLogFilter(log_level)
 
-  var project: Project
+  var
+    project: Project
   setupLocalProject(project)
 
   prepareForTheWorst:
@@ -93,10 +98,13 @@ proc fixer*(log_level = logLevel; dry_run = false): int =
       warn "run `nimph doctor` to fix this stuff"
 
 proc nimbler*(args: seq[string]; log_level = logLevel; dry_run = false): int =
+  ## cli entry to pass-through nimble commands with a sane nimbleDir
+
   # user's choice, our default
   setLogFilter(log_level)
 
-  var project: Project
+  var
+    project: Project
   setupLocalProject(project)
 
   let
@@ -105,15 +113,17 @@ proc nimbler*(args: seq[string]; log_level = logLevel; dry_run = false): int =
     crash &"nimble didn't like that"
 
 proc pather*(names: seq[string]; log_level = logLevel; dry_run = false): int =
+  ## cli entry to echo the path(s) of any dependencies
+
   # user's choice, our default
   setLogFilter(log_level)
 
   var
     project: Project
-    group = newDependencyGroup(flags = {Flag.Quiet})
   setupLocalProject(project)
 
-  if not project.resolveDependencies(group):
+  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
   # for convenience, add the project itself if possible
@@ -137,6 +147,8 @@ proc dumpLockList(project: Project) =
     fatal &"\t{room.name}"
 
 proc lockfiler*(names: seq[string]; log_level = logLevel; dry_run = false): int =
+  ## cli entry to write a lockfile
+
   # user's choice, our default
   setLogFilter(log_level)
 
@@ -155,7 +167,10 @@ proc lockfiler*(names: seq[string]; log_level = logLevel; dry_run = false): int 
     else:
       result = 1
 
-proc unlockfiler*(names: seq[string]; log_level = logLevel; dry_run = false): int =
+proc unlockfiler*(names: seq[string]; log_level = logLevel;
+                  dry_run = false): int =
+  ## cli entry to read a lockfile
+
   # user's choice, our default
   setLogFilter(log_level)
 
@@ -175,15 +190,17 @@ proc unlockfiler*(names: seq[string]; log_level = logLevel; dry_run = false): in
       result = 1
 
 proc forker*(names: seq[string]; log_level = logLevel; dry_run = false): int =
+  ## cli entry to remotely fork installed packages
+
   # user's choice, our default
   setLogFilter(log_level)
 
   var
     project: Project
-    group = newDependencyGroup(flags = {Flag.Quiet})
   setupLocalProject(project)
 
-  if not project.resolveDependencies(group):
+  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
   for name in names.items:
@@ -213,6 +230,8 @@ proc forker*(names: seq[string]; log_level = logLevel; dry_run = false): int =
       {.warning: "optionally upgrade a gitless install to clone".}
 
 proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
+  ## cli entry to clone a package into the environment
+
   # user's choice, our default
   setLogFilter(log_level)
 

@@ -14,6 +14,7 @@ import nimph/package
 import nimph/project
 import nimph/version
 import nimph/git
+import nimph/config
 
 import nimph/group
 export group
@@ -26,6 +27,8 @@ type
     projects*: ProjectGroup
 
   DependencyGroup* = ref object of Group[Requirement, Dependency]
+    packages: PackageGroup
+    projects: ProjectGroup
 
 proc name*(dependency: Dependency): string =
   result = dependency.names.join("|")
@@ -93,7 +96,7 @@ proc adopt*(parent: Project; child: var Project) =
     raise newException(Defect, emsg)
   child.parent = parent
 
-proc childProjects*(project: var Project): ProjectGroup =
+proc childProjects*(project: Project): ProjectGroup =
   ## compose a group of possible dependencies of the project
   result = project.availableProjects
   for child in result.mvalues:
@@ -426,9 +429,8 @@ proc isHappyWithVersion*(dependency: Dependency): bool =
       result = true
       break
 
-proc resolveDependency*(projects: ProjectGroup;
-                        packages: PackageGroup;
-                        requirement: Requirement): Dependency =
+proc resolveUsing*(projects: ProjectGroup; packages: PackageGroup;
+                   requirement: Requirement): Dependency =
   ## filter all we know about the environment, a requirement, and the
   ## means by which we may satisfy it, into a single object
   result = newDependency(requirement)
@@ -473,10 +475,10 @@ proc isUsing*(dependencies: DependencyGroup; target: Target;
   when defined(debug):
     debug &"is using {target.repo}: {result}"
 
-proc resolveDependencies*(project: var Project;
-                          projects: var ProjectGroup;
-                          packages: PackageGroup;
-                          dependencies: var DependencyGroup): bool =
+proc resolve(project: Project; deps: var DependencyGroup;
+             req: Requirement): bool
+
+proc resolve*(project: var Project; dependencies: var DependencyGroup): bool =
   ## resolve a project's dependencies recursively;
   ## store result in dependencies
 
@@ -486,65 +488,71 @@ proc resolveDependencies*(project: var Project;
   if Flag.Quiet notin dependencies.flags:
     info &"{project.cuteRelease:>8} {project.name:>12}   {project.releaseSummary}"
 
+  # assume innocence until the guilt is staining the carpet in the den
   result = true
 
-  let
-    findReqs = project.determineDeps
-  if findReqs.isNone:
+  # start with determining the dependencies of the project
+  let requires = project.determineDeps
+  if requires.isNone:
     warn &"no requirements found for {project}"
     return
+  let requirements = requires.get
 
-  let
-    requires = findReqs.get
-  for requirement in requires.values:
+  # next, iterate over each requirement
+  for requirement in requirements.values:
+    # and if it's not "virtual" (ie. the compiler)
     if requirement.isVirtual:
       continue
+    # and we haven't already processed the same exact requirement
     if requirement in dependencies:
       continue
-    var resolved = resolveDependency(projects, packages, requirement)
-    case resolved.packages.len:
-    of 0:
-      warn &"unable to resolve requirement `{requirement}`"
-      result = false
-      continue
-    of 1:
-      discard
-    else:
-      project.reportMultipleResolutions(requirement, resolved.packages)
+    # then try to stay truthy while resolving that requirement, too
+    result = result and project.resolve(dependencies, requirement)
 
-    # if the addition of the resolution is not novel, move along
-    if not dependencies.addedRequirements(resolved):
-      continue
+proc resolve(project: Project; deps: var DependencyGroup;
+             req: Requirement): bool =
+  ## resolve a single project's requirement, storing the result
+  var resolved = resolveUsing(deps.projects, deps.packages, req)
+  case resolved.packages.len:
+  of 0:
+    warn &"unable to resolve requirement `{req}`"
+    result = false
+    return
+  of 1:
+    discard
+  else:
+    project.reportMultipleResolutions(req, resolved.packages)
 
-    # else, we'll resolve dependencies introduced in any new projects
-    #
-    # note: we're using project.cfg and project.repo as a kind of scope
-    for recurse in resolved.projects.asFoundVia(project.cfg, project.repo):
-      # if one of the existing dependencies is using the same project, then
-      # we won't bother to recurse into it and process its requirements
-      if dependencies.isUsing(recurse.nimble, outside = resolved):
-        continue
-      result = result and recurse.resolveDependencies(projects, packages,
-                                                      dependencies)
+  # this game is now ours to lose
+  result = true
+
+  # if the addition of the dependency is not novel, we're done
+  if not deps.addedRequirements(resolved):
+    return
+
+  # else, we'll resolve dependencies introduced in any new dependencies.
+  # note: we're using project.cfg and project.repo as a kind of scope
+  for recurse in resolved.projects.asFoundVia(project.cfg, project.repo):
+    # if one of the existing dependencies is using the same project, then
+    # we won't bother to recurse into it and process its requirements
+    if deps.isUsing(recurse.nimble, outside = resolved):
+      continue
+    result = result and recurse.resolve(deps)
 
 proc getOfficialPackages(project: Project): PackagesResult =
   result = getOfficialPackages(project.nimbleDir)
 
-proc resolveDependencies*(project: var Project;
-                          dependencies: var DependencyGroup): bool =
-  ## entrance to the recursive dependency resolution
-  var
-    packages: PackageGroup
-    projects = project.childProjects
+proc newDependencyGroup*(project: Project;
+                         flags = defaultFlags): DependencyGroup =
+  ## a convenience to load packages and projects for resolution
+  result = newDependencyGroup(flags)
 
-  let
-    findPacks = project.getOfficialPackages
-  if not findPacks.ok:
-    packages = newPackageGroup()
-  else:
-    packages = findPacks.packages
+  # try to load the official packages list; either way, a group will exist
+  let official = project.getOfficialPackages
+  result.packages = official.packages
 
-  result = project.resolveDependencies(projects, packages, dependencies)
+  # collect all the packages from the environment
+  result.projects = project.childProjects
 
 proc setHeadToRelease(project: Project; release: Release): bool =
   ## advance the head of a project to a particular release
@@ -576,3 +584,12 @@ proc rollTowards*(project: var Project; requirement: Requirement): bool =
       project.release = match
       project.relocateDependency(match.reference)
       break
+
+proc reset*(dependencies: var DependencyGroup; project: var Project) =
+  ## reset a dependency group and prepare to resolve dependencies again
+  # empty the group of all requirements and dependencies
+  dependencies.clear
+  # reset the project's configuration to find new paths, etc.
+  project.cfg = loadAllCfgs(project.repo)
+  # rescan for package dependencies applicable to this project
+  dependencies.projects = project.childProjects

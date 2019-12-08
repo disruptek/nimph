@@ -256,29 +256,24 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
   # check dependencies and maybe install some
   block dependencies:
     var
-      group = newDependencyGroup(flags)
-      iteration = 0
+      group = project.newDependencyGroup(flags)
       state = DrState(kind: DrRetry)
 
     while state.kind == DrRetry:
       # we need to reload the config each repeat through this loop so that we
       # can correctly identify new search paths after adding new packages
-      if iteration > 0:
-        fatal "👍environment changed; re-examining dependencies..."
-        project.cfg = loadAllCfgs(project.repo)
-        group = newDependencyGroup(flags)
-
-      if not project.resolveDependencies(group):
+      if not project.resolve(group):
         notice &"unable to resolve all dependencies for {project}"
         result = false
         state.kind = DrError
       elif not project.fixDependencies(group, state):
         result = false
-
       # maybe we're done here
       if state.kind notin {DrRetry}:
         break
-      iteration.inc
+      # we need to try again, but first we'll reset the environment
+      fatal "👍environment changed; re-examining dependencies..."
+      group.reset(project)
 
     # if dependencies are available via --nimblePath, then warn of any
     # dependencies that aren't recorded as part of the dependency graph;

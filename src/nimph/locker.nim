@@ -14,6 +14,7 @@ import nimph/dependency
 import nimph/package
 import nimph/asjson
 import nimph/git
+import nimph/doctor
 
 type
   Locker* = ref object
@@ -51,7 +52,7 @@ proc `==`(a, b: Locker): bool =
 proc `==`(a, b: LockerRoom): bool =
   result = a.hash == b.hash
 
-proc newLockerRoom*(name = ""; flags: set[Flag] = defaultFlags): LockerRoom =
+proc newLockerRoom*(name = ""; flags = defaultFlags): LockerRoom =
   result = LockerRoom(name: name, flags: flags)
   result.init(flags, mode = modeStyleInsensitive)
 
@@ -65,10 +66,10 @@ proc newLocker(req: Requirement; name: string; project: Project): Locker =
   result.dist = project.dist
   result.release = project.release
 
-proc newLockerRoom*(project: Project): LockerRoom =
+proc newLockerRoom*(project: Project; flags = defaultFlags): LockerRoom =
   let
     requirement = newRequirement(project.importName, Equal, project.release)
-  result = newLockerRoom()
+  result = newLockerRoom(flags = flags)
   result.root = newLocker(requirement, rootName, project)
 
 proc add*(room: var LockerRoom; req: Requirement; name: string;
@@ -176,10 +177,10 @@ iterator allLockerRooms*(project: Project): LockerRoom =
   for name, js in project.config.getAllLockerRooms.pairs:
     yield js.toLockerRoom(name)
 
-proc unlock*(project: var Project; name: string): bool =
+proc unlock*(project: var Project; name: string; flags = defaultFlags): bool =
   var
-    dependencies = newDependencyGroup(flags = {Flag.Quiet})
-    room = newLockerRoom()
+    dependencies = newDependencyGroup(flags = {Flag.Quiet} + flags)
+    room = newLockerRoom(name, flags)
 
   if not project.getLockerRoom(name, room):
     notice &"unable to find a lock named `{name}`"
@@ -189,19 +190,32 @@ proc unlock*(project: var Project; name: string): bool =
     if locker.dist != Git:
       warn &"unsafe lock of `{name}` for {locker.requirement} as {locker.release}"
 
-  result = dependencies.populate(room)
-  if not result:
-    notice &"unable to resolve all dependencies for `{name}`"
-    return
-
-proc lock*(project: var Project; name: string): bool =
+  # perform doctor resolution of dependencies, etc.
   var
-    dependencies = newDependencyGroup(flags = {Flag.Quiet})
-    room = newLockerRoom(project)
+    state = DrState(kind: DrRetry)
+  while state.kind == DrRetry:
+    # resolve dependencies for the lock
+    if not dependencies.populate(room):
+      notice &"unable to resolve all dependencies for `{name}`"
+      result = false
+      state.kind = DrError
+    # see if we can converge the environment to the lock
+    elif not project.fixDependencies(dependencies, state):
+      result = false
+    # if the doctor doesn't want us to try again, we're done
+    if state.kind notin {DrRetry}:
+      break
+    # empty the dependencies and rescan for projects
+    dependencies.reset(project)
+
+proc lock*(project: var Project; name: string; flags = defaultFlags): bool =
+  var
+    dependencies = project.newDependencyGroup(flags = {Flag.Quiet} + flags)
+    room = newLockerRoom(project, flags)
   if project.getLockerRoom(name, room):
     notice &"lock `{name}` already exists; choose a new name"
     return
-  result = project.resolveDependencies(dependencies)
+  result = project.resolve(dependencies)
   if not result:
     notice &"unable to resolve all dependencies for {project}"
     return
