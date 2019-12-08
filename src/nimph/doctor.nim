@@ -41,21 +41,21 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
       # but the version is not suitable,
       if not dependency.isHappyWithVersion:
         # try to roll any supporting project to a version that'll work
-        for project in dependency.projects.mvalues:
+        for child in dependency.projects.mvalues:
           # if we're allowed to, i mean
           if Dry notin group.flags:
             # and if it was successful,
-            if project.rollTowards(requirement):
+            if child.rollTowards(requirement):
               # report success
-              notice &"rolled to {project.release} to meet {requirement}"
+              notice &"rolled to {child.release} to meet {requirement}"
               break
           # else report the problem and set failure
-          notice &"{requirement} unmet by {project}"
+          notice &"{requirement} unmet by {child}"
           result = false
 
       # the dependency is fine, but maybe we don't have it in our paths?
-      for proj in dependency.projects.mvalues:
-        for path in project.missingSearchPaths(proj):
+      for child in dependency.projects.mvalues:
+        for path in project.missingSearchPaths(child):
           # report or update the paths
           if Dry in group.flags:
             notice &"missing path `{path}` in `{project.nimcfg}`"
@@ -92,8 +92,8 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
         for package in dependency.packages.values:
           var cloned: Project
           if project.clone(package.url, package.name, cloned):
-            if project.rollTowards(requirement):
-              notice &"rolled to {project.release} to meet {requirement}"
+            if cloned.rollTowards(requirement):
+              notice &"rolled to {cloned.release} to meet {requirement}"
             state.kind = DrRetry
             break cloneokay
           else:

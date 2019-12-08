@@ -277,6 +277,8 @@ proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
 proc relocateDependency*(project: var Project; head: string) =
   ## try to rename a project to more accurately reflect tag or version
   assert project.dist == Git
+  if project.parent == nil:
+    raise newException(Defect, "we don't rename parent project repositories")
   let
     repository = project.repo
     current = repository.lastPathPart
