@@ -206,6 +206,19 @@ $ nimph lock works with latest npeg
 👌locked nimph-#0.0.26 as `works with latest npeg`
 ```
 
+### Unlock
+
+The `unlock` subcommand reads a dependency tree previously saved with `lock`
+and adjusts the environment to match, installing any missing dependencies and
+rolling repositories to the versions that were recorded previously.
+
+```
+$ nimph unlock goats
+unsafe lock of `regex` for regex>=0.10.0 as #ff6ab8297c72f30e4da34daa9e8a60075ce8df7b
+👭cloning https://github.com/zevv/npeg...
+rolled to #e3243f6ff2d05290f9c6f1e3d3f1c725091d60ab to meet git://github.com/disruptek/cutelog.git##1.1.1
+```
+
 ### Bump
 
 The `bump` tool is included as a dependency; it provides easy version and tag incrementing.

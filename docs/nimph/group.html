@@ -836,7 +836,8 @@ function main() {
     title="Group[K; V] = ref object of RootObj
   table*: OrderedTableRef[K, V]
   imports*: StringTableRef
-  flags*: set[Flag]"><wbr />Group<span class="attachedType"></span></a></li>
+  flags*: set[Flag]
+  mode: StringTableMode"><wbr />Group<span class="attachedType"></span></a></li>
 
   </ul>
 </li>
@@ -875,6 +876,8 @@ function main() {
     title="contains[K, V](group: Group[K, V]; url: Uri): bool"><wbr />contains<span class="attachedType">Group</span></a></li>
   <li><a class="reference" href="#contains%2CGroup%5BK%2CV%5D%2CV"
     title="contains[K, V](group: Group[K, V]; value: V): bool"><wbr />contains<span class="attachedType">Group</span></a></li>
+  <li><a class="reference" href="#clear%2CGroup%5BK%2CV%5D"
+    title="clear[K, V](group: Group[K, V])"><wbr />clear<span class="attachedType">Group</span></a></li>
 
   </ul>
 </li>
@@ -915,6 +918,7 @@ function main() {
   <span class="Identifier">table</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">OrderedTableRef</span><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span>
   <span class="Identifier">imports</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">StringTableRef</span>
   <span class="Identifier">flags</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">set</span><span class="Other">[</span><a href="spec.html#Flag"><span class="Identifier">Flag</span></a><span class="Other">]</span>
+  <span class="Identifier">mode</span><span class="Other">:</span> <span class="Identifier">StringTableMode</span>
 </pre></dt>
 <dd>
 
@@ -1038,6 +1042,13 @@ true if a member of the group has the same (bare) url
 
 
 </dd>
+<a id="clear,Group[K,V]"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#clear%2CGroup%5BK%2CV%5D"><span class="Identifier">clear</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span></pre></dt>
+<dd>
+
+clear the group without any other disruption
+
+</dd>
 
 </dl></div>
 <div class="section" id="15">
@@ -1088,7 +1099,7 @@ yield values in reverse order of entry
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-07 19:57:34 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-08 20:11:58 UTC</small>
       </div>
     </div>
   </div>
