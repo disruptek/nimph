@@ -475,12 +475,11 @@ proc isUsing*(dependencies: DependencyGroup; target: Target;
   when defined(debug):
     debug &"is using {target.repo}: {result}"
 
-proc resolve(project: Project; deps: var DependencyGroup;
-             req: Requirement): bool
+proc resolve*(project: Project; deps: var DependencyGroup;
+              req: Requirement): bool
 
 proc resolve*(project: var Project; dependencies: var DependencyGroup): bool =
-  ## resolve a project's dependencies recursively;
-  ## store result in dependencies
+  ## resolve a project's dependencies recursively; store result in dependencies
 
   # assert a usable config
   assert project.cfg != nil
@@ -509,7 +508,7 @@ proc resolve*(project: var Project; dependencies: var DependencyGroup): bool =
     # then try to stay truthy while resolving that requirement, too
     result = result and project.resolve(dependencies, requirement)
 
-proc resolve(project: Project; deps: var DependencyGroup;
+proc resolve*(project: Project; deps: var DependencyGroup;
              req: Requirement): bool =
   ## resolve a single project's requirement, storing the result
   var resolved = resolveUsing(deps.projects, deps.packages, req)

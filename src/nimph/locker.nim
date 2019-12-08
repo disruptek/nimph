@@ -127,10 +127,12 @@ proc populate(room: var LockerRoom; dependencies: DependencyGroup): bool =
       warn &"shadowed project {project}"
       result = false
 
-proc populate(dependencies: var DependencyGroup; room: LockerRoom): bool =
+proc populate(dependencies: var DependencyGroup;
+              room: LockerRoom; project: Project): bool =
+  result = true
   for name, locker in room.pairs:
     dependencies.add locker.requirement, newDependency(locker.requirement)
-  result = true
+    result = result and project.resolve(dependencies, locker.requirement)
 
 proc toJson*(locker: Locker): JsonNode =
   result = newJObject()
@@ -179,7 +181,7 @@ iterator allLockerRooms*(project: Project): LockerRoom =
 
 proc unlock*(project: var Project; name: string; flags = defaultFlags): bool =
   var
-    dependencies = newDependencyGroup(flags = {Flag.Quiet} + flags)
+    dependencies = project.newDependencyGroup(flags = {Flag.Quiet} + flags)
     room = newLockerRoom(name, flags)
 
   if not project.getLockerRoom(name, room):
@@ -195,7 +197,7 @@ proc unlock*(project: var Project; name: string; flags = defaultFlags): bool =
     state = DrState(kind: DrRetry)
   while state.kind == DrRetry:
     # resolve dependencies for the lock
-    if not dependencies.populate(room):
+    if not dependencies.populate(room, project):
       notice &"unable to resolve all dependencies for `{name}`"
       result = false
       state.kind = DrError
