@@ -17,6 +17,99 @@ import nimph/dependency
 import nimph/group
 import nimph/git as git
 
+type
+  StateKind* = enum
+    DrOkay = "okay"
+    DrRetry = "retry"
+    DrError = "error"
+
+  DrState* = object
+    kind*: StateKind
+    why*: string
+
+proc fixDependencies*(project: var Project; group: var DependencyGroup;
+                      state: var DrState): bool =
+  ## try to fix any outstanding issues with a set of dependencies
+
+  # by default, everything is fine
+  result = true
+  # but don't come back here
+  state.kind = DrError
+  for requirement, dependency in group.pairs:
+    # if the dependency is being met,
+    if dependency.isHappy:
+      # but the version is not suitable,
+      if not dependency.isHappyWithVersion:
+        # try to roll any supporting project to a version that'll work
+        for project in dependency.projects.mvalues:
+          # if we're allowed to, i mean
+          if Dry notin group.flags:
+            # and if it was successful,
+            if project.rollTowards(requirement):
+              # report success
+              notice &"rolled to {project.release} to meet {requirement}"
+              break
+          # else report the problem and set failure
+          notice &"{requirement} unmet by {project}"
+          result = false
+
+      # the dependency is fine, but maybe we don't have it in our paths?
+      for proj in dependency.projects.mvalues:
+        for path in project.missingSearchPaths(proj):
+          # report or update the paths
+          if Dry in group.flags:
+            notice &"missing path `{path}` in `{project.nimcfg}`"
+            result = false
+          elif project.addSearchPath(path):
+            info &"added path `{path}` to `{project.nimcfg}`"
+            # yay, we get to reload again
+            project.cfg = loadAllCfgs(project.repo)
+          else:
+            warn &"couldn't add path `{path}` to `{project.nimcfg}`"
+            result = false
+      # dependency is happy and (probably) in a search path now
+      continue
+
+    # so i just came back from lunch and i was in the drive-thru and
+    # reading reddit and managed to bump into the truck in front of me. 🙄
+    #
+    # this tiny guy pops out the door of the truck and practically tumbles
+    # down the running board before arriving at the door to my car.  he's
+    # so short that all i can see is his little balled-up fist raised over
+    # his head.
+    #
+    # i roll the window down, and he immediately yells, "I'M NOT HAPPY!"
+    # to which my only possible reply was, "Well, which one ARE you, then?"
+    #
+    # anyway, if we made it this far, we're not happy...
+    if Dry in group.flags:
+      notice &"{dependency.name} ({requirement}) missing"
+      result = false
+    # for now, we'll force trying again even though it's a security risk,
+    # because it will make users happy sooner, and we love happy users
+    else:
+      block cloneokay:
+        for package in dependency.packages.values:
+          var cloned: Project
+          if project.clone(package.url, package.name, cloned):
+            if project.rollTowards(requirement):
+              notice &"rolled to {project.release} to meet {requirement}"
+            state.kind = DrRetry
+            break cloneokay
+          else:
+            error &"error cloning {package}"
+            # a subsequent iteration could clone successfully
+        # no package was successfully cloned
+        result = false
+
+    # okay, we did some stuff...  let's see where we are now
+    if state.kind == DrRetry:
+      discard
+    elif result:
+      state.kind = DrOkay
+    else:
+      state.kind = DrError
+
 proc doctor*(project: var Project; dry = true; strict = true): bool =
   ## perform some sanity tests against the project and
   ## try to fix any issues we find unless `dry` is true
@@ -163,11 +256,11 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
   # check dependencies and maybe install some
   block dependencies:
     var
-      tryAgain = true
       group = newDependencyGroup(flags)
       iteration = 0
-    #for iteration in 0 .. 1:
-    while tryAgain:
+      state = DrState(kind: DrRetry)
+
+    while state.kind == DrRetry:
       # we need to reload the config each repeat through this loop so that we
       # can correctly identify new search paths after adding new packages
       if iteration > 0:
@@ -175,57 +268,15 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         project.cfg = loadAllCfgs(project.repo)
         group = newDependencyGroup(flags)
 
-      # by default, we won't try this again
-      tryAgain = false
-
       if not project.resolveDependencies(group):
         notice &"unable to resolve all dependencies for {project}"
         result = false
-      for requirement, dependency in group.pairs:
-        if dependency.isHappy:
-          if not dependency.isHappyWithVersion:
-            for project in dependency.projects.mvalues:
-              if not dry:
-                if project.rollTowards(requirement):
-                  notice &"rolled to {project.release} to meet {requirement}"
-                  break
-              notice &"{requirement} unmet by {project}"
-              result = false
-          for proj in dependency.projects.mvalues:
-            for path in project.missingSearchPaths(proj):
-              if dry:
-                notice &"missing path `{path}` in `{project.nimcfg}`"
-              elif project.addSearchPath(path):
-                info &"added path `{path}` to `{project.nimcfg}`"
-                # yay, we get to reload again
-                project.cfg = loadAllCfgs(project.repo)
-              else:
-                warn &"couldn't add path `{path}` to `{project.nimcfg}`"
-          # dependency is happy and in a search path now
-          continue
-        if dry:
-          notice &"{dependency.name} ({requirement}) missing"
-          result = false
-        # for now, we'll force trying again even though it's a security risk,
-        # because it will make users happy sooner, and we love happy users
-        elif true or iteration == 0:
-          block cloneokay:
-            for package in dependency.packages.values:
-              var cloned: Project
-              if project.clone(package.url, package.name, cloned):
-                if project.rollTowards(requirement):
-                  notice &"rolled to {project.release} to meet {requirement}"
-                tryAgain = true
-                break cloneokay
-              else:
-                error &"error cloning {package}"
-                # a subsequent iteration could clone successfully
-            # no package was successfully cloned
-            result = false
-        else:
-          error &"missing {dependency.name} package"
-          result = false
-      if not tryAgain:
+        state.kind = DrError
+      elif not project.fixDependencies(group, state):
+        result = false
+
+      # maybe we're done here
+      if state.kind notin {DrRetry}:
         break
       iteration.inc
 
