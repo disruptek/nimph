@@ -9,7 +9,6 @@ import std/strformat
 import bump
 
 import nimph/spec
-import nimph/git
 import nimph/nimble
 import nimph/project
 import nimph/doctor
