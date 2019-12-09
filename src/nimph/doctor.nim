@@ -12,7 +12,6 @@ import nimph/nimble
 import nimph/config
 import nimph/thehub
 import nimph/package
-import nimph/version
 import nimph/dependency
 import nimph/group
 import nimph/git as git
