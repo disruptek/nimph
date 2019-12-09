@@ -83,13 +83,11 @@ proc add*(room: var LockerRoom; req: Requirement; name: string;
     room.add name, locker
 
 proc repoLockReady(project: Project): bool =
-  result = true
-  var open: GitOpen
-  gitTrap open, openRepository(open, project.repo):
-    result = false
-    warn &"unable to read {project} repository"
+  ## true if a project's git repo is ready to be locked
+  if project.dist != Git:
     return
-  let state = repositoryState(open.repo)
+  result = true
+  let state = repositoryState(project.repo)
   if state != GitRepoState.rsNone:
     result = false
     warn &"{project} repository in invalid {state} state"

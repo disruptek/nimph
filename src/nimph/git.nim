@@ -348,6 +348,26 @@ template withGit(body: untyped) =
         raise newException(OSError, "unable to shut git")
   body
 
+template withGitRepoAt(path: string; body: untyped) =
+  withGit:
+    var open: GitOpen
+    gitTrap open, openRepository(open, path):
+      var code: GitResultCode
+      error &"error opening repository {path}"
+      result = code
+    var repo {.inject.} = open.repo
+    body
+
+template demandGitRepoAt(path: string; body: untyped) =
+  withGit:
+    var open: GitOpen
+    gitTrap open, openRepository(open, path):
+      var code: GitResultCode
+      let emsg = &"error opening repository {path}"
+      raise newException(IOError, emsg)
+    var repo {.inject.} = open.repo
+    body
+
 proc free*[T: GitHeapGits](point: ptr T) =
   withGit:
     if point != nil:
@@ -577,6 +597,12 @@ proc remoteLookup*(remote: var GitRemote; repo: GitRepository;
   withGit:
     result = git_remote_lookup(addr remote, repo, name).grc
 
+proc remoteLookup*(remote: var GitRemote; path: string;
+                   name: string): GitResultCode =
+  ## get the remote by name using a repository path
+  withGitRepoAt(path):
+    result = remoteLookup(remote, repo, name)
+
 proc remoteRename*(repo: GitRepository; prior: string; next: string): GitResultCode =
   ## rename a remote
   var
@@ -592,16 +618,32 @@ proc remoteRename*(repo: GitRepository; prior: string; next: string): GitResultC
         for problem in problems.items:
           warn problem
 
+proc remoteRename*(path: string; prior: string; next: string): GitResultCode =
+  ## rename a remote in the repository at the given path
+  withGitRepoAt(path):
+    result = remoteRename(repo, prior, next)
+
 proc remoteDelete*(repo: GitRepository; name: string): GitResultCode =
   ## delete a remote from the repository
   withGit:
     result = git_remote_delete(repo, name).grc
+
+proc remoteDelete*(path: string; name: string): GitResultCode =
+  ## delete a remote from the repository at the given path
+  withGitRepoAt(path):
+    result = remoteDelete(repo, name)
 
 proc remoteCreate*(remote: var GitRemote; repo: GitRepository;
                    name: string; url: Uri): GitResultCode =
   ## create a new remote in the repository
   withGit:
     result = git_remote_create(addr remote, repo, name, $url).grc
+
+proc remoteCreate*(remote: var GitRemote; path: string;
+                   name: string; url: Uri): GitResultCode =
+  ## create a new remote in the repository at the given path
+  withGitRepoAt(path):
+    result = remoteCreate(remote, repo, name, url)
 
 proc url*(remote: GitRemote): Uri =
   ## retrieve the url of a remote
@@ -647,13 +689,8 @@ proc lookupThing*(thing: var GitThing; repo: GitRepository; name: string): GitRe
 
 proc lookupThing*(thing: var GitThing; path: string; name: string): GitResultCode =
   ## try to look some thing up in the repository at the given path
-  var
-    open: GitOpen
-  withGit:
-    gitTrap open, openRepository(open, path):
-      let emsg = &"error opening repository {path}"
-      raise newException(IOError, emsg)
-    result = lookupThing(thing, open.repo, name)
+  withGitRepoAt(path):
+    result = lookupThing(thing, repo, name)
 
 proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
   ## compose a table of tags and their associated references
@@ -684,6 +721,11 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
         return
     tags.add name, target
 
+proc tagTable*(path: string; tags: var GitTagTable): GitResultCode =
+  ## compose a table of tags and their associated references
+  withGitRepoAt(path):
+    result = repo.tagTable(tags)
+
 proc shortestTag*(table: GitTagTable; oid: string): string =
   ## pick the shortest tag that matches the oid supplied
   for name, thing in table.pairs:
@@ -711,13 +753,8 @@ proc getHeadOid*(repository: GitRepository): Option[GitOid] =
 
 proc getHeadOid*(path: string): Option[GitOid] =
   ## try to retrieve the #head oid from a repository at the given path
-  var
-    open: GitOpen
-  withGit:
-    gitTrap open, openRepository(open, path):
-      let emsg = &"error opening repository {path}"
-      raise newException(IOError, emsg)
-    result = open.repo.getHeadOid
+  demandGitRepoAt(path):
+    result = repo.getHeadOid
 
 proc repositoryState*(repository: GitRepository): GitRepoState =
   ## fetch the state of a repository
@@ -726,13 +763,8 @@ proc repositoryState*(repository: GitRepository): GitRepoState =
 
 proc repositoryState*(path: string): GitRepoState =
   ## fetch the state of the repository at the given path
-  var
-    open: GitOpen
-  withGit:
-    gitTrap open, openRepository(open, path):
-      let emsg = &"error opening repository {path}"
-      raise newException(IOError, emsg)
-    result = repositoryState(open.repo)
+  demandGitRepoAt(path):
+    result = repositoryState(repo)
 
 when git2SetVer == "master":
   iterator status*(repository: GitRepository; show: GitStatusShow;
@@ -767,13 +799,8 @@ else:
 iterator status*(path: string; show = ssIndexAndWorkdir;
                  flags = defaultStatusFlags): GitStatus =
   ## for repository at path, yield status for each file which trips the flags
-  withGit:
-    var
-      open: GitOpen
-    gitTrap open, openRepository(open, path):
-      let emsg = &"error opening repository {path}"
-      raise newException(IOError, emsg)
-    for entry in status(open.repo, show, flags):
+  demandGitRepoAt(path):
+    for entry in status(repo, show, flags):
       yield entry
 
 proc checkoutTree*(repo: GitRepository; thing: GitThing;
@@ -842,10 +869,5 @@ proc checkoutTree*(repo: GitRepository; reference: string;
 proc checkoutTree*(path: string; reference: string;
                    strategy = defaultCheckoutStrategy): GitResultCode =
   ## checkout a repository in the given path using a reference string
-  withGit:
-    var
-      open: GitOpen
-    gitTrap open, openRepository(open, path):
-      let emsg = &"error opening repository {path}"
-      raise newException(IOError, emsg)
-    result = checkoutTree(open.repo, reference, strategy = strategy)
+  withGitRepoAt(path):
+    result = checkoutTree(repo, reference, strategy = strategy)

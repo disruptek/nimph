@@ -131,21 +131,23 @@ proc peelRelease*(project: Project; release: Release): Release =
     return
 
   # else, look up the reference
-  if grcOk == lookupThing(thing, project.repo, result.reference):
-    case thing.kind:
-    of goTag:
-      # the reference is a tag, so we need to resolve the target oid
-      result = project.peelRelease newRelease($thing.targetId,
-                                              operator = Tag)
-    of goCommit:
-      # good; we found a matching commit
-      result = newRelease($thing.oid, operator = Tag)
-    else:
-      # otherwise, it's some kinda git object we don't grok
-      let emsg = &"{thing.kind} references unimplemented" # noqa
-      raise newException(ValueError, emsg)
+  gitTrap thing, lookupThing(thing, project.repo, result.reference):
+    warn &"unable to find release reference `{result.reference}`"
+    return
+
+  # it's a valid reference, let's try to convert it to a release
+  case thing.kind:
+  of goTag:
+    # the reference is a tag, so we need to resolve the target oid
+    result = project.peelRelease newRelease($thing.targetId,
+                                            operator = Tag)
+  of goCommit:
+    # good; we found a matching commit
+    result = newRelease($thing.oid, operator = Tag)
   else:
-    debug &"unable to find release reference `{result.reference}`"
+    # otherwise, it's some kinda git object we don't grok
+    let emsg = &"{thing.kind} references unimplemented" # noqa
+    raise newException(ValueError, emsg)
 
 proc peelRelease*(project: Project): Release =
   result = project.peelRelease(project.release)

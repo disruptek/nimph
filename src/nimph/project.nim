@@ -277,13 +277,7 @@ proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
   ## retrieve the tags for a project from its git repository
   if project.dist != Git:
     return
-  var
-    opened: GitOpen
-  gitTrap opened, openRepository(opened, project.repo):
-    let path {.used.} = project.repo # template reasons
-    warn &"error opening repository {path}"
-    return
-  gitTrap tagTable(opened.repo, result):
+  gitTrap tagTable(project.repo, result):
     let path {.used.} = project.repo # template reasons
     warn &"unable to fetch tags from repo in {path}"
     return
@@ -299,12 +293,7 @@ proc releaseSummary*(project: Project): string =
     return $project.release
   var
     thing: GitThing
-    opened: GitOpen
-  gitTrap opened, openRepository(opened, project.repo):
-    let path {.used.} = project.repo # template reasons
-    warn &"error opening repository {path}"
-    return
-  gitTrap thing, lookupThing(thing, opened.repo, project.release.reference):
+  gitTrap thing, lookupThing(thing, project.repo, project.release.reference):
     warn &"error reading reference `{project.release.reference}`"
     return
   result = thing.summary
@@ -441,24 +430,23 @@ proc findRepositoryUrl*(path: string; name = defaultRemote): Option[Uri] =
   ## find the (remote?) url to a given local repository
   var
     remote: GitRemote
-    open: GitOpen
 
-  gitTrap openRepository(open, path):
-    warn &"error opening repository {path}"
-    return
   block found:
-    let r = remoteLookup(remote, open.repo, name)
-    case r:
+    let grc: GitResultCode = remoteLookup(remote, path, name)
+    case grc:
     of grcOk:
       break found
     of grcNotFound:
       discard
     else:
-      warn &"{r}: unable to fetch remote `{name}` from repo in {path}"
+      warn &"{grc}: unable to fetch remote `{name}` from repo in {path}"
     result = Uri(scheme: "file", path: path.absolutePath / "").some
     return
 
-  defer: remote.free
+  # remote is populated, so be sure to free it
+  defer:
+    remote.free
+
   try:
     let url = remote.url
     if url.isValid:
@@ -855,7 +843,6 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
   ## true if we were able to promote a url to be our new ssh origin
   var
     remote, upstream: GitRemote
-    open: GitOpen
   let
     path = project.repo
     ssh = url.convertToSsh
@@ -866,10 +853,7 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
     let emsg = &"nonsensical promotion on {project.dist} distribution" # noqa
     raise newException(Defect, emsg)
 
-  gitTrap openRepository(open, project.repo):
-    warn &"error opening repository {path}"
-    return
-  gitTrap remote, remoteLookup(remote, open.repo, name):
+  gitTrap remote, remoteLookup(remote, project.repo, name):
     warn &"unable to fetch remote `{name}` from repo in {path}"
     return
 
@@ -884,20 +868,20 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
         info &"upgrading remote to ssh..."
     except:
       warn &"unparseable remote `{name}` from repo in {path}"
-    gitFail upstream, remoteLookup(upstream, open.repo, upstreamRemote):
+    gitFail upstream, remoteLookup(upstream, project.repo, upstreamRemote):
       # there's no upstream remote; what do we do with origin?
       if remote.url.forkTarget == target:
         # the origin isn't an ssh remote; remove it
-        gitTrap open.repo.remoteDelete(name):
+        gitTrap remoteDelete(project.repo, name):
           # this should issue warnings of any problems...
           break
       else:
         # there's no upstream remote; rename origin to upstream
-        gitTrap open.repo.remoteRename(name, upstreamRemote):
+        gitTrap remoteRename(project.repo, name, upstreamRemote):
           # this should issue warnings of any problems...
           break
       # and make a new origin remote using the hubrepo's url
-      gitTrap upstream, remoteCreate(upstream, open.repo, defaultRemote, ssh):
+      gitTrap upstream, remoteCreate(upstream, project.repo, defaultRemote, ssh):
         # this'll issue some errors for us, too...
         break
       # success
