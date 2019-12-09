@@ -30,7 +30,6 @@ import std/options
 import std/strformat
 import std/os
 import std/osproc
-import std/sequtils
 import std/strtabs
 import std/asyncdispatch
 
