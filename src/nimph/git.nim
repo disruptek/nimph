@@ -912,9 +912,9 @@ proc checkoutTree*(repo: GitRepository; reference: string;
     var
       thing: GitThing
     result = lookupThing(thing, repo, reference)
-    defer:
-      thing.free
     if result == grcOk:
+      defer:
+        thing.free
       result = checkoutTree(repo, thing, strategy = strategy)
 
 proc checkoutTree*(path: string; reference: string;
