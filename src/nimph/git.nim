@@ -88,6 +88,24 @@ type
     soIncludeUnreadable     = (GIT_STATUS_OPT_INCLUDE_UNREADABLE,
                                "include unreadable")
 
+  GitStatusFlag* = enum
+    gsfCurrent           = (GIT_STATUS_CURRENT, "current")
+    # this space intentionally left blank
+    gsfIndexNew          = (GIT_STATUS_INDEX_NEW, "index new")
+    gsfIndexModified     = (GIT_STATUS_INDEX_MODIFIED, "index modified")
+    gsfIndexDeleted      = (GIT_STATUS_INDEX_DELETED, "index deleted")
+    gsfIndexRenamed      = (GIT_STATUS_INDEX_RENAMED, "index renamed")
+    gsfIndexTypechange   = (GIT_STATUS_INDEX_TYPECHANGE, "index typechange")
+    # this space intentionally left blank
+    gsfTreeNew           = (GIT_STATUS_WT_NEW, "tree new")
+    gsfTreeModified      = (GIT_STATUS_WT_MODIFIED, "tree modified")
+    gsfTreeDeleted       = (GIT_STATUS_WT_DELETED, "tree deleted")
+    gsfTreeTypechange    = (GIT_STATUS_WT_TYPECHANGE, "tree typechange")
+    gsfTreeRenamed       = (GIT_STATUS_WT_RENAMED, "tree renamed")
+    # this space intentionally left blank
+    gsfIgnored           = (GIT_STATUS_IGNORED, "ignored")
+    gsfConflicted        = (GIT_STATUS_CONFLICTED, "conflicted")
+
   GitCheckoutStrategy* = enum
     gcsNone                      = (GIT_CHECKOUT_NONE,
                                     "dry run")
@@ -470,6 +488,12 @@ proc isTag*(got: GitReference): bool =
   withGit:
     result = git_reference_is_tag(got) == 1
 
+proc flags*(status: GitStatus): set[GitStatusFlag] =
+  ## produce the set of flags indicating the status of the file
+  for flag in GitStatusFlag.low .. GitStatusFlag.high:
+    if flag.ord.uint == bitand(status.status.uint, flag.ord.uint):
+      result.incl flag
+
 proc `$`*(reference: GitReference): string =
   if reference.isTag:
     result = reference.name
@@ -486,7 +510,13 @@ proc `$`*(thing: GitThing): string =
 #  case thing.kind:
 #  of goTag:
 #  else:
-#
+
+proc `$`*(status: GitStatus): string =
+  for flag in status.flags.items:
+    if result != "":
+      result &= ","
+    result &= $flag
+
 proc message*(commit: GitCommit): string =
   withGit:
     result = $git_commit_message(commit)
