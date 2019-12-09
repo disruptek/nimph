@@ -530,8 +530,10 @@ proc findProject*(project: var Project; dir: string;
 
 iterator packageDirectories(project: Project): string =
   ## yield directories according to the project's path configuration
-  if project.parent != nil or project.cfg == nil:
+  if project.parent != nil:
     raise newException(Defect, "nonsensical outside root project")
+  elif project.cfg == nil:
+    raise newException(Defect, "fetch yourself a configuration first")
   for directory in project.cfg.packagePaths(exists = true):
     yield directory
 
