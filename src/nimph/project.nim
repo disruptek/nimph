@@ -236,14 +236,29 @@ proc getHeadOid*(project: Project): Option[GitOid] =
     raise newException(Defect, emsg)
   result = getHeadOid(project.gitDir)
 
-proc nameMyRepo(project: Project; head: string): string =
+proc demandHead*(project: Project): GitOid =
+  ## retrieve the #head oid from the project's repository or raise an exception
+  if project.dist != Git:
+    let emsg = &"{project} lacks a git repository to load" # noqa
+    raise newException(Defect, emsg)
+  let oid = getHeadOid(project.gitDir)
+  if oid.isNone:
+    let emsg = &"unable to fetch HEAD from {project}" # noqa
+    raise newException(ValueError, emsg)
+  result = oid.get
+
+proc nameMyRepo(project: Project): string =
   ## name a repository directory in such a way that the compiler can grok it
+  var
+    oid: Option[GitOid]
   block:
+    if project.dist == Git:
+      oid = project.getHeadOid
     # the release is a tag, so we might be able to simplify it
-    if project.release in {Tag} and project.dist == Git:
-      let tag = project.tags.shortestTag(project.release.reference)
+    if project.release in {Tag} and oid.isSome:
+      let tag = project.tags.shortestTag($oid.get)
       # use the nimble style of project-#head when appropriate
-      if tag == head:
+      if tag == $oid.get:
         result = project.name & "-" & "#head"
       else:
         let loose = parseVersionLoosely(tag)
@@ -261,6 +276,8 @@ proc nameMyRepo(project: Project; head: string): string =
 
 proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
   ## retrieve the tags for a project from its git repository
+  if project.dist != Git:
+    return
   var
     opened: GitOpen
   withGit:
@@ -274,28 +291,28 @@ proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
       return
     project.tags = result
 
-proc relocateDependency*(project: var Project; head: string) =
+proc relocateDependency*(project: var Project) =
   ## try to rename a project to more accurately reflect tag or version
-  assert project.dist == Git
   if project.parent == nil:
     raise newException(Defect, "we don't rename parent project repositories")
+
+  # tags are quite useful for choosing a name
+  discard project.fetchTagTable
+
   let
     repository = project.repo
     current = repository.lastPathPart
-  discard project.fetchTagTable
-  let
-    name = project.nameMyRepo(head)
-  if current == name:
-    return
-  let
+    name = project.nameMyRepo
     splat = repository.splitFile
     future = splat.dir / name
-  if dirExists(future):
-    warn &"cannot rename `{current}` to `{name}` -- already exists"
-  else:
-    moveDir(repository, future)
-  let nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
-  project.nimble = newTarget(nimble)
+    nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
+
+  if current != name:
+    if dirExists(future):
+      warn &"cannot rename `{current}` to `{name}` -- already exists"
+    else:
+      moveDir(repository, future)
+      project.nimble = newTarget(nimble)
 
 proc releaseSummary*(project: Project): string =
   ## summarize a project's tree using whatever we can
@@ -368,7 +385,7 @@ proc findCurrentTag*(project: var Project): Release =
     project.fetchTagTable
   result = readonly.findCurrentTag
 
-proc inventRelease(project: var Project): Release {.discardable.} =
+proc inventRelease*(project: var Project): Release {.discardable.} =
   ## compute the most accurate release specification for the project
   block found:
     if project.dist == Git:

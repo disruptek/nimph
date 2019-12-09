@@ -571,12 +571,19 @@ proc rollTowards*(project: var Project; requirement: Requirement): bool =
     return
   if project.tags == nil:
     project.fetchTagTable
+  # iterate over all matching tags
   for match in project.symbolicMatch(requirement):
+    # try to point to the matching release
     result = project.setHeadToRelease(match)
-    if result:
-      project.release = match
-      project.relocateDependency(match.reference)
-      break
+    if not result:
+      warn &"failed checkout of {match}"
+      continue
+    # now, we've had some issues here, so we assume nothing.
+    # first, read the current release
+    discard project.inventRelease
+    # then, maybe rename the directory appropriately
+    project.relocateDependency
+    break
 
 proc reset*(dependencies: var DependencyGroup; project: var Project) =
   ## reset a dependency group and prepare to resolve dependencies again

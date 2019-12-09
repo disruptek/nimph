@@ -280,9 +280,7 @@ proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
     crash &"unable to clone {url}"
 
   # rename the directory to match head release
-  let oid = cloned.getHeadOid
-  if oid.isSome:
-    cloned.relocateDependency($oid.get)
+  cloned.relocateDependency
 
   # try to point it at github if it looks like it's our repo
   if not cloned.promote:
