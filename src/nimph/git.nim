@@ -228,8 +228,10 @@ type
       discard
 
   GitHeapGits = git_repository | git_reference | git_remote | git_tag |
-                git_strarray | git_object | git_commit | git_status_list
-  NimHeapGits = git_clone_options | git_status_options
+                git_strarray | git_object | git_commit | git_status_list |
+                git_annotated_commit
+  NimHeapGits = git_clone_options | git_status_options | git_checkout_options |
+                git_oid
   GitOid* = ptr git_oid
   GitRemote* = ptr git_remote
   GitReference* = ptr git_reference
@@ -337,19 +339,14 @@ proc shutdown*(): bool =
     debug "open gits:", count
 
 template withGit(body: untyped) =
-  when true:
-    once:
-      if not init():
-        raise newException(OSError, "unable to init git")
-    body
-  else:
+  once:
     if not init():
       raise newException(OSError, "unable to init git")
-    else:
-      defer:
-        if not shutdown():
-          raise newException(OSError, "unable to shut git")
-      body
+  when false:
+    defer:
+      if not shutdown():
+        raise newException(OSError, "unable to shut git")
+  body
 
 proc free*[T: GitHeapGits](point: ptr T) =
   withGit:
@@ -370,6 +367,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
         git_object_free(point)
       elif T is git_status_list:
         git_status_list_free(point)
+      elif T is git_annotated_commit:
+        git_annotated_commit_free(point)
       else:
         {.error: "missing a free definition".}
 
@@ -528,6 +527,8 @@ proc clone*(got: var GitClone; uri: Uri; path: string;
             branch = ""): GitResultCode =
   ## clone a repository
   got.options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
+  defer:
+    got.options.free
   withGit:
     when git2SetVer == "master":
       result = git_clone_options_init(got.options, GIT_CLONE_OPTIONS_VERSION).grc
@@ -540,7 +541,6 @@ proc clone*(got: var GitClone; uri: Uri; path: string;
       got.options.checkout_branch = branch
     got.url = $uri
     got.directory = path
-    dealloc(got.options)
 
   result = git_clone(addr got.repo, got.url, got.directory, got.options).grc
 
@@ -558,11 +558,12 @@ proc setHeadDetached*(repo: GitRepository; reference: string): GitResultCode =
   ## point the repo's head at the given reference
   var
     oid: ptr git_oid = cast[ptr git_oid](sizeof(git_oid).alloc)
+  defer:
+    oid.free
   withGit:
     result = git_oid_fromstr(oid, reference).grc
     if result == grcOk:
       result = repo.setHeadDetached(oid)
-    dealloc(oid)
 
 proc openRepository*(got: var GitOpen; path: string): GitResultCode =
   ## open a repository by path
@@ -582,12 +583,14 @@ proc remoteRename*(repo: GitRepository; prior: string; next: string): GitResultC
     list: git_strarray
   withGit:
     result = git_remote_rename(addr list, repo, prior, next).grc
-    if list.count > 0'u:
-      let problems = cstringArrayToSeq(cast[cstringArray](list.strings),
-                                       list.count)
-      for problem in problems.items:
-        warn problem
-    git_strarray_free(addr list)
+    if result == grcOk:
+      defer:
+        git_strarray_free(addr list)
+      if list.count > 0'u:
+        let problems = cstringArrayToSeq(cast[cstringArray](list.strings),
+                                         list.count)
+        for problem in problems.items:
+          warn problem
 
 proc remoteDelete*(repo: GitRepository; name: string): GitResultCode =
   ## delete a remote from the repository
@@ -618,9 +621,8 @@ proc target*(thing: GitThing; target: var GitThing): GitResultCode =
     obj: GitObject
   withGit:
     result = git_tag_target(addr obj, cast[GitTag](thing.o)).grc
-    if result != grcOk:
-      return
-    target = newThing(obj)
+    if result == grcOk:
+      target = newThing(obj)
 
 proc tagList*(repo: GitRepository; tags: var seq[string]): GitResultCode =
   ## retrieve a list of tags from the repo
@@ -628,18 +630,19 @@ proc tagList*(repo: GitRepository; tags: var seq[string]): GitResultCode =
     list: git_strarray
   withGit:
     result = git_tag_list(addr list, repo).grc
-    if list.count > 0'u:
-      tags = cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
-    git_strarray_free(addr list)
+    if result == grcOk:
+      defer:
+        git_strarray_free(addr list)
+      if list.count > 0'u:
+        tags = cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
 
 proc lookupThing*(thing: var GitThing; repo: GitRepository; name: string): GitResultCode =
   var
     obj: GitObject
   withGit:
     result = git_revparse_single(addr obj, repo, name).grc
-    if result != grcOk:
-      return
-    thing = newThing(obj)
+    if result == grcOk:
+      thing = newThing(obj)
 
 proc lookupThing*(thing: var GitThing; path: string; name: string): GitResultCode =
   var
@@ -772,18 +775,51 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
                    strategy = defaultCheckoutStrategy): GitResultCode =
   withGit:
     var
-      options: ptr git_checkout_options = cast[ptr git_checkout_options](sizeof(git_checkout_options).alloc)
+      options = cast[ptr git_checkout_options](sizeof(git_checkout_options).alloc)
+      commit: ptr git_commit
+      target: ptr git_annotated_commit
+    defer:
+      options.free
+
     block:
-      result = git_checkout_options_init(options, GIT_CHECKOUT_OPTIONS_VERSION).grc
+      # start with converting the thing to an annotated commit
+      result = git_annotated_commit_lookup(addr target, repo, thing.oid).grc
+      if result != grcOk:
+        break
+      defer:
+        target.free
+
+      # use the oid of this target to look up the commit
+      let oid = git_annotated_commit_id(target)
+      result = git_commit_lookup(addr commit, repo, oid).grc
+      if result != grcOk:
+        break
+      defer:
+        commit.free
+
+      # setup our checkout options
+      result = git_checkout_options_init(options,
+                                         GIT_CHECKOUT_OPTIONS_VERSION).grc
       if result != grcOk:
         break
 
+      # reset the strategy per flags
       options.checkout_strategy = 0
       for flag in strategy.items:
         options.checkout_strategy = bitand(options.checkout_strategy,
                                            flag.ord.cuint)
-      result = git_checkout_tree(repo, thing.o, options).grc
-    dealloc(options)
+
+      # checkout the tree using the commit we fetched
+      result = git_checkout_tree(repo, cast[GitObject](commit), options).grc
+      if result != grcOk:
+        break
+
+      # get the commit ref name
+      let name = git_annotated_commit_ref(target)
+      if name.isNil:
+        result = git_repository_set_head_detached_from_annotated(repo, target).grc
+      else:
+        result = git_repository_set_head(repo, name).grc
 
 proc checkoutTree*(repo: GitRepository; reference: string;
                    strategy = defaultCheckoutStrategy): GitResultCode =
@@ -791,9 +827,10 @@ proc checkoutTree*(repo: GitRepository; reference: string;
     var
       thing: GitThing
     result = lookupThing(thing, repo, reference)
+    defer:
+      thing.free
     if result == grcOk:
       result = checkoutTree(repo, thing, strategy = strategy)
-    thing.free
 
 proc checkoutTree*(path: string; reference: string;
                    strategy = defaultCheckoutStrategy): GitResultCode =
