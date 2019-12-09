@@ -23,16 +23,22 @@ import nimph/spec
 
 type
   GitRepoState* = enum
-    rsNone                  = (GIT_REPOSITORY_STATE_NONE, "none")
-    rsMerge                 = (GIT_REPOSITORY_STATE_MERGE, "merge")
-    rsRevert                = (GIT_REPOSITORY_STATE_REVERT, "revert")
+    rsNone                  = (GIT_REPOSITORY_STATE_NONE,
+                               "none")
+    rsMerge                 = (GIT_REPOSITORY_STATE_MERGE,
+                               "merge")
+    rsRevert                = (GIT_REPOSITORY_STATE_REVERT,
+                               "revert")
     rsRevertSequence        = (GIT_REPOSITORY_STATE_REVERT_SEQUENCE,
                                "revert sequence")
-    rsCherrypick            = (GIT_REPOSITORY_STATE_CHERRYPICK, "cherrypick")
+    rsCherrypick            = (GIT_REPOSITORY_STATE_CHERRYPICK,
+                               "cherrypick")
     rsCherrypickSequence    = (GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE,
                                "cherrypick sequence")
-    rsBisect                = (GIT_REPOSITORY_STATE_BISECT, "bisect")
-    rsRebase                = (GIT_REPOSITORY_STATE_REBASE, "rebase")
+    rsBisect                = (GIT_REPOSITORY_STATE_BISECT,
+                               "bisect")
+    rsRebase                = (GIT_REPOSITORY_STATE_REBASE,
+                               "rebase")
     rsRebaseInteractive     = (GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,
                                "rebase interactive")
     rsRebaseMerge           = (GIT_REPOSITORY_STATE_REBASE_MERGE,
@@ -41,6 +47,7 @@ type
                                "apply mailbox")
     rsApplyMailboxOrRebase  = (GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
                                "apply mailbox or rebase")
+
   GitStatusShow* = enum
     ssIndexAndWorkdir       = (GIT_STATUS_SHOW_INDEX_AND_WORKDIR,
                                "index and workdir")
@@ -48,6 +55,7 @@ type
                                "index only")
     ssWorkdirOnly           = (GIT_STATUS_SHOW_WORKDIR_ONLY,
                                "workdir only")
+
   GitStatusOption* = enum
     soIncludeUntracked      = (GIT_STATUS_OPT_INCLUDE_UNTRACKED,
                                "include untracked")
@@ -137,7 +145,7 @@ type
     gcnAll             = (GIT_CHECKOUT_NOTIFY_ALL, "all")
 
   GitResultCode* = enum
-    grcOk              = (-1 * GIT_OK, "ok")
+    grcOk              = (     GIT_OK, "ok")
     grcError           = (-1 * GIT_ERROR, "generic error")
     # this space intentionally left blank
     grcNotFound        = (-1 * GIT_ENOTFOUND, "not found")
@@ -206,7 +214,6 @@ type
     gecWorkTree    = (GIT_ERROR_WORKTREE, "work tree")
     gecSHA1        = (GIT_ERROR_SHA1, "sha1")
 
-  GitObject* = ptr git_object
   GitObjectKind* = enum
     goAny         = (2 + GIT_OBJECT_ANY, "object")
     goBad         = (2 + GIT_OBJECT_INVALID, "invalid")
@@ -217,6 +224,7 @@ type
     # this space intentionally left blank
     goOfsDelta    = (2 + GIT_OBJECT_OFS_DELTA, "ofs")
     goRefDelta    = (2 + GIT_OBJECT_REF_DELTA, "ref")
+
   GitThing* = ref object
     o*: GitObject
     case kind*: GitObjectKind:
@@ -227,11 +235,16 @@ type
     else:
       discard
 
+  # separating out stuff we free via routines from libgit2
   GitHeapGits = git_repository | git_reference | git_remote | git_tag |
                 git_strarray | git_object | git_commit | git_status_list |
                 git_annotated_commit
+
+  # or stuff we alloc and pass to libgit2, and then free later ourselves
   NimHeapGits = git_clone_options | git_status_options | git_checkout_options |
                 git_oid
+
+  GitObject* = ptr git_object
   GitOid* = ptr git_oid
   GitRemote* = ptr git_remote
   GitReference* = ptr git_reference
@@ -239,17 +252,20 @@ type
   GitStrArray* = ptr git_strarray
   GitTag* = ptr git_tag
   GitCommit* = ptr git_commit
+  GitStatus* = ptr git_status_entry
+  GitStatusList* = ptr git_status_list
+
   GitClone* = object
     url*: cstring
     directory*: cstring
     repo*: GitRepository
     options*: ptr git_clone_options
+
   GitOpen* = object
     path*: cstring
     repo*: GitRepository
+
   GitTagTable* = OrderedTableRef[string, GitThing]
-  GitStatus* = ptr git_status_entry
-  GitStatusList* = ptr git_status_list
 
 proc grc(code: cint): GitResultCode =
   result = cast[GitResultCode](ord(-1 * code))
