@@ -290,29 +290,6 @@ proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
     return
   project.tags = result
 
-proc relocateDependency*(project: var Project) =
-  ## try to rename a project to more accurately reflect tag or version
-  if project.parent == nil:
-    raise newException(Defect, "we don't rename parent project repositories")
-
-  # tags are quite useful for choosing a name
-  discard project.fetchTagTable
-
-  let
-    repository = project.repo
-    current = repository.lastPathPart
-    name = project.nameMyRepo
-    splat = repository.splitFile
-    future = splat.dir / name
-    nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
-
-  if current != name:
-    if dirExists(future):
-      warn &"cannot rename `{current}` to `{name}` -- already exists"
-    else:
-      moveDir(repository, future)
-      project.nimble = newTarget(nimble)
-
 proc releaseSummary*(project: Project): string =
   ## summarize a project's tree using whatever we can
   if project.dist != Git:
@@ -697,6 +674,42 @@ iterator missingSearchPaths*(project: Project; target: var Project): string =
   for path in parent.missingSearchPaths(readonly):
     yield path
 
+proc addMissingSearchPathsTo*(project: var Project; cloned: var Project) =
+  ## point the project at a fresh clone if necessary
+  # reload the project's config to see if we capture a new search path
+  project.cfg = loadAllCfgs(project.repo)
+  # a future relocation will break this, of course
+  for path in project.missingSearchPaths(cloned):
+    if project.addSearchPath(path):
+      info &"added path `{path}` to `{project.nimcfg}`"
+    else:
+      warn &"couldn't add path `{path}` to `{project.nimcfg}`"
+
+proc relocateDependency*(parent: var Project; project: var Project) =
+  ## try to rename a project to more accurately reflect tag or version
+  if project.parent == nil:
+    raise newException(Defect, "we don't rename parent project repositories")
+
+  # tags are quite useful for choosing a name
+  discard project.fetchTagTable
+
+  let
+    repository = project.repo
+    current = repository.lastPathPart
+    name = project.nameMyRepo
+    splat = repository.splitFile
+    future = splat.dir / name
+    nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
+
+  if current != name:
+    if dirExists(future):
+      warn &"cannot rename `{current}` to `{name}` -- already exists"
+    else:
+      moveDir(repository, future)
+      project.nimble = newTarget(nimble)
+      # the path changed, so point the parent to it
+      parent.addMissingSearchPathsTo(project)
+
 proc clone*(project: var Project; url: Uri; name: string;
             cloned: var Project): bool =
   ## clone a package into the project's nimbleDir
@@ -754,14 +767,6 @@ proc clone*(project: var Project; url: Uri; name: string;
                  cloned.repo == directory:
     if not writeNimbleMeta(directory, bare, oid):
       warn &"unable to write {nimbleMeta} in {directory}"
-    # reload the project's config to see if we capture a new search path
-    project.cfg = loadAllCfgs(project.repo)
-    # a future relocation will break this, of course
-    for path in project.missingSearchPaths(cloned):
-      if project.addSearchPath(path):
-        info &"added path `{path}` to `{project.nimcfg}`"
-      else:
-        warn &"couldn't add path `{path}` to `{project.nimcfg}`"
   else:
     error "couldn't make sense of the project i just cloned"
 

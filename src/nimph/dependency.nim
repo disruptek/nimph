@@ -581,7 +581,8 @@ proc rollTowards*(project: var Project; requirement: Requirement): bool =
     # first, read the current release
     discard project.inventRelease
     # then, maybe rename the directory appropriately
-    project.relocateDependency
+    if project.parent != nil:
+      project.parent.relocateDependency(project)
     break
 
 proc reset*(dependencies: var DependencyGroup; project: var Project) =

@@ -94,6 +94,9 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
           if project.clone(package.url, package.name, cloned):
             if cloned.rollTowards(requirement):
               notice &"rolled to {cloned.release} to meet {requirement}"
+            else:
+              # we didn't roll, so we may need to relocate
+              project.relocateDependency(cloned)
             state.kind = DrRetry
             break cloneokay
           else:
