@@ -9,6 +9,6 @@ export NIMBLE_DIR="`pwd`/deps"
 mkdir --parents "$NIMBLE_DIR"
 
 nimble --accept refresh
-nimble install "--passNim:--path:\"`pwd`/src\""
+nimble install "--passNim:--path:\"`pwd`/src\" --outdir:\"`pwd`\""
 
 realpath nimph
