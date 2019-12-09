@@ -47,7 +47,7 @@ proc newDependencyGroup*(flags: set[Flag]): DependencyGroup =
 
 proc contains*(dependencies: DependencyGroup; package: Package): bool =
   for name, dependency in dependencies.pairs:
-    result = package.url in dependency.packages
+    result = dependency.packages.hasUrl(package.url)
     if result:
       break
 

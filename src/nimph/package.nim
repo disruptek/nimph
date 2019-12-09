@@ -213,10 +213,11 @@ proc toUrl*(requirement: Requirement; group: PackageGroup): Option[Uri] =
       removePrefix(url.anchor, {'#'})
     result = url.some
 
-proc contains*(group: PackageGroup; url: Uri): bool {.deprecated.} =
+proc hasUrl*(group: PackageGroup; url: Uri): bool =
   for value in group.values:
-    if bareUrlsAreEqual(value.url, url):
-      result = true
+    result = bareUrlsAreEqual(value.url.convertToGit,
+                              url.convertToGit)
+    if result:
       break
 
 proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
