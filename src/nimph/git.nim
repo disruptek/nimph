@@ -819,9 +819,13 @@ when git2SetVer == "master":
     withGit:
       var
         statum: GitStatusList
-        options: ptr git_status_options = cast[ptr git_status_options](sizeof(git_status_options).alloc)
+        options = cast[ptr git_status_options](sizeof(git_status_options).alloc)
+      defer:
+        options.free
+
       block:
-        if grcOk != git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION).grc:
+        if grcOk != git_status_options_init(options,
+                                            GIT_STATUS_OPTIONS_VERSION).grc:
           break
 
         options.show = cast[git_status_show_t](show)
@@ -830,13 +834,14 @@ when git2SetVer == "master":
 
         if grcOk != git_status_list_new(addr statum, repository, options).grc:
           break
+        defer:
+          statum.free
 
         let
           count = git_status_list_entrycount(statum)
         for index in 0 ..< count:
           yield git_status_byindex(statum, index.cuint)
-      free(options)
-      free(statum)
+
 else:
   iterator status*(repository: GitRepository; show: GitStatusShow;
                    flags = defaultStatusFlags): GitStatus =
