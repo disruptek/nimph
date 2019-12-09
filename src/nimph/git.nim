@@ -336,7 +336,7 @@ proc shutdown*(): bool =
   when defined(debugGit):
     debug "open gits:", count
 
-template withGit*(body: untyped) =
+template withGit(body: untyped) =
   when true:
     once:
       if not init():

@@ -280,16 +280,15 @@ proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
     return
   var
     opened: GitOpen
-  withGit:
-    gitTrap opened, openRepository(opened, project.repo):
-      let path {.used.} = project.repo # template reasons
-      warn &"error opening repository {path}"
-      return
-    gitTrap tagTable(opened.repo, result):
-      let path {.used.} = project.repo # template reasons
-      warn &"unable to fetch tags from repo in {path}"
-      return
-    project.tags = result
+  gitTrap opened, openRepository(opened, project.repo):
+    let path {.used.} = project.repo # template reasons
+    warn &"error opening repository {path}"
+    return
+  gitTrap tagTable(opened.repo, result):
+    let path {.used.} = project.repo # template reasons
+    warn &"unable to fetch tags from repo in {path}"
+    return
+  project.tags = result
 
 proc relocateDependency*(project: var Project) =
   ## try to rename a project to more accurately reflect tag or version
@@ -322,18 +321,17 @@ proc releaseSummary*(project: Project): string =
     return "⚠️(invalid release)"
   if project.release.kind != Tag:
     return $project.release
-  withGit:
-    var
-      thing: GitThing
-      opened: GitOpen
-    gitTrap opened, openRepository(opened, project.repo):
-      let path {.used.} = project.repo # template reasons
-      warn &"error opening repository {path}"
-      return
-    gitTrap thing, lookupThing(thing, opened.repo, project.release.reference):
-      warn &"error reading reference `{project.release.reference}`"
-      return
-    result = thing.summary
+  var
+    thing: GitThing
+    opened: GitOpen
+  gitTrap opened, openRepository(opened, project.repo):
+    let path {.used.} = project.repo # template reasons
+    warn &"error opening repository {path}"
+    return
+  gitTrap thing, lookupThing(thing, opened.repo, project.release.reference):
+    warn &"error reading reference `{project.release.reference}`"
+    return
+  result = thing.summary
 
 proc cuteRelease*(project: Project): string =
   ## a very short summary of a release; ie. a git commit or version
@@ -469,31 +467,30 @@ proc findRepositoryUrl*(path: string; name = defaultRemote): Option[Uri] =
     remote: GitRemote
     open: GitOpen
 
-  withGit:
-    gitTrap openRepository(open, path):
-      warn &"error opening repository {path}"
-      return
-    block found:
-      let r = remoteLookup(remote, open.repo, name)
-      case r:
-      of grcOk:
-        break found
-      of grcNotFound:
-        discard
-      else:
-        warn &"{r}: unable to fetch remote `{name}` from repo in {path}"
-      result = Uri(scheme: "file", path: path.absolutePath / "").some
-      return
+  gitTrap openRepository(open, path):
+    warn &"error opening repository {path}"
+    return
+  block found:
+    let r = remoteLookup(remote, open.repo, name)
+    case r:
+    of grcOk:
+      break found
+    of grcNotFound:
+      discard
+    else:
+      warn &"{r}: unable to fetch remote `{name}` from repo in {path}"
+    result = Uri(scheme: "file", path: path.absolutePath / "").some
+    return
 
-    defer: remote.free
-    try:
-      let url = remote.url
-      if url.isValid:
-        result = remote.url.some
-      else:
-        warn &"bad git url in {path}: {url}"
-    except:
-      warn &"unable to parse url from remote `{name}` from repo in {path}"
+  defer: remote.free
+  try:
+    let url = remote.url
+    if url.isValid:
+      result = remote.url.some
+    else:
+      warn &"bad git url in {path}: {url}"
+  except:
+    warn &"unable to parse url from remote `{name}` from repo in {path}"
 
 proc createUrl*(project: Project): Uri =
   ## determine the source url for a project which may be local
@@ -707,7 +704,6 @@ proc clone*(project: var Project; url: Uri; name: string;
     bare = url
     tag: string
     directory = project.nimbleDir / PkgDir
-    oid: string
 
   if bare.anchor != "":
     tag = bare.anchor
@@ -741,18 +737,18 @@ proc clone*(project: var Project; url: Uri; name: string;
   fatal &"👭cloning {bare}..."
   info &"... into {directory}"
 
-  withGit:
-    var
-      got: GitClone
-      head: Option[GitOid]
-    gitTrap got, clone(got, bare, directory):
-      return
+  var
+    got: GitClone
+    head: Option[GitOid]
+    oid: string
+  gitTrap got, clone(got, bare, directory):
+    return
 
-    head = getHeadOid(got.repo)
-    if head.isNone:
-      oid = ""
-    else:
-      oid = $head.get
+  head = getHeadOid(got.repo)
+  if head.isNone:
+    oid = ""
+  else:
+    oid = $head.get
 
   if findProject(cloned, directory, parent = project) and
                  cloned.repo == directory:
@@ -866,54 +862,53 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
     let emsg = &"nonsensical promotion on {project.dist} distribution" # noqa
     raise newException(Defect, emsg)
 
-  withGit:
-    gitTrap openRepository(open, project.repo):
-      warn &"error opening repository {path}"
-      return
-    gitTrap remote, remoteLookup(remote, open.repo, name):
-      warn &"unable to fetch remote `{name}` from repo in {path}"
-      return
+  gitTrap openRepository(open, project.repo):
+    warn &"error opening repository {path}"
+    return
+  gitTrap remote, remoteLookup(remote, open.repo, name):
+    warn &"unable to fetch remote `{name}` from repo in {path}"
+    return
 
-    block donehere:
-      try:
-        # maybe we've already pointed at the repo via ssh?
-        if remote.url == ssh:
-          result = true
-          break
-        # maybe we've already pointed at the repo, but we wanna upgrade the url
-        if remote.url.forkTarget == target:
-          info &"upgrading remote to ssh..."
-      except:
-        warn &"unparseable remote `{name}` from repo in {path}"
-      gitFail upstream, remoteLookup(upstream, open.repo, upstreamRemote):
-        # there's no upstream remote; what do we do with origin?
-        if remote.url.forkTarget == target:
-          # the origin isn't an ssh remote; remove it
-          gitTrap open.repo.remoteDelete(name):
-            # this should issue warnings of any problems...
-            break
-        else:
-          # there's no upstream remote; rename origin to upstream
-          gitTrap open.repo.remoteRename(name, upstreamRemote):
-            # this should issue warnings of any problems...
-            break
-        # and make a new origin remote using the hubrepo's url
-        gitTrap upstream, remoteCreate(upstream, open.repo, defaultRemote, ssh):
-          # this'll issue some errors for us, too...
-          break
-        # success
+  block donehere:
+    try:
+      # maybe we've already pointed at the repo via ssh?
+      if remote.url == ssh:
         result = true
-        return
+        break
+      # maybe we've already pointed at the repo, but we wanna upgrade the url
+      if remote.url.forkTarget == target:
+        info &"upgrading remote to ssh..."
+    except:
+      warn &"unparseable remote `{name}` from repo in {path}"
+    gitFail upstream, remoteLookup(upstream, open.repo, upstreamRemote):
+      # there's no upstream remote; what do we do with origin?
+      if remote.url.forkTarget == target:
+        # the origin isn't an ssh remote; remove it
+        gitTrap open.repo.remoteDelete(name):
+          # this should issue warnings of any problems...
+          break
+      else:
+        # there's no upstream remote; rename origin to upstream
+        gitTrap open.repo.remoteRename(name, upstreamRemote):
+          # this should issue warnings of any problems...
+          break
+      # and make a new origin remote using the hubrepo's url
+      gitTrap upstream, remoteCreate(upstream, open.repo, defaultRemote, ssh):
+        # this'll issue some errors for us, too...
+        break
+      # success
+      result = true
+      return
 
-      try:
-        # upstream exists, so, i dunno, just warn the user?
-        if upstream.url.forkTarget != remote.url.forkTarget:
-          warn &"remote `{upstreamRemote}` exists for repo in {path}"
-        else:
-          {.warning: "origin equals upstream; remove upstream and try again?".}
-          warn &"remote `{upstreamRemote}` is the same as `{name}` in {path}"
-      except:
-        warn &"unparseable remote `{upstreamRemote}` from repo in {path}"
+    try:
+      # upstream exists, so, i dunno, just warn the user?
+      if upstream.url.forkTarget != remote.url.forkTarget:
+        warn &"remote `{upstreamRemote}` exists for repo in {path}"
+      else:
+        {.warning: "origin equals upstream; remove upstream and try again?".}
+        warn &"remote `{upstreamRemote}` is the same as `{name}` in {path}"
+    except:
+      warn &"unparseable remote `{upstreamRemote}` from repo in {path}"
 
 proc promote*(project: Project; name = defaultRemote;
              user: HubResult = nil): bool =
