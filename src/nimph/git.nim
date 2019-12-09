@@ -637,6 +637,7 @@ proc tagList*(repo: GitRepository; tags: var seq[string]): GitResultCode =
         tags = cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
 
 proc lookupThing*(thing: var GitThing; repo: GitRepository; name: string): GitResultCode =
+  ## try to look some thing up in the repository with the given name
   var
     obj: GitObject
   withGit:
@@ -645,6 +646,7 @@ proc lookupThing*(thing: var GitThing; repo: GitRepository; name: string): GitRe
       thing = newThing(obj)
 
 proc lookupThing*(thing: var GitThing; path: string; name: string): GitResultCode =
+  ## try to look some thing up in the repository at the given path
   var
     open: GitOpen
   withGit:
@@ -693,6 +695,7 @@ proc shortestTag*(table: GitTagTable; oid: string): string =
     result = oid
 
 proc getHeadOid*(repository: GitRepository): Option[GitOid] =
+  ## try to retrieve the #head oid from a repository
   var
     head: GitReference
   withGit:
@@ -707,7 +710,7 @@ proc getHeadOid*(repository: GitRepository): Option[GitOid] =
     result = head.oid.some
 
 proc getHeadOid*(path: string): Option[GitOid] =
-  ## retrieve the #head oid from a repository at the given path
+  ## try to retrieve the #head oid from a repository at the given path
   var
     open: GitOpen
   withGit:
@@ -722,6 +725,7 @@ proc repositoryState*(repository: GitRepository): GitRepoState =
     result = cast[GitRepoState](git_repository_state(repository))
 
 proc repositoryState*(path: string): GitRepoState =
+  ## fetch the state of the repository at the given path
   var
     open: GitOpen
   withGit:
@@ -762,6 +766,7 @@ else:
 
 iterator status*(path: string; show = ssIndexAndWorkdir;
                  flags = defaultStatusFlags): GitStatus =
+  ## for repository at path, yield status for each file which trips the flags
   withGit:
     var
       open: GitOpen
@@ -773,6 +778,7 @@ iterator status*(path: string; show = ssIndexAndWorkdir;
 
 proc checkoutTree*(repo: GitRepository; thing: GitThing;
                    strategy = defaultCheckoutStrategy): GitResultCode =
+  ## checkout a repository using a thing
   withGit:
     var
       options = cast[ptr git_checkout_options](sizeof(git_checkout_options).alloc)
@@ -823,6 +829,7 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
 
 proc checkoutTree*(repo: GitRepository; reference: string;
                    strategy = defaultCheckoutStrategy): GitResultCode =
+  ## checkout a repository using a reference string
   withGit:
     var
       thing: GitThing
@@ -834,10 +841,11 @@ proc checkoutTree*(repo: GitRepository; reference: string;
 
 proc checkoutTree*(path: string; reference: string;
                    strategy = defaultCheckoutStrategy): GitResultCode =
+  ## checkout a repository in the given path using a reference string
   withGit:
     var
       open: GitOpen
     gitTrap open, openRepository(open, path):
       let emsg = &"error opening repository {path}"
       raise newException(IOError, emsg)
-    result = open.repo.checkoutTree(reference, strategy = strategy)
+    result = checkoutTree(open.repo, reference, strategy = strategy)
