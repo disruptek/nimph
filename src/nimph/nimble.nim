@@ -45,8 +45,14 @@ proc runNimble*(args: seq[string]; options: set[ProcessOption];
     arguments = @["--debug"].concat arguments
 
   if nimbleDir != "":
+    # we want to strip any trailing PkgDir arriving from elsewhere...
+    var nimbleDir = nimbleDir / ""
+    # the only way this is a problem is if the user stores deps in pkgs/pkgs,
+    # but we can remove this hack once we have nimblePaths in nim-1.0 ...
+    if nimbleDir.endsWith("" / PkgDir / ""):
+      nimbleDir = nimbleDir.parentDir
     if not nimbleDir.dirExists:
-      let emsg = &"bogus nimbleDir: {nimbleDir}" # noqa
+      let emsg = &"{nimbleDir} is missing; can't run nimble" # noqa
       raise newException(IOError, emsg)
     # the ol' belt-and-suspenders approach to specifying nimbleDir
     arguments = @["--nimbleDir=" & nimbleDir].concat arguments
