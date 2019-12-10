@@ -396,7 +396,6 @@ template demandGitRepoAt(path: string; body: untyped) =
   withGit:
     var open: GitOpen
     gitTrap open, openRepository(open, path):
-      var code: GitResultCode
       let emsg = &"error opening repository {path}"
       raise newException(IOError, emsg)
     var repo {.inject.} = open.repo
@@ -452,6 +451,10 @@ proc short*(oid: GitOid; size: int): string =
     git_oid_nfmt(output, size.uint, oid)
     result = $output
     dealloc(output)
+
+proc `$`*(annotated: ptr git_annotated_commit): string =
+  withGit:
+    result = $git_annotated_commit_ref(annotated)
 
 proc `$`*(got: GitOid): string =
   withGit:
@@ -548,6 +551,9 @@ proc summary*(thing: GitThing): string =
   else:
     raise newException(ValueError, "dunno how to get a summary: " & $thing)
   result = result.strip
+
+proc `$`*(commit: GitCommit): string =
+  result = $cast[GitObject](commit)
 
 proc free*(table: var GitTagTable) =
   ## free a tag table
@@ -830,7 +836,7 @@ when git2SetVer == "master":
 
         options.show = cast[git_status_show_t](show)
         for flag in flags.items:
-          options.flags = bitand(options.flags, flag.ord.cuint)
+          options.flags = bitand(options.flags.uint, flag.ord.uint).cuint
 
         if grcOk != git_status_list_new(addr statum, repository, options).grc:
           break
@@ -890,8 +896,8 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
       # reset the strategy per flags
       options.checkout_strategy = 0
       for flag in strategy.items:
-        options.checkout_strategy = bitand(options.checkout_strategy,
-                                           flag.ord.cuint)
+        options.checkout_strategy = bitor(options.checkout_strategy.uint,
+                                          flag.ord.uint).cuint
 
       # checkout the tree using the commit we fetched
       result = git_checkout_tree(repo, cast[GitObject](commit), options).grc
