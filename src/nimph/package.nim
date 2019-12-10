@@ -135,10 +135,10 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
   ## parse the official packages list from nimbledir
   var
     filename = nimbledir / ""
-  if fileExists(filename / officialPackages):
-    filename = filename / officialPackages
-  elif filename.endsWith("" / PkgDir / ""):
-    filename = filename / ".." / officialPackages
+  if filename.endsWith("" / PkgDir / ""):
+    filename = nimbledir.parentDir / officialPackages
+  else:
+    filename = nimbledir / officialPackages
 
   # make sure we have a sane return value
   result = PackagesResult(ok: false, why: "", packages: newPackageGroup())
