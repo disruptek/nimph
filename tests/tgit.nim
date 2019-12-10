@@ -1,5 +1,4 @@
 import std/options
-import std/uri
 
 import unittest2
 
@@ -28,10 +27,10 @@ suite "git":
       cute = deps.projectForPath(path.get)
 
   test "roll a dep":
-    let
-      future = newRelease("1.0.2", operator = Tag)
-      req = newRequirement("cutelog", operator = Tag, future)
-    check cute.rollTowards(req)
-    for stat in cute.repo.status:
-      checkpoint $stat
-      check gsfIndexModified notin stat.flags
+    for ver in ["1.0.2", "1.1.1"]:
+      let
+        release = newRelease(ver, operator = Tag)
+        req = newRequirement("cutelog", operator = Tag, release)
+      check cute.rollTowards(req)
+      for stat in cute.repo.status:
+        check gsfIndexModified notin stat.flags
