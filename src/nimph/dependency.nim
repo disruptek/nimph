@@ -560,11 +560,14 @@ proc setHeadToRelease(project: Project; release: Release): bool =
     return
   if not release.isValid or release.kind != Tag:
     return
-  gitTrap checkoutTree(project.repo, release.reference):
-    error &"unable to set {project.name} head to {release}"
-    return
-  debug &"set head of {project.name} to {release}"
-  result = true
+  # we want the code because it'll tell us what went wrong
+  let code = checkoutTree(project.repo, release.reference)
+  case code:
+  of grcOk:
+    debug &"roll {project.name} to {release}"
+    result = true
+  else:
+    error &"roll {project.name} to {release}: {code}"
 
 proc rollTowards*(project: var Project; requirement: Requirement): bool =
   ## advance the head of a project to meet a given requirement
