@@ -22,6 +22,19 @@ else:
 import nimph/spec
 
 type
+  # separating out stuff we free via routines from libgit2
+  GitHeapGits = git_repository | git_reference | git_remote | git_tag |
+                git_strarray | git_object | git_commit | git_status_list |
+                git_annotated_commit | git_tree_entry
+
+  # or stuff we alloc and pass to libgit2, and then free later ourselves
+  NimHeapGits = git_clone_options | git_status_options | git_checkout_options |
+                git_oid
+
+  GitTreeWalkMode* = enum
+    gtwPre  = (GIT_TREEWALK_PRE, "pre")
+    gtwPost = (GIT_TREEWALK_POST, "post")
+
   GitRepoState* = enum
     rsNone                  = (GIT_REPOSITORY_STATE_NONE,
                                "none")
@@ -163,38 +176,38 @@ type
     gcnAll             = (GIT_CHECKOUT_NOTIFY_ALL, "all")
 
   GitResultCode* = enum
-    grcOk              = (     GIT_OK, "ok")
-    grcError           = (-1 * GIT_ERROR, "generic error")
+    grcApplyFail       = (GIT_EAPPLYFAIL, "patch failed")
+    grcIndexDirty      = (GIT_EINDEXDIRTY, "dirty index")
+    grcMismatch        = (GIT_EMISMATCH, "hash mismatch")
+    grcRetry           = (GIT_RETRY, "retry")
+    grcIterOver        = (GIT_ITEROVER, "end of iteration")
+    grcPassThrough     = (GIT_PASSTHROUGH, "pass-through")
     # this space intentionally left blank
-    grcNotFound        = (-1 * GIT_ENOTFOUND, "not found")
-    grcExists          = (-1 * GIT_EEXISTS, "object exists")
-    grcAmbiguous       = (-1 * GIT_EAMBIGUOUS, "ambiguous match")
-    grcBuffer          = (-1 * GIT_EBUFS, "buffer overflow")
-    grcUser            = (-1 * GIT_EUSER, "user-specified")
-    grcBareRepo        = (-1 * GIT_EBAREREPO, "bare repository")
-    grcUnbornBranch    = (-1 * GIT_EUNBORNBRANCH, "unborn branch")
-    grcUnmerged        = (-1 * GIT_EUNMERGED, "unmerged")
-    grcNonFastForward  = (-1 * GIT_ENONFASTFORWARD, "not fast-forward")
-    grcInvalidSpec     = (-1 * GIT_EINVALIDSPEC, "invalid spec")
-    grcConflict        = (-1 * GIT_ECONFLICT, "conflict")
-    grcLocked          = (-1 * GIT_ELOCKED, "locked")
-    grcModified        = (-1 * GIT_EMODIFIED, "modified")
-    grcAuthentication  = (-1 * GIT_EAUTH, "authentication")
-    grcCertificate     = (-1 * GIT_ECERTIFICATE, "certificate")
-    grcApplied         = (-1 * GIT_EAPPLIED, "applied")
-    grcPeel            = (-1 * GIT_EPEEL, "peel")
-    grcEndOfFile       = (-1 * GIT_EEOF, "end-of-file")
-    grcInvalid         = (-1 * GIT_EINVALID, "invalid")
-    grcUncommitted     = (-1 * GIT_EUNCOMMITTED, "uncommitted")
-    grcDirectory       = (-1 * GIT_EDIRECTORY, "directory")
-    grcMergeConflict   = (-1 * GIT_EMERGE_CONFLICT, "merge conflict")
+    grcMergeConflict   = (GIT_EMERGE_CONFLICT, "merge conflict")
+    grcDirectory       = (GIT_EDIRECTORY, "directory")
+    grcUncommitted     = (GIT_EUNCOMMITTED, "uncommitted")
+    grcInvalid         = (GIT_EINVALID, "invalid")
+    grcEndOfFile       = (GIT_EEOF, "end-of-file")
+    grcPeel            = (GIT_EPEEL, "peel")
+    grcApplied         = (GIT_EAPPLIED, "applied")
+    grcCertificate     = (GIT_ECERTIFICATE, "certificate")
+    grcAuthentication  = (GIT_EAUTH, "authentication")
+    grcModified        = (GIT_EMODIFIED, "modified")
+    grcLocked          = (GIT_ELOCKED, "locked")
+    grcConflict        = (GIT_ECONFLICT, "conflict")
+    grcInvalidSpec     = (GIT_EINVALIDSPEC, "invalid spec")
+    grcNonFastForward  = (GIT_ENONFASTFORWARD, "not fast-forward")
+    grcUnmerged        = (GIT_EUNMERGED, "unmerged")
+    grcUnbornBranch    = (GIT_EUNBORNBRANCH, "unborn branch")
+    grcBareRepo        = (GIT_EBAREREPO, "bare repository")
+    grcUser            = (GIT_EUSER, "user-specified")
+    grcBuffer          = (GIT_EBUFS, "buffer overflow")
+    grcAmbiguous       = (GIT_EAMBIGUOUS, "ambiguous match")
+    grcExists          = (GIT_EEXISTS, "object exists")
+    grcNotFound        = (GIT_ENOTFOUND, "not found")
     # this space intentionally left blank
-    grcPassThrough     = (-1 * GIT_PASSTHROUGH, "pass-through")
-    grcIterOver        = (-1 * GIT_ITEROVER, "end of iteration")
-    grcRetry           = (-1 * GIT_RETRY, "retry")
-    grcMismatch        = (-1 * GIT_EMISMATCH, "hash mismatch")
-    grcIndexDirty      = (-1 * GIT_EINDEXDIRTY, "dirty index")
-    grcApplyFail       = (-1 * GIT_EAPPLYFAIL, "patch failed")
+    grcError           = (GIT_ERROR, "generic error")
+    grcOk              = (GIT_OK, "ok")
 
   GitErrorClass* = enum
     gecNone        = (GIT_ERROR_NONE, "none")
@@ -233,6 +246,7 @@ type
     gecSHA1        = (GIT_ERROR_SHA1, "sha1")
 
   GitObjectKind* = enum
+    # we have to add 2 here to satisfy nim; discriminants.low must be zero
     goAny         = (2 + GIT_OBJECT_ANY, "object")
     goBad         = (2 + GIT_OBJECT_INVALID, "invalid")
     goCommit      = (2 + GIT_OBJECT_COMMIT, "commit")
@@ -250,18 +264,12 @@ type
       discard
     of goRefDelta:
       discard
+    of goTree:
+      discard
     else:
       discard
 
-  # separating out stuff we free via routines from libgit2
-  GitHeapGits = git_repository | git_reference | git_remote | git_tag |
-                git_strarray | git_object | git_commit | git_status_list |
-                git_annotated_commit
-
-  # or stuff we alloc and pass to libgit2, and then free later ourselves
-  NimHeapGits = git_clone_options | git_status_options | git_checkout_options |
-                git_oid
-
+  GitTreeEntry* = ptr git_tree_entry
   GitObject* = ptr git_object
   GitOid* = ptr git_oid
   GitRemote* = ptr git_remote
@@ -272,6 +280,7 @@ type
   GitCommit* = ptr git_commit
   GitStatus* = ptr git_status_entry
   GitStatusList* = ptr git_status_list
+  GitTree* = ptr git_tree
 
   GitClone* = object
     url*: cstring
@@ -387,7 +396,7 @@ template withGitRepoAt(path: string; body: untyped) =
     var open: GitOpen
     gitTrap open, openRepository(open, path):
       var code: GitResultCode
-      error &"error opening repository {path}"
+      error "error opening repository " & path
       result = code
     var repo {.inject.} = open.repo
     body
@@ -418,6 +427,10 @@ proc free*[T: GitHeapGits](point: ptr T) =
         git_commit_free(point)
       elif T is git_object:
         git_object_free(point)
+      elif T is git_tree:
+        git_tree_free(point)
+      elif T is git_tree_entry:
+        git_tree_entry_free(point)
       elif T is git_status_list:
         git_status_list_free(point)
       elif T is git_annotated_commit:
@@ -928,3 +941,50 @@ proc checkoutTree*(path: string; reference: string;
   ## checkout a repository in the given path using a reference string
   withGitRepoAt(path):
     result = checkoutTree(repo, reference, strategy = strategy)
+
+proc treeEntryByPath*(entry: var GitTreeEntry; thing: GitThing;
+                      path: string): GitResultCode =
+  ## get a tree entry using its path and that of the repo
+  withGit:
+    var
+      leaf: GitTreeEntry
+    # get the entry by path using the thing as a tree
+    result = git_tree_entry_bypath(addr leaf, cast[GitTree](thing.o), path).grc
+    if result == grcOk:
+      defer:
+        leaf.free
+      # if it's okay, we have to make a copy of it that the user can free,
+      # because when our thing is freed, it will invalidate the leaf var.
+      result = git_tree_entry_dup(addr entry, leaf).grc
+
+proc treeEntryByPath*(entry: var GitTreeEntry; repo: GitRepository;
+                      path: string): GitResultCode =
+  ## get a tree entry using its path and that of the repo
+  withGit:
+    var thing: GitThing
+    result = thing.lookupThing(repo, "HEAD^{tree}")
+    if result == grcOk:
+      defer:
+        thing.free
+      result = treeEntryByPath(entry, thing, path)
+
+proc treeEntryByPath*(entry: var GitTreeEntry; at: string;
+                      path: string): GitResultCode =
+  ## get a tree entry using its path and that of the repo
+  withGitRepoAt(at):
+    result = treeEntryByPath(entry, repo, path)
+
+proc treeEntryToThing*(thing: var GitThing; repo: GitRepository;
+                       entry: GitTreeEntry): GitResultCode =
+  ## convert a tree entry into a thing
+  withGit:
+    var obj: GitObject
+    result = git_tree_entry_to_object(addr obj, repo, entry).grc
+    if result == grcOk:
+      thing = newThing(obj)
+
+proc treeEntryToThing*(thing: var GitThing; at: string;
+                       entry: GitTreeEntry): GitResultCode =
+  ## convert a tree entry into a thing using the repo at the given path
+  withGitRepoAt(at):
+    result = treeEntryToThing(thing, repo, entry)
