@@ -1,4 +1,4 @@
-version = "0.0.39"
+version = "0.0.40"
 author = "disruptek"
 description = "nim package handler from the future"
 license = "MIT"
@@ -9,8 +9,8 @@ requires "cligen >= 0.9.41"
 requires "bump >= 1.8.12"
 requires "nimgit2 >= 0.1.1"
 requires "npeg >= 0.21.3"
-requires "git://github.com/disruptek/cutelog.git#1.1.1"
-requires "git://github.com/stefantalpalaru/nim-unittest2.git >= 0.0.1"
+requires "https://github.com/disruptek/cutelog#1.1.1"
+requires "https://github.com/stefantalpalaru/nim-unittest2 >= 0.0.1"
 
 bin = @["nimph"]
 srcDir = "src"
