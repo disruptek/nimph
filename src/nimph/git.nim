@@ -31,6 +31,9 @@ type
   NimHeapGits = git_clone_options | git_status_options | git_checkout_options |
                 git_oid
 
+  GitTreeWalkCallback* = proc (root: cstring; entry: ptr git_tree_entry;
+                               payload: pointer): cint
+
   GitTreeWalkMode* = enum
     gtwPre  = (GIT_TREEWALK_PRE, "pre")
     gtwPost = (GIT_TREEWALK_POST, "post")
@@ -270,6 +273,7 @@ type
       discard
 
   GitTreeEntry* = ptr git_tree_entry
+  GitTreeEntries* = seq[GitTreeEntry]
   GitObject* = ptr git_object
   GitOid* = ptr git_oid
   GitRemote* = ptr git_remote
@@ -988,3 +992,31 @@ proc treeEntryToThing*(thing: var GitThing; at: string;
   ## convert a tree entry into a thing using the repo at the given path
   withGitRepoAt(at):
     result = treeEntryToThing(thing, repo, entry)
+
+proc treeWalk*(tree: GitTree; mode: GitTreeWalkMode;
+               callback: git_treewalk_cb;
+               payload: pointer): GitResultCode =
+  ## walk a tree and run a callback on every entry
+  withGit:
+    result = git_tree_walk(tree,
+                           cast[git_treewalk_mode](mode.ord.cint),
+                           callback, payload).grc
+
+proc walk(root: cstring; entry: ptr git_tree_entry;
+          payload: pointer): cint =
+  var
+    dupe: GitTreeEntry
+  gitTrap dupe, git_tree_entry_dup(addr dupe, entry).grc:
+    return
+  cast[var GitTreeEntries](payload).add dupe
+
+proc treeWalk*(tree: GitTree;
+               mode: GitTreeWalkMode): Option[GitTreeEntries] =
+  ## try to walk a tree and return a sequence of its entries
+  withGit:
+    var
+      entries: GitTreeEntries
+
+  if grcOk == tree.treeWalk(mode, cast[git_treewalk_cb](walk),
+                            payload = addr entries):
+    result = entries.some
