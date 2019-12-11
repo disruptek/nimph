@@ -299,7 +299,7 @@ type
   GitTagTable* = OrderedTableRef[string, GitThing]
 
 proc grc(code: cint): GitResultCode =
-  result = cast[GitResultCode](ord(-1 * code))
+  result = cast[GitResultCode](code.ord)
 
 proc gec(code: int): GitErrorClass =
   result = cast[GitErrorClass](code.ord)
