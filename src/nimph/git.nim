@@ -313,6 +313,7 @@ const
     gcsSkipLockedDirectories,
     gcsDontOverwriteIgnored,
   ].toHashSet
+
   commonDefaultStatusFlags: set[GitStatusOption] = {
     soIncludeUntracked,
     soIncludeIgnored,
@@ -337,16 +338,7 @@ template dumpError() =
   if err != nil:
     error $gec(err.klass) & " error: " & $err.message
 
-template gitFail*(allocd: typed; code: untyped; body: untyped) =
-  ## a version of gitTrap that expects failure; no error messages!
-  block:
-    defer:
-      if code == grcOk:
-        free(allocd)
-    if code != grcOk:
-      body
-
-template gitFail*(allocd: typed; code: untyped; body: untyped) =
+template gitFail*(allocd: typed; code: GitResultCode; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
   defer:
     if code == grcOk:
@@ -354,8 +346,15 @@ template gitFail*(allocd: typed; code: untyped; body: untyped) =
   if code != grcOk:
     body
 
-template gitTrap*(allocd: typed; code: untyped; body: untyped) =
+template gitFail*(allocd: typed; code: GitResultCode; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
+  defer:
+    if code == grcOk:
+      free(allocd)
+  if code != grcOk:
+    body
+
+template gitTrap*(allocd: typed; code: GitResultCode; body: untyped) =
   defer:
     if code == grcOk:
       free(allocd)
@@ -366,11 +365,6 @@ template gitTrap*(allocd: typed; code: untyped; body: untyped) =
 template gitTrap*(code: GitResultCode; body: untyped) =
   if code != grcOk:
     dumpError()
-    body
-
-template gitFail*(code: GitResultCode; body: untyped) =
-  var code: GitResultCode = code
-  if code != grcOk:
     body
 
 proc init*(): bool =
@@ -459,6 +453,11 @@ proc free*(thing: GitThing) =
   withGit:
     free(thing.o)
 
+proc free*(entries: GitTreeEntries) =
+  withGit:
+    for entry in entries.items:
+      free(entry)
+
 proc short*(oid: GitOid; size: int): string =
   var
     output: cstring
@@ -485,6 +484,10 @@ proc `$`*(tag: GitTag): string =
     if name != nil:
       result = $name
 
+proc oid*(entry: GitTreeEntry): GitOid =
+  withGit:
+    result = git_tree_entry_id(entry)
+
 proc oid*(got: GitReference): GitOid =
   withGit:
     result = git_reference_target(got)
@@ -504,6 +507,10 @@ proc name*(got: GitReference): string =
   withGit:
     result = $git_reference_name(got)
 
+proc name*(entry: GitTreeEntry): string =
+  withGit:
+    result = $git_tree_entry_name(entry)
+
 proc isTag*(got: GitReference): bool =
   withGit:
     result = git_reference_is_tag(got) == 1
@@ -519,6 +526,9 @@ proc `$`*(reference: GitReference): string =
     result = reference.name
   else:
     result = $reference.oid
+
+proc `$`*(entry: GitTreeEntry): string =
+  result = entry.name
 
 proc `$`*(obj: GitObject): string =
   withGit:
@@ -967,9 +977,10 @@ proc treeEntryByPath*(entry: var GitTreeEntry; repo: GitRepository;
   withGit:
     var thing: GitThing
     result = thing.lookupThing(repo, "HEAD^{tree}")
-    if result == grcOk:
-      defer:
-        thing.free
+    if result != grcOk:
+      warn &"unable to lookup HEAD for {path}"
+    else:
+      defer: thing.free
       result = treeEntryByPath(entry, thing, path)
 
 proc treeEntryByPath*(entry: var GitTreeEntry; at: string;
@@ -1002,20 +1013,19 @@ proc treeWalk*(tree: GitTree; mode: GitTreeWalkMode;
                            cast[git_treewalk_mode](mode.ord.cint),
                            callback, payload).grc
 
-proc walk(root: cstring; entry: ptr git_tree_entry;
-          payload: pointer): cint =
-  var
-    dupe: GitTreeEntry
-  gitTrap dupe, git_tree_entry_dup(addr dupe, entry).grc:
-    return
-  cast[var GitTreeEntries](payload).add dupe
-
 proc treeWalk*(tree: GitTree;
                mode: GitTreeWalkMode): Option[GitTreeEntries] =
   ## try to walk a tree and return a sequence of its entries
   withGit:
     var
       entries: GitTreeEntries
+
+  proc walk(root: cstring; entry: ptr git_tree_entry;
+             payload: pointer): cint {.exportc.} =
+    # a good way to get a round
+    var dupe: GitTreeEntry
+    if git_tree_entry_dup(addr dupe, entry).grc == grcOk:
+      cast[var GitTreeEntries](payload).add dupe
 
   if grcOk == tree.treeWalk(mode, cast[git_treewalk_cb](walk),
                             payload = addr entries):
