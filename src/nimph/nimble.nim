@@ -27,6 +27,14 @@ type
     js: JsonNode
     link: seq[string]
 
+proc stripPkgs*(nimbledir: string): string =
+  ## omit and trailing /PkgDir from a path
+  result = nimbleDir / ""
+  # the only way this is a problem is if the user stores deps in pkgs/pkgs,
+  # but we can remove this hack once we have nimblePaths in nim-1.0 ...
+  if result.endsWith("" / PkgDir / ""):
+    result = result.parentDir / ""
+
 proc runNimble*(args: seq[string]; options: set[ProcessOption];
                 nimbleDir = ""): NimbleOutput =
   ## run nimble
@@ -46,11 +54,7 @@ proc runNimble*(args: seq[string]; options: set[ProcessOption];
 
   if nimbleDir != "":
     # we want to strip any trailing PkgDir arriving from elsewhere...
-    var nimbleDir = nimbleDir / ""
-    # the only way this is a problem is if the user stores deps in pkgs/pkgs,
-    # but we can remove this hack once we have nimblePaths in nim-1.0 ...
-    if nimbleDir.endsWith("" / PkgDir / ""):
-      nimbleDir = nimbleDir.parentDir
+    var nimbleDir = nimbleDir.stripPkgs
     if not nimbleDir.dirExists:
       let emsg = &"{nimbleDir} is missing; can't run nimble" # noqa
       raise newException(IOError, emsg)

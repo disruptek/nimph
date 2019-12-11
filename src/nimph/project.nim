@@ -705,7 +705,7 @@ proc clone*(project: var Project; url: Uri; name: string;
   var
     bare = url
     tag: string
-    directory = project.nimbleDir / PkgDir
+    directory = project.nimbleDir.stripPkgs / PkgDir
 
   if bare.anchor != "":
     tag = bare.anchor
