@@ -956,6 +956,15 @@ proc checkoutTree*(path: string; reference: string;
   withGitRepoAt(path):
     result = checkoutTree(repo, reference, strategy = strategy)
 
+proc lookupTreeThing*(thing: var GitThing;
+                      repo: GitRepository; path = "HEAD"): GitResultCode =
+    result = thing.lookupThing(repo, path & "^{tree}")
+
+proc lookupTreeThing*(thing: var GitThing;
+                      repository: string; path = "HEAD"): GitResultCode =
+  withGitRepoAt(repository):
+    result = thing.lookupThing(repo, path & "^{tree}")
+
 proc treeEntryByPath*(entry: var GitTreeEntry; thing: GitThing;
                       path: string): GitResultCode =
   ## get a tree entry using its path and that of the repo
@@ -976,7 +985,7 @@ proc treeEntryByPath*(entry: var GitTreeEntry; repo: GitRepository;
   ## get a tree entry using its path and that of the repo
   withGit:
     var thing: GitThing
-    result = thing.lookupThing(repo, "HEAD^{tree}")
+    result = thing.lookupTreeThing(repo, path = "HEAD")
     if result != grcOk:
       warn &"unable to lookup HEAD for {path}"
     else:
@@ -1030,3 +1039,6 @@ proc treeWalk*(tree: GitTree;
   if grcOk == tree.treeWalk(mode, cast[git_treewalk_cb](walk),
                             payload = addr entries):
     result = entries.some
+
+proc treeWalk*(tree: GitThing; mode = gtwPre): Option[GitTreeEntries] =
+  result = treeWalk(cast[GitTree](tree.o), mode)
