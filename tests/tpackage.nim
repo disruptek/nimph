@@ -13,7 +13,7 @@ import nimph/version
 
 const
   # how we'll render a release requirement like "package"
-  anyRelease = "*.*.*"
+  anyRelease = "*"
 
 suite "package":
   setup:
@@ -64,7 +64,7 @@ suite "package":
       check req.release.reference == "catsAndDogsLivingTogether"
     check parsed7.isSome
     for req in parsed7.get.values:
-      check $req.release == "2.*.*"
+      check $req.release == "2"
     check parsed8.isSome
     for req in parsed8.get.values:
       check req.identity == "git://github.com/disruptek/bump.git"

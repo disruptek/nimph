@@ -137,9 +137,7 @@ proc `$`*(spec: Release): string =
     result = $spec.kind & $spec.reference
   of Equal, AtLeast, Over, Under, NotMore:
     result = $spec.version
-  of Wild:
-    result = $spec.accepts
-  of Caret, Tilde:
+  of Wild, Caret, Tilde:
     result = spec.accepts.omitStars
 
 proc `$`*(req: Requirement): string =
