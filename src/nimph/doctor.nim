@@ -357,6 +357,23 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
   block unspecifiedsearchpath:
     {.warning: "unspecified search path needs implementing".}
 
+  # warn of tags missing for a particular version/commit pair
+  block identifymissingtags:
+    if project.dist != Git or not project.repoLockReady:
+      info "not looking for missing tags because the repository is dirty"
+      break
+    project.fetchTagTable
+    if project.tags == nil:
+      info "not looking for missing tags because i couldn't fetch any"
+      break
+    for key, value in project.versionChangingCommits.pairs:
+      block found:
+        for v, tag in project.tags.pairs:
+          if value.oid == tag.oid:
+            break found
+        notice &"{project.name} is missing a tag for version {key}"
+        notice &"version {key} arrived in {value}"
+
   # warn if the user appears to have multiple --nimblePaths in use
   block nimblepaths:
     let

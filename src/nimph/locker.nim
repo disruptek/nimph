@@ -82,20 +82,6 @@ proc add*(room: var LockerRoom; req: Requirement; name: string;
         break found
     room.add name, locker
 
-proc repoLockReady(project: Project): bool =
-  ## true if a project's git repo is ready to be locked
-  if project.dist != Git:
-    return
-  result = true
-  let state = repositoryState(project.repo)
-  if state != GitRepoState.rsNone:
-    result = false
-    warn &"{project} repository in invalid {state} state"
-  for n in status(project.repo, ssIndexAndWorkdir):
-    result = false
-    warn &"{project} repository has been modified"
-    break
-
 proc populate(room: var LockerRoom; dependencies: DependencyGroup): bool =
   ## fill a lockerroom with lockers
   result = true

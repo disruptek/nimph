@@ -76,6 +76,11 @@ type
     source: string
     search: SearchResult
 
+  VersionTags* = Group[Version, GitThing]
+  # same as Requires, for now
+  Requirements* = OrderedTableRef[Requirement, Requirement]
+  RequirementsTags* = Group[Requirements, GitThing]
+
 template repo*(project: Project): string = project.nimble.repo
 template gitDir*(project: Project): string = project.repo / dotGit
 template hasGit*(project: Project): bool = dirExists(project.gitDir)
@@ -492,6 +497,17 @@ proc createUrl*(project: var Project): Uri =
   result = readonly.createUrl
   project.url = result
 
+proc refresh*(project: var Project) =
+  ## appropriate to run to scan for and set some basic project data
+  let
+    mycfg = loadProjectCfg($project.nimCfg)
+  if mycfg.isSome:
+    project.mycfg = mycfg.get
+  project.url = project.createUrl
+  project.dump = nil
+  project.version = project.knowVersion
+  project.inventRelease
+
 proc findProject*(project: var Project; dir: string;
                   parent: Project = nil): bool =
   ## locate a project starting from `dir`
@@ -519,13 +535,7 @@ proc findProject*(project: var Project; dir: string;
   project.develop = target.via
   project.meta = fetchNimbleMeta(project.repo)
   project.dist = project.guessDist
-  let
-    mycfg = loadProjectCfg($project.nimCfg)
-  if mycfg.isSome:
-    project.mycfg = mycfg.get
-  project.url = project.createUrl
-  project.version = project.knowVersion
-  project.inventRelease
+  project.refresh
   if project.release.isValid:
     debug &"{project} version {project.version}"
   else:
@@ -925,3 +935,26 @@ proc promote*(project: Project; name = defaultRemote;
     target = project.url.forkTarget
   if target.ok and target.owner == user.login:
     result = project.promoteRemoteLike(project.url, name = name)
+
+proc newRequirementsTags(flags = defaultFlags): RequirementsTags =
+  result = RequirementsTags(flags: flags)
+  result.init(flags, mode = modeCaseSensitive)
+
+proc requirementChangingCommits*(project: Project): RequirementsTags =
+  # a table of the commits that changed the Requirements in a Project's
+  # dotNimble file
+  result = newRequirementsTags()
+
+proc repoLockReady*(project: Project): bool =
+  ## true if a project's git repo is ready to be locked
+  if project.dist != Git:
+    return
+  result = true
+  let state = repositoryState(project.repo)
+  if state != GitRepoState.rsNone:
+    result = false
+    warn &"{project} repository in invalid {state} state"
+  for n in status(project.repo, ssIndexAndWorkdir):
+    result = false
+    warn &"{project} repository has been modified"
+    break

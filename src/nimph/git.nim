@@ -25,11 +25,12 @@ type
   # separating out stuff we free via routines from libgit2
   GitHeapGits = git_repository | git_reference | git_remote | git_tag |
                 git_strarray | git_object | git_commit | git_status_list |
-                git_annotated_commit | git_tree_entry | git_revwalk
+                git_annotated_commit | git_tree_entry | git_revwalk |
+                git_pathspec | git_tree | git_diff | git_pathspec_match_list
 
   # or stuff we alloc and pass to libgit2, and then free later ourselves
   NimHeapGits = git_clone_options | git_status_options | git_checkout_options |
-                git_oid
+                git_oid | git_diff_options
 
   GitTreeWalkCallback* = proc (root: cstring; entry: ptr git_tree_entry;
                                payload: pointer): cint
@@ -63,6 +64,15 @@ type
                                "apply mailbox")
     rsApplyMailboxOrRebase  = (GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
                                "apply mailbox or rebase")
+
+  GitPathSpecFlag* = enum
+    gpsDefault              = (GIT_PATHSPEC_DEFAULT, "default")
+    gpsIgnoreCase           = (GIT_PATHSPEC_IGNORE_CASE, "ignore case")
+    gpsUseCase              = (GIT_PATHSPEC_USE_CASE, "use case")
+    gpsNoGlob               = (GIT_PATHSPEC_NO_GLOB, "no glob")
+    gpsNoMatchError         = (GIT_PATHSPEC_NO_MATCH_ERROR, "no match error")
+    gpsFindFailures         = (GIT_PATHSPEC_FIND_FAILURES, "find failures")
+    gpsFailuresOnly         = (GIT_PATHSPEC_FAILURES_ONLY, "failures only")
 
   GitStatusShow* = enum
     ssIndexAndWorkdir       = (GIT_STATUS_SHOW_INDEX_AND_WORKDIR,
@@ -272,6 +282,8 @@ type
     else:
       discard
 
+  GitDiff* = ptr git_diff
+  GitPathSpec* = ptr git_pathspec
   GitRevWalker* = ptr git_revwalk
   GitTreeEntry* = ptr git_tree_entry
   GitTreeEntries* = seq[GitTreeEntry]
@@ -348,11 +360,8 @@ template gitFail*(allocd: typed; code: GitResultCode; body: untyped) =
   if code != grcOk:
     body
 
-template gitFail*(allocd: typed; code: GitResultCode; body: untyped) =
+template gitFail*(code: GitResultCode; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
-  defer:
-    if code == grcOk:
-      free(allocd)
   if code != grcOk:
     body
 
@@ -439,8 +448,14 @@ proc free*[T: GitHeapGits](point: ptr T) =
         git_status_list_free(point)
       elif T is git_annotated_commit:
         git_annotated_commit_free(point)
+      elif T is git_pathspec:
+        git_pathspec_free(point)
+      elif T is git_pathspec_match_list:
+        git_pathspec_match_list_free(point)
+      elif T is git_diff:
+        git_diff_free(point)
       else:
-        {.error: "missing a free definition".}
+        {.error: "missing a free definition for " & $typeof(T).}
 
 proc free*[T: NimHeapGits](point: ptr T) =
   if point != nil:
@@ -527,6 +542,10 @@ proc flags*(status: GitStatus): set[GitStatusFlag] =
     if flag.ord.uint == bitand(status.status.uint, flag.ord.uint):
       result.incl flag
 
+proc setFlags[T](flags: seq[T] | set[T] | HashSet[T]): cuint =
+  for flag in flags.items:
+    result = bitor(result, flag.ord.cuint).cuint
+
 proc `$`*(reference: GitReference): string =
   if reference.isTag:
     result = reference.name
@@ -543,9 +562,6 @@ proc `$`*(obj: GitObject): string =
 
 proc `$`*(thing: GitThing): string =
   result = $thing.o
-#  case thing.kind:
-#  of goTag:
-#  else:
 
 proc `$`*(status: GitStatus): string =
   for flag in status.flags.items:
@@ -628,6 +644,9 @@ proc newThing(obj: GitObject): GitThing =
   except:
     result = GitThing(kind: goAny, o: obj)
 
+proc toThing*(commit: GitCommit): GitThing =
+  result = newThing(cast[GitObject](commit))
+
 proc clone*(got: var GitClone; uri: Uri; path: string;
             branch = ""): GitResultCode =
   ## clone a repository
@@ -636,9 +655,11 @@ proc clone*(got: var GitClone; uri: Uri; path: string;
     got.options.free
   withGit:
     when git2SetVer == "master":
-      result = git_clone_options_init(got.options, GIT_CLONE_OPTIONS_VERSION).grc
+      result = git_clone_options_init(got.options,
+                                      GIT_CLONE_OPTIONS_VERSION).grc
     else:
-      result = git_clone_init_options(got.options, GIT_CLONE_OPTIONS_VERSION).grc
+      result = git_clone_init_options(got.options,
+                                      GIT_CLONE_OPTIONS_VERSION).grc
     if result != grcOk:
       return
 
@@ -688,7 +709,8 @@ proc remoteLookup*(remote: var GitRemote; path: string;
   withGitRepoAt(path):
     result = remoteLookup(remote, repo, name)
 
-proc remoteRename*(repo: GitRepository; prior: string; next: string): GitResultCode =
+proc remoteRename*(repo: GitRepository; prior: string;
+                   next: string): GitResultCode =
   ## rename a remote
   var
     list: git_strarray
@@ -927,10 +949,7 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
         break
 
       # reset the strategy per flags
-      options.checkout_strategy = 0
-      for flag in strategy.items:
-        options.checkout_strategy = bitor(options.checkout_strategy.uint,
-                                          flag.ord.uint).cuint
+      options.checkout_strategy = setFlags(strategy)
 
       # checkout the tree using the commit we fetched
       result = git_checkout_tree(repo, cast[GitObject](commit), options).grc
@@ -961,6 +980,59 @@ proc checkoutTree*(path: string; reference: string;
   ## checkout a repository in the given path using a reference string
   withGitRepoAt(path):
     result = checkoutTree(repo, reference, strategy = strategy)
+
+proc checkoutHead*(repo: GitRepository;
+                   strategy = defaultCheckoutStrategy): GitResultCode =
+  ## checkout a repository's head
+  withGit:
+    var
+      options = cast[ptr git_checkout_options](sizeof(git_checkout_options).alloc)
+    defer:
+      options.free
+
+    block:
+      # setup our checkout options
+      result = git_checkout_options_init(options,
+                                         GIT_CHECKOUT_OPTIONS_VERSION).grc
+      if result != grcOk:
+        break
+
+      # reset the strategy per flags
+      options.checkout_strategy = setFlags(strategy)
+
+      # checkout the head
+      result = git_checkout_head(repo, options).grc
+      if result != grcOk:
+        break
+
+proc setHead*(repo: GitRepository; short: string): GitResultCode =
+  ## set the head of a repository
+  withGit:
+    result = git_repository_set_head(repo, short.cstring).grc
+
+proc setHead*(path: string; short: string): GitResultCode =
+  ## set the head of a repository at the given path
+  withGitRepoAt(path):
+    result = repo.setHead(short)
+
+proc referenceDWIM*(refer: var GitReference;
+                    repo: GitRepository;
+                    short: string): GitResultCode =
+  ## turn a string into a reference
+  withGit:
+    result = git_reference_dwim(addr refer, repo, short).grc
+
+proc referenceDWIM*(refer: var GitReference; path: string;
+                    short: string): GitResultCode =
+  ## turn a string into a reference
+  withGitRepoAt(path):
+    result = referenceDWIM(refer, repo, short)
+
+proc checkoutHead*(path: string;
+                   strategy = defaultCheckoutStrategy): GitResultCode =
+  ## checkout a repository's head in the given path using a reference string
+  withGitRepoAt(path):
+    result = checkoutHead(repo, strategy = strategy)
 
 proc lookupTreeThing*(thing: var GitThing;
                       repo: GitRepository; path = "HEAD"): GitResultCode =
@@ -1090,4 +1162,128 @@ iterator revWalk*(path: string; walker: GitRevWalker; start: GitOid): GitCommit 
   ## starting with the given oid, sic the walker on a repo at the given path
   withGitRepoAt(path):
     for commit in revWalk(repo, walker, start):
+      yield commit
+
+proc newPathSpec*(ps: var GitPathSpec; spec: openArray[string]): GitResultCode =
+  ## instantiate a new path spec from a strarray
+  withGit:
+    var list: git_strarray
+    list.count = len(spec).cuint
+    list.strings = cast[ptr cstring](allocCStringArray(spec))
+    result = git_pathspec_new(addr ps, addr list).grc
+    deallocCStringArray(cast[cstringArray](list.strings))
+
+proc matchWithParent(commit: ptr git_commit; nth: cuint;
+                     options: ptr git_diff_options): GitResultCode =
+  ## grcOkay if the commit's tree intersects with the nth parent's tree;
+  ## else grcNotFound if there was no intersection
+  ##
+  ## (this is adapted from a helper in libgit2's log.c example)
+  ## https://github.com/libgit2/libgit2/blob/master/examples/log.c
+  block:
+    var
+      parent: ptr git_commit
+      pt, ct: GitTree
+      diff: GitDiff
+
+    # get the nth parent
+    result = git_commit_parent(addr parent, commit, nth).grc
+    gitTrap parent, result:
+      break
+
+    # grab the parent's tree
+    result = git_commit_tree(addr pt, parent).grc
+    gitTrap pt, result:
+      break
+
+    # grab the commit's tree
+    result = git_commit_tree(addr ct, commit).grc
+    gitTrap ct, result:
+      break
+
+    # take a diff the the two trees
+    result = git_diff_tree_to_tree(addr diff,
+                                   git_commit_owner(commit),
+                                   pt, ct, options).grc
+    gitTrap diff, result:
+      break
+
+    if git_diff_num_deltas(diff).uint == 0'u:
+      result = grcNotFound
+
+iterator commitsForSpec*(repo: GitRepository;
+                         spec: openArray[string]): GitCommit =
+  ## yield each commit that matches the provided pathspec
+  withGit:
+    var
+      options = cast[ptr git_diff_options](sizeof(git_diff_options).alloc)
+    defer:
+      options.free
+
+    block master:
+      var
+        ps: GitPathSpec
+        head: GitOid
+        walker: GitRevWalker
+        grc: GitResultCode
+
+      # options for matching against n parent trees
+      if grcOk != git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc:
+        break
+      options.pathspec.count = len(spec).cuint
+      options.pathspec.strings = cast[ptr cstring](allocCStringArray(spec))
+      defer:
+        deallocCStringArray(cast[cstringArray](options.pathspec.strings))
+
+      # setting up a similar pathspec for matching against trees
+      gitTrap ps, newPathSpec(ps, spec):
+        break
+
+      # we'll need a walker
+      gitTrap walker, newRevWalk(walker, repo):
+        break
+
+      # find the head
+      let findHead = repo.getHeadOid
+      if findHead.isNone:
+        # no head, no problem
+        break
+
+      # start at the head
+      head = findHead.get
+      gitTrap walker.push(head):
+        break
+
+      # iterate over ALL the commits
+      for commit in repo.revWalk(walker, head):
+        let
+          parents = git_commit_parentcount(commit)
+        var
+          unmatched = parents
+        case parents:
+        of 0:
+          var tree: ptr git_tree
+          gitTrap tree, git_commit_tree(addr tree, commit).grc:
+            break master
+
+          # these don't seem worth storing...
+          #var matches: ptr git_pathspec_match_list
+          let gps: uint32 = {gpsNoMatchError}.setFlags
+          gitFail git_pathspec_match_tree(nil, tree, gps, ps).grc:
+            # ie. continue the revwalk
+            continue
+        else:
+          for nth in 0 ..< parents:
+            gitTrap matchWithParent(commit, nth, options):
+              continue
+            unmatched.dec
+
+        # all the parents matched
+        if unmatched == 0:
+          yield commit
+
+iterator commitsForSpec*(path: string; spec: openArray[string]): GitCommit =
+  ## yield each commit that matches the provided pathspec
+  withGitRepoAt(path):
+    for commit in commitsForSpec(repo, spec):
       yield commit

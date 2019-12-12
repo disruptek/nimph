@@ -1,3 +1,4 @@
+import std/os
 import std/uri
 import std/strformat
 import std/strutils
@@ -554,7 +555,7 @@ proc newDependencyGroup*(project: Project;
   # collect all the packages from the environment
   result.projects = project.childProjects
 
-proc setHeadToRelease(project: Project; release: Release): bool =
+proc setHeadToRelease(project: var Project; release: Release): bool =
   ## advance the head of a project to a particular release
   if project.dist != Git:
     return
@@ -569,6 +570,11 @@ proc setHeadToRelease(project: Project; release: Release): bool =
   else:
     error &"roll {project.name} to {release}: {code}"
 
+  # make sure we invalidate some data
+  project.dump = nil
+  # or reset it, at least
+  project.version = project.knowVersion
+
 proc rollTowards*(project: var Project; requirement: Requirement): bool =
   ## advance the head of a project to meet a given requirement
   if project.dist != Git:
@@ -582,13 +588,67 @@ proc rollTowards*(project: var Project; requirement: Requirement): bool =
     if not result:
       warn &"failed checkout of {match}"
       continue
-    # now, we've had some issues here, so we assume nothing.
-    # first, read the current release
-    discard project.inventRelease
+    # freshen project version, release, etc.
+    project.refresh
     # then, maybe rename the directory appropriately
     if project.parent != nil:
       project.parent.relocateDependency(project)
     break
+
+proc addName*(group: var VersionTags; ver: Version; thing: GitThing) =
+  group.imports[$ver] = $thing.oid
+
+proc add*(group: var VersionTags; ver: Version; thing: GitThing) =
+  group.table.add ver, thing
+  group.addName ver, thing
+
+proc newVersionTags(flags = defaultFlags): VersionTags =
+  result = VersionTags(flags: flags)
+  result.init(flags, mode = modeStyleInsensitive)
+
+proc versionChangingCommits*(project: var Project): VersionTags =
+  # a table of the commits that changed the Version of a Project's
+  # dotNimble file
+  result = newVersionTags()
+  let
+    package = project.nimble.package.addFileExt(project.nimble.ext)
+    previous = project.getHeadOid
+
+  # we may have no head; if that's the case, we have no tags either
+  if previous.isNone:
+    return
+
+  # this could just be a bad idea all the way aroun'
+  if not project.repoLockReady:
+    error "refusing to roll the repo when it's dirty"
+    return
+
+  # if we have no way to get back, don't even depart
+  var home: GitReference
+  gitTrap home, referenceDWIM(home, project.repo, "HEAD"):
+    raise newException(IOError, "i'm lost; where am i?")
+
+  for commit in commitsForSpec(project.repo, @[package]):
+    var
+      thing = commit.toThing
+    let release = newRelease($thing.oid, operator = Tag)
+    if not project.setHeadToRelease(release):
+      continue
+    # freshen project version, release, etc.
+    project.refresh
+    if not result.hasKey(project.version):
+      result.add project.version, thing
+
+  # there's no place like home
+  if not project.setHeadToRelease(newRelease($previous.get, operator = Tag)):
+    raise newException(IOError, "cannot detach head to " & $previous.get)
+
+  # re-attach the head if we can
+  gitTrap setHead(project.repo, $home.name):
+    raise newException(IOError, "cannot set head to " & home.name)
+
+  # be sure to reload the project specifics now that we're home
+  project.refresh
 
 proc reset*(dependencies: var DependencyGroup; project: var Project) =
   ## reset a dependency group and prepare to resolve dependencies again
