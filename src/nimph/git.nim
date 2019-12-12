@@ -395,11 +395,11 @@ template withGitRepoAt(path: string; body: untyped) =
   withGit:
     var open: GitOpen
     gitTrap open, openRepository(open, path):
-      var code: GitResultCode
-      error "error opening repository " & path
       when declaredInScope(result):
         when result is GitResultCode:
+          var code: GitResultCode
           result = code
+      error "error opening repository " & path
     var repo {.inject.} = open.repo
     body
 
