@@ -469,10 +469,15 @@ proc createUrl*(project: Project): Uri =
         # sometimes...
         result = project.meta.url
     of Git:
-      var url = findRepositoryUrl(project.repo)
+      # try looking at remotes
+      let url = findRepositoryUrl(project.repo, defaultRemote)
       if url.isSome:
-        # try looking at remotes
         result = url.get
+      # if we have a result, we may want to overlook a fork...
+      if result.scheme in ["file", "ssh"]:
+        let fork = findRepositoryUrl(project.repo, upstreamRemote)
+        if fork.isSome and fork.get.scheme notin ["file", "ssh"]:
+          result = fork.get
     else:
       raise newException(Defect, "not implemented")
 
