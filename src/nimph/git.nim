@@ -25,7 +25,7 @@ type
   # separating out stuff we free via routines from libgit2
   GitHeapGits = git_repository | git_reference | git_remote | git_tag |
                 git_strarray | git_object | git_commit | git_status_list |
-                git_annotated_commit | git_tree_entry
+                git_annotated_commit | git_tree_entry | git_revwalk
 
   # or stuff we alloc and pass to libgit2, and then free later ourselves
   NimHeapGits = git_clone_options | git_status_options | git_checkout_options |
@@ -272,10 +272,12 @@ type
     else:
       discard
 
+  GitRevWalker* = ptr git_revwalk
   GitTreeEntry* = ptr git_tree_entry
   GitTreeEntries* = seq[GitTreeEntry]
   GitObject* = ptr git_object
   GitOid* = ptr git_oid
+  GitOids* = seq[GitOid]
   GitRemote* = ptr git_remote
   GitReference* = ptr git_reference
   GitRepository* = ptr git_repository
@@ -395,7 +397,9 @@ template withGitRepoAt(path: string; body: untyped) =
     gitTrap open, openRepository(open, path):
       var code: GitResultCode
       error "error opening repository " & path
-      result = code
+      when declaredInScope(result):
+        when result is GitResultCode:
+          result = code
     var repo {.inject.} = open.repo
     body
 
@@ -429,6 +433,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
         git_tree_free(point)
       elif T is git_tree_entry:
         git_tree_entry_free(point)
+      elif T is git_revwalk:
+        git_revwalk_free(point)
       elif T is git_status_list:
         git_status_list_free(point)
       elif T is git_annotated_commit:
@@ -1041,4 +1047,47 @@ proc treeWalk*(tree: GitTree;
     result = entries.some
 
 proc treeWalk*(tree: GitThing; mode = gtwPre): Option[GitTreeEntries] =
+  ## the laziest way to walk a tree, ever
   result = treeWalk(cast[GitTree](tree.o), mode)
+
+proc newRevWalk*(walker: var GitRevWalker; repo: GitRepository): GitResultCode =
+  ## instantiate a new walker
+  withGit:
+    result = git_revwalk_new(addr walker, repo).grc
+
+proc newRevWalk*(walker: var GitRevWalker; path: string): GitResultCode =
+  ## instantiate a new walker from a repo at the given path
+  withGitRepoAt(path):
+    result = newRevWalk(walker, repo)
+
+proc next*(oid: var git_oid; walker: GitRevWalker): GitResultCode =
+  ## walk to the next node
+  withGit:
+    result = git_revwalk_next(addr oid, walker).grc
+
+proc push*(walker: var GitRevWalker; oid: GitOid): GitResultCode =
+  ## add a tree to be walked
+  withGit:
+    result = git_revwalk_push(walker, oid).grc
+
+iterator revWalk*(repo: GitRepository; walker: GitRevWalker;
+                  start: GitOid): GitCommit =
+  ## sic the walker on a repo starting with the given oid
+  withGit:
+    var
+      oid = cast[git_oid](start[])
+      commit: GitCommit
+    while true:
+      gitTrap commit, git_commit_lookup(addr commit, repo, addr oid).grc:
+        warn &"unexpected error while walking {oid}:"
+        dumpError()
+        break
+      yield commit
+      gitTrap next(oid, walker):
+        break
+
+iterator revWalk*(path: string; walker: GitRevWalker; start: GitOid): GitCommit =
+  ## starting with the given oid, sic the walker on a repo at the given path
+  withGitRepoAt(path):
+    for commit in revWalk(repo, walker, start):
+      yield commit
