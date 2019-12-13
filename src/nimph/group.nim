@@ -38,7 +38,7 @@ proc addName[K: Uri, V](group: Group[K, V]; url: K) =
     assert $url.bare notin group.imports
   group.imports[$url.bare] = $url
 
-proc delName(group: Group; key: string) =
+proc delName*(group: Group; key: string) =
   ## remove a name from the group
   var
     remove: seq[string]
@@ -105,6 +105,12 @@ proc add*[K: string, V](group: Group[K, V]; url: Uri; value: V) =
   # this gets picked up during instant-instantiation of a package from
   # a project's url, a la asPackage(project: Project): Package ...
   group.addName naked.importName, key
+
+proc `[]=`*[K, V](group: Group[K, V]; key: K; value: V) =
+  ## set a key to a single value
+  if group.hasKey(key):
+    group.del key
+  group.add key, value
 
 {.warning: "nim bug #12818".}
 proc add*[K: Uri, V](group: Group[K, V]; url: Uri; value: V) =

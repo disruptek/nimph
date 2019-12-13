@@ -14,7 +14,7 @@ import nimph/thehub
 import nimph/package
 import nimph/dependency
 import nimph/group
-import nimph/git as git
+import nimph/git
 
 type
   StateKind* = enum
@@ -366,13 +366,13 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
     if project.tags == nil:
       info "not looking for missing tags because i couldn't fetch any"
       break
-    for key, value in project.versionChangingCommits.pairs:
+    for version, commit in project.versionChangingCommits.pairs:
       block found:
-        for v, tag in project.tags.pairs:
-          if value.oid == tag.oid:
+        for text, tag in project.tags.pairs:
+          if commit.oid == tag.oid:
             break found
-        notice &"{project.name} is missing a tag for version {key}"
-        notice &"version {key} arrived in {value}"
+        notice &"{project.name} is missing a tag for version {version}"
+        notice &"version {version} arrived in {commit}"
 
   # warn if the user appears to have multiple --nimblePaths in use
   block nimblepaths:

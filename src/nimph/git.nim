@@ -760,6 +760,8 @@ proc url*(remote: GitRemote): Uri =
 proc `==`*(a, b: GitOid): bool =
   withGit:
     result = 1 == git_oid_equal(a, b)
+    # sanity
+    assert result == ($a == $b)
 
 proc targetId*(thing: GitThing): GitOid =
   withGit:

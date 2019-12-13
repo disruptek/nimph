@@ -602,6 +602,17 @@ proc add*(group: var VersionTags; ver: Version; thing: GitThing) =
   group.table.add ver, thing
   group.addName ver, thing
 
+proc del*(group: var VersionTags; ver: Version) =
+  ## remove a version from the group
+  if group.table.hasKey(ver):
+    group.delName $group.table[ver].oid
+    group.table.del ver
+
+proc `[]=`*(group: var VersionTags; ver: Version; thing: GitThing) =
+  ## set a key to a single value
+  group.del ver
+  group.add ver, thing
+
 proc newVersionTags(flags = defaultFlags): VersionTags =
   result = VersionTags(flags: flags)
   result.init(flags, mode = modeStyleInsensitive)
@@ -636,8 +647,7 @@ proc versionChangingCommits*(project: var Project): VersionTags =
       continue
     # freshen project version, release, etc.
     project.refresh
-    if not result.hasKey(project.version):
-      result.add project.version, thing
+    result[project.version] = thing
 
   # there's no place like home
   if not project.setHeadToRelease(newRelease($previous.get, operator = Tag)):
