@@ -431,21 +431,22 @@ proc linkedFindTarget(dir: string; target = ""; nimToo = false;
     result.search.message = e.msg
   result.search.found = none(Target)
 
-proc findRepositoryUrl*(path: string; name = defaultRemote): Option[Uri] =
+proc findRepositoryUrl*(project: Project;
+                        name = defaultRemote): Option[Uri] =
   ## find the (remote?) url to a given local repository
   var
     remote: GitRemote
 
   block found:
-    let grc: GitResultCode = remoteLookup(remote, path, name)
+    let grc: GitResultCode = remoteLookup(remote, project.repo, name)
     case grc:
     of grcOk:
       break found
     of grcNotFound:
       discard
     else:
-      warn &"{grc}: unable to fetch remote `{name}` from repo in {path}"
-    result = Uri(scheme: "file", path: path.absolutePath / "").some
+      warn &"{grc}: unable to fetch remote `{name}` from {project.repo}"
+    result = Uri(scheme: "file", path: project.repo / "").some
     return
 
   # remote is populated, so be sure to free it
@@ -457,13 +458,13 @@ proc findRepositoryUrl*(path: string; name = defaultRemote): Option[Uri] =
     if url.isValid:
       result = remote.url.some
     else:
-      warn &"bad git url in {path}: {url}"
+      warn &"bad git url in {project.repo}: {url}"
   except:
-    warn &"unable to parse url from remote `{name}` from repo in {path}"
+    warn &"unable to parse url from remote `{name}` from {project.repo}"
 
-proc createUrl*(project: Project): Uri =
+proc createUrl*(project: Project; refresh = false): Uri =
   ## determine the source url for a project which may be local
-  if project.url.isValid:
+  if not refresh and project.url.isValid:
     result = project.url
   else:
     # make something up
@@ -475,12 +476,12 @@ proc createUrl*(project: Project): Uri =
         result = project.meta.url
     of Git:
       # try looking at remotes
-      let url = findRepositoryUrl(project.repo, defaultRemote)
+      let url = findRepositoryUrl(project, defaultRemote)
       if url.isSome:
         result = url.get
       # if we have a result, we may want to overlook a fork...
       if result.scheme in ["file", "ssh"]:
-        let fork = findRepositoryUrl(project.repo, upstreamRemote)
+        let fork = findRepositoryUrl(project, upstreamRemote)
         if fork.isSome and fork.get.scheme notin ["file", "ssh"]:
           result = fork.get
     else:
@@ -491,10 +492,16 @@ proc createUrl*(project: Project): Uri =
       result = Uri(scheme: "file", path: project.repo)
     assert result.isValid
 
-proc createUrl*(project: var Project): Uri =
+proc createUrl*(project: var Project; refresh = false): Uri =
   let
     readonly = project
-  result = readonly.createUrl
+  result = readonly.createUrl(refresh = refresh)
+  if result != project.url:
+    # update the nimble metadata with this new url
+    if not writeNimbleMeta(project.repo, result, result.anchor):
+      warn &"unable to update {project.name}'s {nimbleMeta}"
+
+  # cache the result if the project is mutable
   project.url = result
 
 proc refresh*(project: var Project) =
@@ -503,7 +510,7 @@ proc refresh*(project: var Project) =
     mycfg = loadProjectCfg($project.nimCfg)
   if mycfg.isSome:
     project.mycfg = mycfg.get
-  project.url = project.createUrl
+  project.url = project.createUrl(refresh = true)
   project.dump = nil
   project.version = project.knowVersion
   project.inventRelease
