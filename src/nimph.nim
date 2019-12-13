@@ -188,6 +188,24 @@ proc unlockfiler*(names: seq[string]; log_level = logLevel;
     else:
       result = 1
 
+proc tagger*(log_level = logLevel; dry_run = false): int =
+  ## cli entry to add missing tags
+
+  # user's choice, our default
+  setLogFilter(log_level)
+
+  var
+    project: Project
+  setupLocalProject(project)
+
+  if project.fixTags(dry_run = dry_run):
+    if dry_run:
+      warn "run without --dry-run to fix these"
+    else:
+      crash &"the doctor wasn't able to fix everything"
+  else:
+    fatal &"👌{project.nimble.package} tags are lookin' good"
+
 proc forker*(names: seq[string]; log_level = logLevel; dry_run = false): int =
   ## cli entry to remotely fork installed packages
 
@@ -303,6 +321,7 @@ when isMainModule:
       scFork = "fork"
       scLock = "lock"
       scUnlock = "unlock"
+      scTag = "tag"
       scVersion = "--version"
       scHelp = "--help"
 
@@ -332,13 +351,15 @@ when isMainModule:
               doc="lock dependencies")
   dispatchGen(unlockfiler, cmdName = $scUnlock, dispatchName = "run" & $scUnlock,
               doc="unlock dependencies")
+  dispatchGen(tagger, cmdName = $scTag, dispatchName = "run" & $scTag,
+              doc="tag versions")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
 
   const
     # these are our subcommands that we want to include in help
     dispatchees = [rundoctor, runsearch, runclone, runpath, runfork,
-                   runlock, rununlock]
+                   runlock, rununlock, runtag]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
@@ -362,6 +383,7 @@ when isMainModule:
       scFork: runfork,
       scLock: runlock,
       scUnlock: rununlock,
+      scTag: runtag,
       #scNimble: runnimble,
     }.toTable
 

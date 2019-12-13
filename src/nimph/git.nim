@@ -532,6 +532,10 @@ proc name*(entry: GitTreeEntry): string =
   withGit:
     result = $git_tree_entry_name(entry)
 
+proc owner*(thing: GitThing): GitRepository =
+  ## retrieve the repository that owns this thing
+  result = git_object_owner(thing.o)
+
 proc isTag*(got: GitReference): bool =
   withGit:
     result = git_reference_is_tag(got) == 1
@@ -759,9 +763,14 @@ proc url*(remote: GitRemote): Uri =
 
 proc `==`*(a, b: GitOid): bool =
   withGit:
-    result = 1 == git_oid_equal(a, b)
-    # sanity
-    assert result == ($a == $b)
+    if a.isNil or b.isNil:
+      result = false
+    elif 1 in [git_oid_is_zero(a), git_oid_is_zero(b)]:
+      result = false
+    else:
+      result = 1 == git_oid_equal(a, b)
+      # sanity
+      assert result == ($a == $b)
 
 proc targetId*(thing: GitThing): GitOid =
   withGit:
@@ -1289,3 +1298,22 @@ iterator commitsForSpec*(path: string; spec: openArray[string]): GitCommit =
   withGitRepoAt(path):
     for commit in commitsForSpec(repo, spec):
       yield commit
+
+proc tagCreateLightweight*(oid: var GitOid; repo: GitRepository; name: string;
+                           target: GitThing; force = false): GitResultCode =
+  ## create a new lightweight tag in the repository
+  withGit:
+    let
+      forced: cint = if force: 1 else: 0
+    oid = cast[ptr git_oid](sizeof(git_oid).alloc)
+    result = git_tag_create_lightweight(oid,
+                                        repo, name, target.o, forced).grc
+    if result != grcOk:
+      defer:
+        oid.free
+
+proc tagCreateLightweight*(oid: var GitOid; path: string; name: string;
+                           target: GitThing; force = false): GitResultCode =
+  ## create a new lightweight tag in the repository
+  withGitRepoAt(path):
+    result = tagCreateLightweight(oid, repo, name, target, force = force)

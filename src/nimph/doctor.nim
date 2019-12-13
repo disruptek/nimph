@@ -26,6 +26,49 @@ type
     kind*: StateKind
     why*: string
 
+proc fixTags*(project: var Project; dry_run = true): bool =
+  block:
+    if project.dist != Git or not project.repoLockReady:
+      info "not looking for missing tags because the repository is unready"
+      break
+    # you gotta spend money to make money
+    project.fetchTagTable
+    if project.tags == nil:
+      info "not looking for missing tags because i couldn't fetch any"
+      break
+    # match up tags to versions to commits; we should probably
+    # copy these structures and remove matches, for efficiency...
+    var tagsNeeded = 0
+    for version, commit in project.versionChangingCommits.pairs:
+      block found:
+        if $version in project.tags:
+          let exists = project.tags[$version]
+          debug &"found tag `{exists}` for {version}"
+          break found
+        for text, tag in project.tags.pairs:
+          if commit.oid == tag.oid:
+            debug &"found tag `{text}` for {version}"
+            break found
+        if dry_run:
+          notice &"{project.name} is missing a tag for version {version}"
+          info &"version {version} arrived in {commit}"
+          result = true
+          tagsNeeded.inc
+        else:
+          # try to create a tag for this version and commit
+          var oid: GitOid = nil
+          gitTrap oid, tagCreateLightweight(oid, commit.owner, $version,
+                                            commit):
+            notice &"unable to create new tag for {version}"
+
+          # if that worked, let them know we did something
+          if not oid.isNil:
+            info &"created new tag {version} for {oid}"
+
+    # save our advice 'til the end
+    if tagsNeeded > 0:
+      notice "use the `tag` subcommand to add missing tags"
+
 proc fixDependencies*(project: var Project; group: var DependencyGroup;
                       state: var DrState): bool =
   ## try to fix any outstanding issues with a set of dependencies
@@ -359,20 +402,8 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
 
   # warn of tags missing for a particular version/commit pair
   block identifymissingtags:
-    if project.dist != Git or not project.repoLockReady:
-      info "not looking for missing tags because the repository is dirty"
-      break
-    project.fetchTagTable
-    if project.tags == nil:
-      info "not looking for missing tags because i couldn't fetch any"
-      break
-    for version, commit in project.versionChangingCommits.pairs:
-      block found:
-        for text, tag in project.tags.pairs:
-          if commit.oid == tag.oid:
-            break found
-        notice &"{project.name} is missing a tag for version {version}"
-        notice &"version {version} arrived in {commit}"
+    if project.fixTags(dry_run = true):
+      result = false
 
   # warn if the user appears to have multiple --nimblePaths in use
   block nimblepaths:

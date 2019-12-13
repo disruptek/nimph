@@ -75,6 +75,7 @@ output (and optional repair) of the environment it finds itself in.
 - [Locking the Dependency Tree by Name](https://github.com/disruptek/nimph#lock)
 - [Rolling the Dependency Tree by Name](https://github.com/disruptek/nimph#unlock)
 - [Cutting New Release Versions+Tags](https://github.com/disruptek/nimph#bump)
+- [Adding Any Missing Tags Automatically](https://github.com/disruptek/nimph#tag)
 - [Nimble Subcommand Auto-Integration](https://github.com/disruptek/nimph#nimble-subcommands)
 - [Tweaking Nimph Behavior Constants](https://github.com/disruptek/nimph#hacking)
 - [Nimph Module Documentation](https://github.com/disruptek/nimph#documentation)
@@ -230,6 +231,50 @@ $ bump fixed a bug
 ```
 
 For complete `bump` documentation, see https://github.com/disruptek/bump
+
+### Tag
+
+The `tag` subcommand operates on a clean project and will roll the repository
+as necessary to examine any changes to your package configuration, noting any
+commits that:
+
+- introduced a new version of the package but aren't pointed to by a tag, _and_
+- introduced a new version for which there exists no tag parsable as that version
+
+```
+$ nimph tag --dry-run --log-level=lvlInfo
+bump is missing a tag for version 1.1.0
+version 1.1.0 arrived in commit-009d45a977a688d22a9f1b14a21b6bd1a064760e
+use the `tag` subcommand to add missing tags
+run without --dry-run to fix these
+```
+
+The above conditions suggest that if you don't want to use this particular
+commit for your tag, you can simply point the tag at a different commit; Nimph
+won't change it on you.
+
+```
+$ git tag -a "re-release of 1.1.0 just in time for the holidays" 0abe7a9f0b5a05f2dd709f2b120805cc0cdd9668
+```
+
+Alternatively, if you don't want a version tag to be used by package managers,
+you can give the tag a name that won't parse as a version. Having found a tag
+for the commit, Nimph won't warn you that the commit needs tagging.
+
+```
+$ git tag -a "oops; this was compromised" 0abe7a9f0b5a05f2dd709f2b120805cc0cdd9668
+```
+
+When run without `--dry-run`, any missing tags are added automatically.
+
+```
+$ nimph tag --log-level=lvlInfo
+created new tag 1.1.0 for 009d45a977a688d22a9f1b14a21b6bd1a064760e
+👌bump tags are lookin' good
+```
+
+Incidentally, these command-line examples demonstrate adjusting the log-level
+to increase verbosity.
 
 ### Nimble Subcommands
 
