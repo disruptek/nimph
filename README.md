@@ -254,7 +254,7 @@ commit for your tag, you can simply point the tag at a different commit; Nimph
 won't change it on you.
 
 ```
-$ git tag -a "re-release of 1.1.0 just in time for the holidays" 0abe7a9f0b5a05f2dd709f2b120805cc0cdd9668
+$ git tag -a "re-release_of_1.1.0_just_in_time_for_the_holidays" 0abe7a9f0b5a05f2dd709f2b120805cc0cdd9668
 ```
 
 Alternatively, if you don't want a version tag to be used by package managers,
@@ -262,7 +262,7 @@ you can give the tag a name that won't parse as a version. Having found a tag
 for the commit, Nimph won't warn you that the commit needs tagging.
 
 ```
-$ git tag -a "oops; this was compromised" 0abe7a9f0b5a05f2dd709f2b120805cc0cdd9668
+$ git tag -a "oops_this_was_compromised" 0abe7a9f0b5a05f2dd709f2b120805cc0cdd9668
 ```
 
 When run without `--dry-run`, any missing tags are added automatically.
