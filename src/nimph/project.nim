@@ -202,11 +202,11 @@ proc knowVersion*(project: var Project): Version =
     if "version" in project.dump:
       let
         text {.used.} = project.dump["version"]
-        parsed = parseVersion(&"""version = "{text}"""")
+        parsed = parseVersionLoosely(text)
       if parsed.isSome:
         when defined(debug):
           debug "parsed a version from `nimble dump`"
-        result = parsed.get
+        result = parsed.get.version
       else:
         let emsg = &"unparsable version `{text}` in {project.name}" # noqa
         raise newException(IOError, emsg)
