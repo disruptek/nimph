@@ -412,6 +412,8 @@ function main() {
     title="lookupThing(thing: var GitThing; repo: GitRepository; name: string): GitResultCode"><wbr />lookup<wbr />Thing<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#lookupThing%2CGitThing%2Cstring%2Cstring"
     title="lookupThing(thing: var GitThing; path: string; name: string): GitResultCode"><wbr />lookup<wbr />Thing<span class="attachedType">GitThing</span></a></li>
+  <li><a class="reference" href="#newTagTable%2Cint"
+    title="newTagTable(size = 32): GitTagTable"><wbr />new<wbr />Tag<wbr />Table<span class="attachedType">GitTagTable</span></a></li>
   <li><a class="reference" href="#tagTable%2CGitRepository%2CGitTagTable"
     title="tagTable(repo: GitRepository; tags: var GitTagTable): GitResultCode"><wbr />tag<wbr />Table<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#tagTable%2Cstring%2CGitTagTable"
@@ -1319,6 +1321,13 @@ try to look some thing up in the repository with the given name
 try to look some thing up in the repository at the given path
 
 </dd>
+<a id="newTagTable,int"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#newTagTable%2Cint"><span class="Identifier">newTagTable</span></a><span class="Other">(</span><span class="Identifier">size</span> <span class="Other">=</span> <span class="DecNumber">32</span><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+instantiate a new table
+
+</dd>
 <a id="tagTable,GitRepository,GitTagTable"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#tagTable%2CGitRepository%2CGitTagTable"><span class="Identifier">tagTable</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="git.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
@@ -1682,7 +1691,7 @@ a version of gitTrap that expects failure; no error messages!
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2019-12-13 21:22:34 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2019-12-14 20:22:16 UTC</small>
       </div>
     </div>
   </div>

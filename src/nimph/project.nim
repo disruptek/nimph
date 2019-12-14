@@ -148,22 +148,22 @@ proc fetchConfig*(project: var Project; force = false): bool =
     when defined(debug):
       notice &"unnecessary config fetch for {project}"
 
-proc runNimble*(project: Project; args: seq[string];
-                opts = {poParentStreams}): NimbleOutput =
+proc runSomething*(project: Project; exe: string; args: seq[string];
+                   opts = {poParentStreams}): NimbleOutput =
   ## run nimble against a particular project
   let
     nimbleDir = project.nimbleDir
-  result = runNimble(args, opts, nimbleDir = nimbleDir)
+  result = runSomething(exe, args, opts, nimbleDir = nimbleDir)
 
-proc runNimble*(project: var Project; args: seq[string];
-                opts = {poParentStreams}): NimbleOutput =
+proc runSomething*(project: var Project; exe: string; args: seq[string];
+                   opts = {poParentStreams}): NimbleOutput =
   ## run nimble against a particular project, fetching its config first
   let
     readonly = project
   # ensure we have a config for the project before running nimble;
   # this could change the nimbleDir value used
   discard project.fetchConfig
-  result = readonly.runNimble(args, opts = opts)
+  result = readonly.runSomething(exe, args, opts = opts)
 
 proc guessVersion*(project: Project): Version =
   ## a poor man's measure of project version; pukes on comments

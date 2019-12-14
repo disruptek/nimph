@@ -76,6 +76,8 @@ output (and optional repair) of the environment it finds itself in.
 - [Rolling the Dependency Tree by Name](https://github.com/disruptek/nimph#unlock)
 - [Cutting New Release Versions+Tags](https://github.com/disruptek/nimph#bump)
 - [Adding Any Missing Tags Automatically](https://github.com/disruptek/nimph#tag)
+- [Running Commands on All Dependencies](https://github.com/disruptek/nimph#run)
+- [Git Subcommand Auto-Integration](https://github.com/disruptek/nimph#git-subcommands)
 - [Nimble Subcommand Auto-Integration](https://github.com/disruptek/nimph#nimble-subcommands)
 - [Tweaking Nimph Behavior Constants](https://github.com/disruptek/nimph#hacking)
 - [Nimph Module Documentation](https://github.com/disruptek/nimph#documentation)
@@ -275,6 +277,61 @@ created new tag 1.1.0 for 009d45a977a688d22a9f1b14a21b6bd1a064760e
 
 Incidentally, these command-line examples demonstrate adjusting the log-level
 to increase verbosity.
+
+### Run
+
+The `run` subcommand lets you invoke arbitrary programs in the root of each
+dependency of your project.
+
+```
+$ nimph run pwd
+/home/adavidoff/git/Nim
+/home/adavidoff/git/nimph/deps/pkgs/github-1.0.2
+/home/adavidoff/git/nimph/deps/pkgs/npeg-0.20.0
+/home/adavidoff/git/nimph/deps/pkgs/rest-#head
+/home/adavidoff/git/nimph/deps/pkgs/foreach-#head
+/home/adavidoff/git/nimph/deps/pkgs/cligen-#head
+/home/adavidoff/git/nimph/deps/pkgs/bump-1.8.15
+/home/adavidoff/git/nimph/deps/pkgs/cutelog-1.1.1
+/home/adavidoff/git/nimph/deps/pkgs/nimgit2-0.1.1
+/home/adavidoff/git/nimph/deps/pkgs/nimterop-0.3.3
+/home/adavidoff/git/nimph/deps/pkgs/regex-#v0.13.0
+/home/adavidoff/git/nimph/deps/pkgs/unicodedb-0.7.2
+/home/adavidoff/git/nimph/deps/pkgs/unicodeplus-0.5.0
+/home/adavidoff/git/nimph/deps/pkgs/unittest2-#head
+```
+
+To pass switches to commands `run` in your dependencies, use the `--` as a stopword.
+
+```
+$ nimph run -- head -1 LICENSE
+/bin/head: cannot open 'LICENSE' for reading: No such file or directory
+head -1 LICENSE
+head didn't like that in /home/adavidoff/git/Nim
+MIT License
+Copyright 2019 Ico Doornekamp <npeg@zevv.nl>
+MIT License
+MIT License
+Copyright (c) 2015,2016,2017,2018,2019 Charles L. Blake.
+MIT License
+MIT License
+MIT License
+MIT License
+MIT License
+MIT License
+MIT License
+/bin/head: cannot open 'LICENSE' for reading: No such file or directory
+head -1 LICENSE
+head didn't like that in /home/adavidoff/git/nimph/deps/pkgs/unittest2-#head
+```
+
+### Git Subcommands
+
+There are a couple shortcuts for running common git commands inside your
+dependencies:
+
+- `nimph fetch` is an alias for `nimph run -- git fetch`; ie. it runs `git fetch` in each dependency package directory.
+- `nimph pull` is an alias for `nimph run -- git pull`; ie. it runs `git pull` in each dependency package directory.
 
 ### Nimble Subcommands
 

@@ -5,6 +5,7 @@ import std/strutils
 import std/asyncdispatch
 import std/options
 import std/strformat
+import std/sequtils
 
 import bump
 
@@ -107,7 +108,7 @@ proc nimbler*(args: seq[string]; log_level = logLevel; dry_run = false): int =
   setupLocalProject(project)
 
   let
-    nimble = project.runNimble(args)
+    nimble = project.runSomething("nimble", args)
   if not nimble.ok:
     crash &"nimble didn't like that"
 
@@ -121,6 +122,10 @@ proc pather*(names: seq[string]; log_level = logLevel; dry_run = false): int =
     project: Project
   setupLocalProject(project)
 
+  if names.len == 0:
+    crash &"give me an import name to retrieve its filesystem path"
+
+  # setup our dependency group
   var group = project.newDependencyGroup(flags = {Flag.Quiet})
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
@@ -138,6 +143,35 @@ proc pather*(names: seq[string]; log_level = logLevel; dry_run = false): int =
       error &"couldn't find `{name}` among our installed dependencies"
       echo ""      # a failed find produces empty output
       result = 1   # and sets the return code to nonzero
+
+proc runner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
+  ## this is another pather, basically, that invokes the arguments in the path
+  let
+    exe = args[0]
+    args = args[1..^1]
+
+  # user's choice, our default
+  setLogFilter(log_level)
+
+  var
+    project: Project
+  setupLocalProject(project)
+
+  # setup our dependency group
+  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  if not project.resolve(group):
+    notice &"unable to resolve all dependencies for {project}"
+
+  # make sure we visit every project that fits the requirements
+  for req, dependency in group.pairs:
+    for child in dependency.projects.values:
+      withinDirectory(child.repo):
+        info &"running {exe} in {child.repo}"
+        let
+          got = project.runSomething(exe, args)
+        if not got.ok:
+          error &"{exe} didn't like that in {child.repo}"
+          result = 1
 
 proc dumpLockList(project: Project) =
   for room in project.allLockerRooms:
@@ -313,6 +347,7 @@ when isMainModule:
   import cligen
   type
     SubCommand = enum
+      scHelp = "--help"
       scDoctor = "doctor"
       scSearch = "search"
       scClone = "clone"
@@ -322,8 +357,10 @@ when isMainModule:
       scLock = "lock"
       scUnlock = "unlock"
       scTag = "tag"
+      scRun = "run"
       scVersion = "--version"
-      scHelp = "--help"
+
+    AliasTable = Table[string, seq[string]]
 
   let
     logger = newCuteConsoleLogger()
@@ -355,24 +392,36 @@ when isMainModule:
               doc="tag versions")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
+  dispatchGen(runner, cmdName = $scRun, dispatchName = "run" & $scRun,
+              stopWords = @["--"],
+              doc="execute the program & arguments in every dependency directory")
+
+  proc makeAliases(passthrough: openArray[string]): AliasTable {.compileTime.} =
+    # command aliases can go here
+    result = {
+      # the nurse is aka `nimph` without arguments...
+      "nurse":    @[$scDoctor, "--dry-run"],
+      "fix":      @[$scDoctor],
+      "fetch":    @[$scRun, "--", "git", "fetch"],
+      "pull":     @[$scRun, "--", "git", "pull"],
+    }.toTable
+
+    # add in the default subcommands
+    for sub in SubCommand.low .. SubCommand.high:
+      result[$sub] = @[$sub]
+
+    # associate known nimble subcommands
+    for sub in passthrough.items:
+      result[sub] = @[$scNimble, sub]
 
   const
     # these are our subcommands that we want to include in help
     dispatchees = [rundoctor, runsearch, runclone, runpath, runfork,
-                   runlock, rununlock, runtag]
+                   runlock, rununlock, runtag, runrun]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
                    "refresh", "list", "tasks"]
-
-  var
-    # get the command line
-    params = commandLineParams()
-
-    # command aliases can go here
-    aliases = {
-      "fix": scDoctor,
-    }.toTable
 
     # associate commands to dispatchers created by cligen
     dispatchers = {
@@ -384,27 +433,29 @@ when isMainModule:
       scLock: runlock,
       scUnlock: rununlock,
       scTag: runtag,
-      #scNimble: runnimble,
+      scRun: runrun,
     }.toTable
 
-  # obviate the need to run parseEnum
-  for sub in SubCommand.low .. SubCommand.high:
-    aliases[$sub] = sub
+    # setup the mapping between subcommand and expanded parameters
+    aliases = makeAliases(passthrough)
 
-  # don't warn if it's an expected Nimble subcommand
-  for sub in passthrough.items:
-    aliases[sub] = scNimble
+  var
+    # get the command line
+    params = commandLineParams()
 
   # maybe just run the nurse
   if params.len == 0:
     let newLog = max(0, logLevel.ord - 1).Level
-    quit dispatchers[scDoctor](cmdline = @["--dry-run", "--log-level=" & $newLog])
+    params = aliases["nurse"].concat @["--log-level=" & $newLog]
 
   # try to parse the subcommand
   var sub: SubCommand
   let first = params[0].strip.toLowerAscii
   if first in aliases:
-    sub = aliases[first]
+    # expand the alias
+    params = aliases[first].concat params[1..^1]
+    # and then parse the subcommand
+    sub = parseEnum[SubCommand](params[0])
   else:
     # if we couldn't parse it, try passing it to nimble
     warn &"unrecognized subcommand `{first}`; passing it to Nimble..."

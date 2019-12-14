@@ -288,7 +288,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
           else:
             break skiprefresh
           if not dry:
-            let refresh = project.runNimble(@["refresh", "--accept"])
+            let refresh = project.runSomething("nimble", @["refresh", "--accept"])
             if refresh.ok:
               info "nimble refreshed the package list"
               continue

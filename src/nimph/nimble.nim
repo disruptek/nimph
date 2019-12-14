@@ -35,31 +35,33 @@ proc stripPkgs*(nimbledir: string): string =
   if result.endsWith("" / PkgDir / ""):
     result = result.parentDir / ""
 
-proc runNimble*(args: seq[string]; options: set[ProcessOption];
-                nimbleDir = ""): NimbleOutput =
+proc runSomething*(exe: string; args: seq[string]; options: set[ProcessOption];
+                   nimbleDir = ""): NimbleOutput =
   ## run nimble
   var
-    command = findExe("nimble")
+    command = findExe(exe)
     arguments = args
     opts = options
   if command == "":
-    result = NimbleOutput(output: "unable to find nimble in path")
+    result = NimbleOutput(output: &"unable to find {exe} in path")
     warn result.output
     return
 
-  when defined(debug):
-    arguments = @["--verbose"].concat arguments
-  when defined(debugNimble):
-    arguments = @["--debug"].concat arguments
+  if exe == "nimble":
+    when defined(debug):
+      arguments = @["--verbose"].concat arguments
+    when defined(debugNimble):
+      arguments = @["--debug"].concat arguments
 
   if nimbleDir != "":
     # we want to strip any trailing PkgDir arriving from elsewhere...
     var nimbleDir = nimbleDir.stripPkgs
     if not nimbleDir.dirExists:
-      let emsg = &"{nimbleDir} is missing; can't run nimble" # noqa
+      let emsg = &"{nimbleDir} is missing; can't run {exe}" # noqa
       raise newException(IOError, emsg)
     # the ol' belt-and-suspenders approach to specifying nimbleDir
-    arguments = @["--nimbleDir=" & nimbleDir].concat arguments
+    if exe == "nimble":
+      arguments = @["--nimbleDir=" & nimbleDir].concat arguments
     putEnv("NIMBLE_DIR", nimbleDir)
 
   if poParentStreams in opts or poInteractive in opts:
@@ -84,9 +86,9 @@ proc runNimble*(args: seq[string]; options: set[ProcessOption];
   # for utility, also return the arguments we used
   result.arguments = arguments
 
-  # a nimble failure is worth noticing
+  # a failure is worth noticing
   if not result.ok:
-    notice "nimble " & arguments.join(" ")
+    notice exe & " " & arguments.join(" ")
 
 proc parseNimbleDump*(input: string): Option[StringTableRef] =
   ## parse output from `nimble dump`
@@ -113,7 +115,8 @@ proc fetchNimbleDump*(path: string; nimbleDir = ""): DumpResult =
   result = DumpResult(ok: false)
   withinDirectory(path):
     let
-      nimble = runNimble(@["dump", path], {poDaemon}, nimbleDir = nimbleDir)
+      nimble = runSomething("nimble",
+                            @["dump", path], {poDaemon}, nimbleDir = nimbleDir)
     if not nimble.ok:
       result.why = "nimble execution failed"
       error nimble.output

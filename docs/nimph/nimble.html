@@ -128,8 +128,9 @@ function main() {
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#stripPkgs%2Cstring"
     title="stripPkgs(nimbledir: string): string"><wbr />strip<wbr />Pkgs<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#runNimble%2Cseq%5BT%5D%5Bstring%5D%2Cset%5BProcessOption%5D%2Cstring"
-    title="runNimble(args: seq[string]; options: set[ProcessOption]; nimbleDir = &quot;&quot;): NimbleOutput"><wbr />run<wbr />Nimble<span class="attachedType">NimbleOutput</span></a></li>
+  <li><a class="reference" href="#runSomething%2Cstring%2Cseq%5BT%5D%5Bstring%5D%2Cset%5BProcessOption%5D%2Cstring"
+    title="runSomething(exe: string; args: seq[string]; options: set[ProcessOption];
+             nimbleDir = &quot;&quot;): NimbleOutput"><wbr />run<wbr />Something<span class="attachedType">NimbleOutput</span></a></li>
   <li><a class="reference" href="#parseNimbleDump%2Cstring"
     title="parseNimbleDump(input: string): Option[StringTableRef]"><wbr />parse<wbr />Nimble<wbr />Dump<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#fetchNimbleDump%2Cstring%2Cstring"
@@ -209,9 +210,10 @@ function main() {
 omit and trailing /PkgDir from a path
 
 </dd>
-<a id="runNimble,seq[T][string],set[ProcessOption],string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#runNimble%2Cseq%5BT%5D%5Bstring%5D%2Cset%5BProcessOption%5D%2Cstring"><span class="Identifier">runNimble</span></a><span class="Other">(</span><span class="Identifier">args</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">options</span><span class="Other">:</span> <span class="Identifier">set</span><span class="Other">[</span><span class="Identifier">ProcessOption</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">nimbleDir</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">)</span><span class="Other">:</span> <a href="nimble.html#NimbleOutput"><span class="Identifier">NimbleOutput</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span>
+<a id="runSomething,string,seq[T][string],set[ProcessOption],string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#runSomething%2Cstring%2Cseq%5BT%5D%5Bstring%5D%2Cset%5BProcessOption%5D%2Cstring"><span class="Identifier">runSomething</span></a><span class="Other">(</span><span class="Identifier">exe</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">args</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">options</span><span class="Other">:</span> <span class="Identifier">set</span><span class="Other">[</span><span class="Identifier">ProcessOption</span><span class="Other">]</span><span class="Other">;</span>
+                 <span class="Identifier">nimbleDir</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">)</span><span class="Other">:</span> <a href="nimble.html#NimbleOutput"><span class="Identifier">NimbleOutput</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span>
     <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
@@ -291,7 +293,7 @@ parse the nimblemeta.json file if it exists
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2019-12-13 21:22:33 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2019-12-14 20:22:14 UTC</small>
       </div>
     </div>
   </div>

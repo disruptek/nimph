@@ -114,6 +114,8 @@ function main() {
     title="nimbler(args: seq[string]; log_level = logLevel; dry_run = false): int"><wbr />nimbler<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#pather%2Cseq%5BT%5D%5Bstring%5D"
     title="pather(names: seq[string]; log_level = logLevel; dry_run = false): int"><wbr />pather<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#runner%2Cseq%5BT%5D%5Bstring%5D"
+    title="runner(args: seq[string]; log_level = logLevel; dry_run = false): int"><wbr />runner<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#lockfiler%2Cseq%5BT%5D%5Bstring%5D"
     title="lockfiler(names: seq[string]; log_level = logLevel; dry_run = false): int"><wbr />lockfiler<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#unlockfiler%2Cseq%5BT%5D%5Bstring%5D"
@@ -186,6 +188,17 @@ cli entry to pass-through nimble commands with a sane nimbleDir
 cli entry to echo the path(s) of any dependencies
 
 </dd>
+<a id="runner,seq[T][string]"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#runner%2Cseq%5BT%5D%5Bstring%5D"><span class="Identifier">runner</span></a><span class="Other">(</span><span class="Identifier">args</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">log_level</span> <span class="Other">=</span> <span class="Identifier">logLevel</span><span class="Other">;</span> <span class="Identifier">dry_run</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
+    <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ERecoverableError</span><span class="Other">,</span>
+    <span class="Identifier">EOFError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span>
+    <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">WriteDirEffect</span><span class="Other">,</span>
+    <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+this is another pather, basically, that invokes the arguments in the path
+
+</dd>
 <a id="lockfiler,seq[T][string]"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#lockfiler%2Cseq%5BT%5D%5Bstring%5D"><span class="Identifier">lockfiler</span></a><span class="Other">(</span><span class="Identifier">names</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">log_level</span> <span class="Other">=</span> <span class="Identifier">logLevel</span><span class="Other">;</span> <span class="Identifier">dry_run</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
     <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ERecoverableError</span><span class="Other">,</span>
@@ -251,7 +264,7 @@ cli entry to clone a package into the environment
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2019-12-13 21:22:35 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2019-12-14 20:22:17 UTC</small>
       </div>
     </div>
   </div>
