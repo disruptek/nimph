@@ -154,7 +154,7 @@ proc peelRelease*(project: Project): Release =
   result = project.peelRelease(project.release)
 
 iterator matchingReleases(requirement: Requirement; head = "";
-                        tags: GitTagTable = nil): Release =
+                          tags: GitTagTable = nil): Release =
   ## yield releases that satisfy the requirement, using the head and tags
   case requirement.release.kind:
   of Tag:
