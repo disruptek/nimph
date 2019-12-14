@@ -810,12 +810,16 @@ proc lookupThing*(thing: var GitThing; path: string; name: string): GitResultCod
   withGitRepoAt(path):
     result = lookupThing(thing, repo, name)
 
+proc newTagTable*(size = 32): GitTagTable =
+  ## instantiate a new table
+  result = newOrderedTable[string, GitThing](size)
+
 proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
   ## compose a table of tags and their associated references
   var
     names: seq[string]
 
-  tags = newOrderedTable[string, GitThing](32)
+  tags = newTagTable()
 
   result = tagList(repo, names)
   if result != grcOk:

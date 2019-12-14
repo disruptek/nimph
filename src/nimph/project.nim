@@ -32,6 +32,7 @@ import std/os
 import std/osproc
 import std/strtabs
 import std/asyncdispatch
+import std/algorithm
 
 import bump
 
@@ -278,15 +279,39 @@ proc nameMyRepo(project: Project): string =
     else:
       result = project.name & "-0"  # something the compiler can grok?
 
+proc sortByVersion*(tags: GitTagTable): GitTagTable =
+  ## re-order an ordered table to match version sorting
+  var
+    order: seq[tuple[tag: string, version: Version, thing: GitThing]]
+  result = newTagTable(nextPowerOfTwo(tags.len))
+
+  # try to parse each of the tags to see if they look like a version
+  for tag, thing in tags.pairs:
+    let parsed = parseVersionLoosely(tag)
+    # if we were able to parse a release and it looks like
+    # a simple version, then we'll add that to our sequence
+    if parsed.isSome:
+      if parsed.get.kind == Equal:
+        order.add (tag: tag, version: parsed.get.version, thing: thing)
+        continue
+    # if the tag isn't parsable as a version, store it in the result
+    result.add tag, thing
+
+  # now sort the sequence and add the tags with versions to the result
+  for trio in order.sortedByIt(it.version):
+    result.add trio.tag, trio.thing
+
 proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
   ## retrieve the tags for a project from its git repository
   if project.dist != Git:
     return
-  gitTrap tagTable(project.repo, result):
+  var
+    tags: GitTagTable
+  gitTrap tags, tagTable(project.repo, tags):
     let path {.used.} = project.repo # template reasons
     warn &"unable to fetch tags from repo in {path}"
     return
-  project.tags = result
+  project.tags = tags.sortByVersion
 
 proc releaseSummary*(project: Project): string =
   ## summarize a project's tree using whatever we can
