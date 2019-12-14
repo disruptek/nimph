@@ -356,7 +356,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         result = false
       elif project.removeSearchPath(path):
         info &"removed missing search path {path}"
-      elif excludeMissingPaths and project.excludeSearchPath(path):
+      elif excludeMissingSearchPaths and project.excludeSearchPath(path):
         info &"excluded missing search path {path}"
       else:
         warn &"unable to remove search path {path}"
@@ -371,7 +371,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         result = false
       elif project.removeSearchPath(path):
         info &"removed missing nimblePath {path}"
-      elif excludeMissingPaths and project.excludeSearchPath(path):
+      elif excludeMissingLazyPaths and project.excludeSearchPath(path):
         info &"excluded missing nimblePath {path}"
       else:
         warn &"unable to remove nimblePath {path}"

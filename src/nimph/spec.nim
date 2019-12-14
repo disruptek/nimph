@@ -43,7 +43,8 @@ const
   emptyRelease* {.strdefine.} = "#head"
   defaultRemote* {.strdefine.} = "origin"
   upstreamRemote* {.strdefine.} = "upstream"
-  excludeMissingPaths* {.booldefine.} = false
+  excludeMissingSearchPaths* {.booldefine.} = false
+  excludeMissingLazyPaths* {.booldefine.} = true
   writeNimbleDirPaths* {.booldefine.} = false
   shortDate* = initTimeFormat "yyyy-MM-dd"
   defaultFlags*: set[Flag] = {Quiet, Strict}
