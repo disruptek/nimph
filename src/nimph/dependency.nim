@@ -603,12 +603,11 @@ proc setHeadToRelease(project: var Project; release: Release): bool =
   of grcOk:
     debug &"roll {project.name} to {release}"
     result = true
+    # make sure we invalidate some data
+    project.dump = nil
+    project.version = (0'u, 0'u, 0'u)
   else:
-    error &"roll {project.name} to {release}: {code}"
-
-  # make sure we invalidate some data
-  project.dump = nil
-  project.version = (0'u, 0'u, 0'u)
+    debug &"roll {project.name} to {release}: {code}"
 
 proc rollTowards*(project: var Project; requirement: Requirement): bool =
   ## advance the head of a project to meet a given requirement
