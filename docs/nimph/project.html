@@ -176,7 +176,7 @@ function main() {
   <li><a class="reference" href="#sortByVersion%2CGitTagTable"
     title="sortByVersion(tags: GitTagTable): GitTagTable"><wbr />sort<wbr />By<wbr />Version<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#fetchTagTable%2CProject"
-    title="fetchTagTable(project: var Project): GitTagTable"><wbr />fetch<wbr />Tag<wbr />Table<span class="attachedType">Project</span></a></li>
+    title="fetchTagTable(project: var Project)"><wbr />fetch<wbr />Tag<wbr />Table<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#releaseSummary%2CProject"
     title="releaseSummary(project: Project): string"><wbr />release<wbr />Summary<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#cuteRelease%2CProject"
@@ -242,6 +242,14 @@ function main() {
     title="requirementChangingCommits(project: Project): RequirementsTags"><wbr />requirement<wbr />Changing<wbr />Commits<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#repoLockReady%2CProject"
     title="repoLockReady(project: Project): bool"><wbr />repo<wbr />Lock<wbr />Ready<span class="attachedType">Project</span></a></li>
+  <li><a class="reference" href="#latestRelease%2CGitTagTable"
+    title="latestRelease(tags: GitTagTable): Version"><wbr />latest<wbr />Release<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#upgradeAvailable%2CGitTagTable%2CVersion"
+    title="upgradeAvailable(tags: GitTagTable; version: Version): bool"><wbr />upgrade<wbr />Available<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#upgradeAvailable%2CProject"
+    title="upgradeAvailable(project: Project): bool"><wbr />upgrade<wbr />Available<span class="attachedType">Project</span></a></li>
+  <li><a class="reference" href="#upgradeAvailable%2CProject_2"
+    title="upgradeAvailable(project: var Project): bool"><wbr />upgrade<wbr />Available<span class="attachedType">Project</span></a></li>
 
   </ul>
 </li>
@@ -511,9 +519,8 @@ re-order an ordered table to match version sorting
 
 </dd>
 <a id="fetchTagTable,Project"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#fetchTagTable%2CProject"><span class="Identifier">fetchTagTable</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">discardable</span><span class="Other">,</span>
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#fetchTagTable%2CProject"><span class="Identifier">fetchTagTable</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span>
+    <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 retrieve the tags for a project from its git repository
@@ -808,6 +815,39 @@ promote a project's remote to a user's repo, if it's theirs
 true if a project's git repo is ready to be locked
 
 </dd>
+<a id="latestRelease,GitTagTable"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#latestRelease%2CGitTagTable"><span class="Identifier">latestRelease</span></a><span class="Other">(</span><span class="Identifier">tags</span><span class="Other">:</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Version</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+the latest tagged release parsable as a version
+
+</dd>
+<a id="upgradeAvailable,GitTagTable,Version"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#upgradeAvailable%2CGitTagTable%2CVersion"><span class="Identifier">upgradeAvailable</span></a><span class="Other">(</span><span class="Identifier">tags</span><span class="Other">:</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">;</span> <span class="Identifier">version</span><span class="Other">:</span> <span class="Identifier">Version</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+true if there is a superior version available
+
+</dd>
+<a id="upgradeAvailable,Project"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#upgradeAvailable%2CProject"><span class="Identifier">upgradeAvailable</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span>
+    <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+true if there is a superior version available
+
+</dd>
+<a id="upgradeAvailable,Project_2"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#upgradeAvailable%2CProject_2"><span class="Identifier">upgradeAvailable</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span>
+    <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+true if there is a superior version available
+
+</dd>
 
 </dl></div>
 <div class="section" id="15">
@@ -948,7 +988,7 @@ yield projects from the group in the same order that they may be resolved by the
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2019-12-14 20:22:17 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2019-12-15 01:10:25 UTC</small>
       </div>
     </div>
   </div>

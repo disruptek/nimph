@@ -19,6 +19,7 @@ import nimph/package
 import nimph/dependency
 import nimph/locker
 import nimph/group
+import nimph/version
 
 template crash(why: string) =
   ## a good way to exit nimph
@@ -91,7 +92,7 @@ proc fixer*(log_level = logLevel; dry_run = false): int =
 
   prepareForTheWorst:
     if project.doctor(dry = dry_run):
-      fatal &"👌{project.nimble.package} version {project.version} lookin' good"
+      fatal &"👌{project.name} version {project.version} lookin' good"
     elif not dry_run:
       crash &"the doctor wasn't able to fix everything"
     else:
@@ -173,6 +174,66 @@ proc runner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
           error &"{exe} didn't like that in {child.repo}"
           result = 1
 
+proc upgradeChild(child: var Project; requirement: Requirement;
+                  dry_run = false): bool =
+  result = true
+  block:
+    if child.dist != Git:
+      break
+    if child.name in ["Nim", "nim", "compiler"]:
+      debug &"ignoring the compiler"
+      break
+    if not child.upgradeAvailable:
+      debug &"no upgrade available for {child.name}"
+      break
+    let latest = child.tags.latestRelease
+    if not child.upgrade(requirement, dry_run = dry_run):
+      if not dry_run:
+        warn &"unable to upgrade {child.name}"
+      result = false
+    elif child.version < latest:
+      notice &"the latest {child.name} release of {latest} is masked"
+
+proc upgrader*(names: seq[string]; log_level = logLevel; dry_run = false): int =
+  ## perform upgrades of dependencies within project requirement specifications
+
+  # user's choice, our default
+  setLogFilter(log_level)
+
+  var
+    project: Project
+  setupLocalProject(project)
+
+  # setup our dependency group
+  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  if not project.resolve(group):
+    notice &"unable to resolve all dependencies for {project}"
+
+  if names.len == 0:
+    for requirement, dependency in group.pairs:
+      for child in dependency.projects.mvalues:
+        if not child.upgradeChild(requirement, dry_run = dry_run):
+          result = 1
+  else:
+    for name in names.items:
+      let found = group.projectForName(name)
+      if found.isSome:
+        var child = found.get
+        let required = group.reqForProject(found.get)
+        if required.isSome:
+          if not child.upgradeChild(required.get, dry_run = dry_run):
+            result = 1
+        else:
+          raise newException(Defect, &"found `{name}` but not its requirement")
+      else:
+        error &"couldn't find `{name}` among our installed dependencies"
+
+  if result == 0:
+    fatal &"👌{project.name} is up-to-date"
+  else:
+    notice &"{project.name} is not fully up-to-date"
+
+
 proc dumpLockList(project: Project) =
   for room in project.allLockerRooms:
     once:
@@ -238,7 +299,7 @@ proc tagger*(log_level = logLevel; dry_run = false): int =
     else:
       crash &"the doctor wasn't able to fix everything"
   else:
-    fatal &"👌{project.nimble.package} tags are lookin' good"
+    fatal &"👌{project.name} tags are lookin' good"
 
 proc forker*(names: seq[string]; log_level = logLevel; dry_run = false): int =
   ## cli entry to remotely fork installed packages
@@ -358,6 +419,7 @@ when isMainModule:
       scUnlock = "unlock"
       scTag = "tag"
       scRun = "run"
+      scUpgrade = "upgrade"
       scVersion = "--version"
 
     AliasTable = Table[string, seq[string]]
@@ -367,9 +429,9 @@ when isMainModule:
   addHandler(logger)
 
   const
-    version = projectVersion()
-  if version.isSome:
-    clCfg.version = $version.get
+    release = projectVersion()
+  if release.isSome:
+    clCfg.version = $release.get
   else:
     clCfg.version = "(unknown version)"
 
@@ -390,6 +452,8 @@ when isMainModule:
               doc="unlock dependencies")
   dispatchGen(tagger, cmdName = $scTag, dispatchName = "run" & $scTag,
               doc="tag versions")
+  dispatchGen(upgrader, cmdName = $scUpgrade, dispatchName = "run" & $scUpgrade,
+              doc="upgrade project dependencies")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
   dispatchGen(runner, cmdName = $scRun, dispatchName = "run" & $scRun,
@@ -404,6 +468,7 @@ when isMainModule:
       "fix":      @[$scDoctor],
       "fetch":    @[$scRun, "--", "git", "fetch"],
       "pull":     @[$scRun, "--", "git", "pull"],
+      "outdated": @[$scUpgrade, "--dry-run"],
     }.toTable
 
     # add in the default subcommands
@@ -417,7 +482,7 @@ when isMainModule:
   const
     # these are our subcommands that we want to include in help
     dispatchees = [rundoctor, runsearch, runclone, runpath, runfork,
-                   runlock, rununlock, runtag, runrun]
+                   runlock, rununlock, runtag, runupgrade, runrun]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
@@ -434,6 +499,7 @@ when isMainModule:
       scUnlock: rununlock,
       scTag: runtag,
       scRun: runrun,
+      scUpgrade: runupgrade,
     }.toTable
 
     # setup the mapping between subcommand and expanded parameters
@@ -443,14 +509,13 @@ when isMainModule:
     # get the command line
     params = commandLineParams()
 
-  # maybe just run the nurse
+  # get the subcommand one way or another
   if params.len == 0:
-    let newLog = max(0, logLevel.ord - 1).Level
-    params = aliases["nurse"].concat @["--log-level=" & $newLog]
+    params = @["nurse"]
+  let first = params[0].strip.toLowerAscii
 
   # try to parse the subcommand
   var sub: SubCommand
-  let first = params[0].strip.toLowerAscii
   if first in aliases:
     # expand the alias
     params = aliases[first].concat params[1..^1]
@@ -484,6 +549,10 @@ when isMainModule:
       discard runnimble(cmdline = @["--help"], prefix = "    ",
                          usage = nimbleUse)
     else:
+      # we'll enhance logging for these subcommands
+      if first in ["outdated", "nurse"]:
+        let newLog = max(0, logLevel.ord - 1).Level
+        params = params.concat @["--log-level=" & $newLog]
       # invoke the appropriate dispatcher
       quit dispatchers[sub](cmdline = params[1..^1])
   except HelpOnly:

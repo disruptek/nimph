@@ -74,6 +74,7 @@ output (and optional repair) of the environment it finds itself in.
 - [Finding a Path via Nim Import Name](https://github.com/disruptek/nimph#path)
 - [Locking the Dependency Tree by Name](https://github.com/disruptek/nimph#lock)
 - [Rolling the Dependency Tree by Name](https://github.com/disruptek/nimph#unlock)
+- [Upgrading Dependencies Automatically](https://github.com/disruptek/nimph#upgrade)
 - [Cutting New Release Versions+Tags](https://github.com/disruptek/nimph#bump)
 - [Adding Any Missing Tags Automatically](https://github.com/disruptek/nimph#tag)
 - [Running Commands on All Dependencies](https://github.com/disruptek/nimph#run)
@@ -220,6 +221,51 @@ $ nimph unlock goats
 unsafe lock of `regex` for regex>=0.10.0 as #ff6ab8297c72f30e4da34daa9e8a60075ce8df7b
 👭cloning https://github.com/zevv/npeg...
 rolled to #e3243f6ff2d05290f9c6f1e3d3f1c725091d60ab to meet git://github.com/disruptek/cutelog.git##1.1.1
+```
+
+### Upgrade
+
+The `upgrade` subcommand resolves the project's dependencies and attempts to
+upgrade any git clones to the latest release tag that matches the project's
+requirements.
+
+The `outdated` subcommand is an alias equivalent to `upgrade --dry-run`:
+
+```
+$ nimph outdated
+would upgrade swayipc from 3.1.0 to 3.1.3
+would upgrade foreach from 1.0.0 to 1.0.2
+would upgrade cutelog from 1.0.1 to 1.1.1
+would upgrade bump from 1.8.11 to 1.8.16
+would upgrade github from 1.0.1 to 1.0.2
+would upgrade nimph from 0.1.0 to 0.2.1
+would upgrade regex from 0.10.0 to v0.13.0
+would upgrade unicodedb from 0.6.0 to v0.7.2
+bot is not fully up-to-date
+```
+
+Upgrade individual packages by specifying the _import name_.
+
+```
+$ nimph upgrade swayipc
+rolled swayipc from 3.1.0 to 3.1.3
+the latest swayipc release of 3.1.4 is masked
+👌bot is up-to-date
+```
+
+Upgrade all dependencies at once by omitting any module names.
+
+```
+$ nimph upgrade
+the latest swayipc release of 3.1.4 is masked
+rolled foreach from 1.0.0 to 1.0.2
+rolled cutelog from 1.0.1 to 1.1.1
+rolled bump from 1.8.11 to 1.8.16
+rolled github from 1.0.1 to 1.0.2
+rolled nimph from 0.1.0 to 0.2.1
+rolled regex from 0.10.0 to v0.13.0
+rolled unicodedb from 0.6.0 to v0.7.2
+👌bot is up-to-date
 ```
 
 ### Bump

@@ -316,14 +316,14 @@ proc effectively*(mask: VersionMask): Version =
 
 proc effectively*(release: Release): Version =
   ## convert a release to a version for rough comparisons
-  case release.kind
+  case release.kind:
   of Tag:
-    block:
-      let parsed = parseVersionLoosely(release.reference)
-      if parsed.isSome:
-        result = parsed.get.version
-        break
+    let parsed = parseVersionLoosely(release.reference)
+    if parsed.isNone:
       result = (0'u, 0'u, 0'u)
+    elif parsed.get.kind == Tag:
+      raise newException(Defect, "inconceivable!")
+    result = parsed.get.effectively
   of Wildlings:
     result = release.accepts.effectively
   of Equal:

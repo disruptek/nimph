@@ -301,7 +301,7 @@ proc sortByVersion*(tags: GitTagTable): GitTagTable =
   for trio in order.sortedByIt(it.version):
     result.add trio.tag, trio.thing
 
-proc fetchTagTable*(project: var Project): GitTagTable {.discardable.} =
+proc fetchTagTable*(project: var Project) =
   ## retrieve the tags for a project from its git repository
   if project.dist != Git:
     return
@@ -727,7 +727,7 @@ proc relocateDependency*(parent: var Project; project: var Project) =
     raise newException(Defect, "we don't rename parent project repositories")
 
   # tags are quite useful for choosing a name
-  discard project.fetchTagTable
+  project.fetchTagTable
 
   let
     repository = project.repo
@@ -775,7 +775,7 @@ proc clone*(project: var Project; url: Uri; name: string;
       directory = directory / name & "-#head"
 
   if directory.dirExists:
-    error "i wanted to clone into {directory}, but it already exists"
+    error &"i wanted to clone into {directory}, but it already exists"
     return
 
   # don't clone the compiler when we're debugging nimph
@@ -990,3 +990,40 @@ proc repoLockReady*(project: Project): bool =
     result = false
     warn &"{project} repository has been modified"
     break
+
+proc latestRelease*(tags: GitTagTable): Version =
+  ## the latest tagged release parsable as a version
+  for tagged in tags.keys:
+    let parsed = parseVersionLoosely(tagged)
+    if parsed.isSome and parsed.get.kind == Equal:
+      result = parsed.get.version
+
+proc upgradeAvailable*(tags: GitTagTable; version: Version): bool =
+  ## true if there is a superior version available
+  for name in tags.keys:
+    # skip cases where a commit hash is tagged as itself, ie. head
+    let parsed = parseVersionLoosely(name)
+    if parsed.isSome:
+      result = parsed.get.effectively > version
+      if result:
+        break
+
+proc upgradeAvailable*(project: Project): bool =
+  ## true if there is a superior version available
+  if project.tags == nil:
+    let emsg = &"unable to fetch tags for an immutable project {project.name}"
+    raise newException(Defect, emsg)
+
+  # no head means no tags means no upgrades
+  let head = project.getHeadOid
+  if head.isNone:
+    return
+
+  result = upgradeAvailable(project.tags, project.version)
+
+proc upgradeAvailable*(project: var Project): bool =
+  ## true if there is a superior version available
+  if project.tags == nil:
+    project.fetchTagTable
+  let readonly = project
+  result = readonly.upgradeAvailable

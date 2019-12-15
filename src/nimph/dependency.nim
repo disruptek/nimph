@@ -7,6 +7,8 @@ import std/hashes
 import std/strtabs
 import std/tables
 import std/options
+import std/sequtils
+import std/algorithm
 
 import bump
 
@@ -194,6 +196,8 @@ iterator matchingReleases(requirement: Requirement; head = "";
 
 iterator symbolicMatch*(project: Project; req: Requirement): Release =
   ## see if a project can match a given requirement symbolically
+  if project.tags == nil:
+    raise newException(Defect, "fetch tags for the project first")
   if project.dist == Git:
     if project.tags == nil:
       warn &"i wanted to examine tags for {project} but they were empty"
@@ -222,17 +226,35 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
 
 proc symbolicMatch*(project: Project; req: Requirement; release: Release): bool =
   ## convenience
+  if project.tags == nil:
+    raise newException(Defect, "fetch tags for the project first")
   let release = project.peelRelease(release)
   for match in project.symbolicMatch(req):
     result = match == release
     if result:
       break
 
+proc symbolicMatch*(project: var Project; req: Requirement; release: Release): bool =
+  ## convenience
+  if project.tags == nil:
+    project.fetchTagTable
+  let readonly = project
+  result = project.symbolicMatch(req, release)
+
 proc symbolicMatch*(project: Project; req: Requirement): bool =
   ## convenience
+  if project.tags == nil:
+    raise newException(Defect, "fetch tags for the project first")
   for match in project.symbolicMatch(req):
     result = true
     break
+
+proc symbolicMatch*(project: var Project; req: Requirement): bool =
+  ## convenience
+  if project.tags == nil:
+    project.fetchTagTable
+  let readonly = project
+  result = project.symbolicMatch(req)
 
 proc isSatisfiedBy(req: Requirement; project: Project; release: Release): bool =
   block satisfied:
@@ -356,11 +378,18 @@ proc addName(group: var DependencyGroup; req: Requirement; dep: Dependency) =
   for directory, project in dep.projects.pairs:
     let name = project.importName
     if name notin group.imports:
-      group.imports[project.importName] = directory
+      group.imports[name] = directory
     elif group.imports[name] != directory:
       warn &"name collision for import `{name}`:"
       for path in [directory, group.imports[name]]:
         warn &"\t{path}"
+  when defined(debugImportNames):
+    when not defined(release) and not defined(danger):
+      for name in dep.names.items:
+        if not group.imports.hasKey(name):
+          warn &"{name} was in {dep.names} but not group names:"
+          warn $group.imports
+        assert group.imports.hasKey(name)
 
 proc add*(group: var DependencyGroup; req: Requirement; dep: Dependency) =
   group.table.add req, dep
@@ -410,6 +439,13 @@ proc projectForPath*(dependencies: DependencyGroup; path: string): Project =
   for dependency in dependencies.values:
     if dependency.projects.hasKey(path):
       result = dependency.projects[path]
+      break
+
+proc reqForProject*(group: DependencyGroup; project: Project): Option[Requirement] =
+  ## try to retrieve a requirement given a project
+  for requirement, dependency in group.pairs:
+    if project in dependency.projects:
+      result = requirement.some
       break
 
 proc projectForName*(group: DependencyGroup; name: string): Option[Project] =
@@ -572,8 +608,7 @@ proc setHeadToRelease(project: var Project; release: Release): bool =
 
   # make sure we invalidate some data
   project.dump = nil
-  # or reset it, at least
-  project.version = project.knowVersion
+  project.version = (0'u, 0'u, 0'u)
 
 proc rollTowards*(project: var Project; requirement: Requirement): bool =
   ## advance the head of a project to meet a given requirement
@@ -668,3 +703,63 @@ proc reset*(dependencies: var DependencyGroup; project: var Project) =
   project.cfg = loadAllCfgs(project.repo)
   # rescan for package dependencies applicable to this project
   dependencies.projects = project.childProjects
+
+proc upgrade*(project: var Project; requirement: Requirement;
+              dry_run = false): bool =
+  ## true if the project is fully upgraded per the requirement
+  if project.dist != Git:
+    return
+  if project.tags == nil:
+    project.fetchTagTable
+  let
+    current = project.version
+    head = project.getHeadOid
+
+  # up-to-date until proven otherwise
+  result = true
+
+  # no head means that we're up-to-date, obviously
+  if head.isNone:
+    return
+
+  var
+    releases = toSeq project.symbolicMatch(requirement)
+  # iterate over all matching tags in reverse order
+  for match in releases.reversed:
+    # if we're at the next best release then we're done
+    if match.kind == Tag and match.reference == $head.get:
+      break
+
+    # make a friendly name for the future version
+    let
+      friendly = block:
+        if match.kind in {Tag}:
+          project.tags.shortestTag(match.reference)
+        else:
+          $match
+    if dry_run:
+      # make some noise and don't actually do anything
+      info &"would upgrade {project.name} from {current} to {friendly}"
+      result = false
+      break
+
+    # make sure we don't do something stupid
+    if not project.repoLockReady:
+      error &"refusing to roll {project.name} 'cause it's dirty"
+      result = false
+      break
+
+    # try to point to the matching release
+    result = project.setHeadToRelease(match)
+    if not result:
+      warn &"failed checkout of {match}"
+      continue
+    else:
+      notice &"rolled {project.name} from {current} to {friendly}"
+    # freshen project version, release, etc.
+    project.refresh
+    # then, maybe rename the directory appropriately
+    if project.parent != nil:
+      project.parent.relocateDependency(project)
+    result = true
+    break
