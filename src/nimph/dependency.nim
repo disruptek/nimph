@@ -239,7 +239,7 @@ proc symbolicMatch*(project: var Project; req: Requirement; release: Release): b
   if project.tags == nil:
     project.fetchTagTable
   let readonly = project
-  result = project.symbolicMatch(req, release)
+  result = readonly.symbolicMatch(req, release)
 
 proc symbolicMatch*(project: Project; req: Requirement): bool =
   ## convenience
@@ -254,7 +254,7 @@ proc symbolicMatch*(project: var Project; req: Requirement): bool =
   if project.tags == nil:
     project.fetchTagTable
   let readonly = project
-  result = project.symbolicMatch(req)
+  result = readonly.symbolicMatch(req)
 
 proc isSatisfiedBy(req: Requirement; project: Project; release: Release): bool =
   block satisfied:
