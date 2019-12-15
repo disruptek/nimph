@@ -985,10 +985,10 @@ proc repoLockReady*(project: Project): bool =
   let state = repositoryState(project.repo)
   if state != GitRepoState.rsNone:
     result = false
-    warn &"{project} repository in invalid {state} state"
+    notice &"{project} repository in invalid {state} state"
   for n in status(project.repo, ssIndexAndWorkdir):
     result = false
-    warn &"{project} repository has been modified"
+    notice &"{project} repository has been modified"
     break
 
 proc latestRelease*(tags: GitTagTable): Version =
