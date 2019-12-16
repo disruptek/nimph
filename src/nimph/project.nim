@@ -199,28 +199,28 @@ proc fetchDump*(project: var Project; refresh = false): bool {.discardable.} =
 
 proc knowVersion*(project: var Project): Version =
   ## pull out all the stops to determine the version of a project
-  if project.dump != nil:
-    if "version" in project.dump:
-      let
-        text {.used.} = project.dump["version"]
-        parsed = parseVersionLoosely(text)
-      if parsed.isSome:
-        when defined(debug):
-          debug "parsed a version from `nimble dump`"
+  block:
+    # this is really the most likely to work, so start with a dump
+    if project.dump != nil:
+      if "version" in project.dump:
+        let
+          text = project.dump["version"]
+          parsed = parseVersionLoosely(text)
+        if parsed.isNone:
+          let emsg = &"unparsable version `{text}` in {project.name}" # noqa
+          raise newException(IOError, emsg)
         result = parsed.get.version
-      else:
-        let emsg = &"unparsable version `{text}` in {project.name}" # noqa
-        raise newException(IOError, emsg)
-      return
-  result = project.guessVersion
-  if result.isValid:
-    when defined(debug):
-      debug &"parsed a version from {project.nimble}"
-    return
-  if project.fetchDump():
-    result = project.knowVersion
-    return
-  raise newException(IOError, "unable to determine {project.package} version")
+        break
+
+    # we don't have a dump to work with, or the dump has no version in it
+    result = project.guessVersion
+    if not result.isValid:
+      # that was a bad guess; if we have no dump, recurse on the dump
+      if project.dump == nil and project.fetchDump:
+        result = project.knowVersion
+
+  if not result.isValid:
+    raise newException(IOError, "unable to determine {project.package} version")
 
 proc newProject*(nimble: Target): Project =
   ## instantiate a new project from the given .nimble
@@ -735,16 +735,27 @@ proc relocateDependency*(parent: var Project; project: var Project) =
     name = project.nameMyRepo
     splat = repository.splitFile
     future = splat.dir / name
-    nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
 
-  if current != name:
-    if dirExists(future):
-      warn &"cannot rename `{current}` to `{name}` -- already exists"
-    else:
-      moveDir(repository, future)
-      project.nimble = newTarget(nimble)
-      # the path changed, so point the parent to it
-      parent.addMissingSearchPathsTo(project)
+  if current == name:
+    return
+
+  if dirExists(future):
+    warn &"cannot rename `{current}` to `{name}` -- already exists"
+  else:
+    # we'll need the dump in order to determine the search path
+    project.fetchDump
+    let
+      previous = project.determineSearchPath
+      nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
+
+    # now we can actually move the repo...
+    moveDir(repository, future)
+    # reset the package configuration target
+    project.nimble = newTarget(nimble)
+    # the path changed, so remove the old path (if you can)
+    discard parent.removeSearchPath(previous)
+    # and point the parent to the new one
+    parent.addMissingSearchPathsTo(project)
 
 proc clone*(project: var Project; url: Uri; name: string;
             cloned: var Project): bool =
@@ -793,28 +804,30 @@ proc clone*(project: var Project; url: Uri; name: string;
   gitTrap got, clone(got, bare, directory):
     return
 
-  head = getHeadOid(got.repo)
-  if head.isNone:
-    oid = ""
-  else:
-    oid = $head.get
-
+  # make sure the project we find is in the directory we cloned to;
+  # this could differ if the repo does not feature a dotNimble file
   if findProject(cloned, directory, parent = project) and
                  cloned.repo == directory:
+    {.warning: "gratuitous nimblemeta write?".}
+    head = getHeadOid(got.repo)
+    if head.isNone:
+      oid = ""
+    else:
+      oid = $head.get
     if not writeNimbleMeta(directory, bare, oid):
       warn &"unable to write {nimbleMeta} in {directory}"
+    result = true
   else:
     error "couldn't make sense of the project i just cloned"
 
-  result = true
+  # if we're gonna fail, ensure that failure is felt
+  if not result:
+    cloned = nil
 
 proc allImportTargets*(config: ConfigRef; repo: string):
   OrderedTableRef[Target, LinkedSearchResult] =
   ## yield projects from the group in the same order that they may be
   ## resolved by the compiler, if at all, given a particular configuration
-  ##
-  ## FIXME: is it safe to assume that searchPaths are searched in the same
-  ## order that they appear in the parsed configuration?  need test for this
   result = newOrderedTable[Target, LinkedSearchResult]()
 
   for path in config.extantSearchPaths:

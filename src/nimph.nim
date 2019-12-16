@@ -353,7 +353,9 @@ proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
 
   if args.len == 0:
     crash &"provide a single url, or a github search query"
-  elif args.len == 1:
+
+  # if only one argument was supplied, see if we can parse it as a url
+  if args.len == 1:
     try:
       let
         uri = parseUri(args[0])
@@ -366,33 +368,59 @@ proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
   var project: Project
   setupLocalProject(project)
 
+  # if the input wasn't parsed to a url,
   if not url.isValid:
+    # search github using the input as a query
     let
       query {.used.} = args.join(" ")
-      group = waitfor searchHub(args)
-    if group.isNone:
+      hubs = waitfor searchHub(args)
+    if hubs.isNone:
       crash &"unable to retrieve search results from github"
 
-    var
-      repository: HubResult
+    # and pluck the first result, presumed to be the best
     block found:
-      for repos in group.get.values:
-        repository = repos
-        url = repository.git
-        name = repository.name
+      for repo in hubs.get.values:
+        url = repo.git
+        name = repo.name
         break found
       crash &"unable to find a package matching `{query}`"
 
+  # if we STILL don't have a url, we're done
   if not url.isValid:
     crash &"unable to determine a valid url to clone"
 
+  # perform the clone
   var
     cloned: Project
   if not project.clone(url, name, cloned):
-    crash &"unable to clone {url}"
+    crash &"problem cloning {url}"
 
-  # rename the directory to match head release
-  project.relocateDependency(cloned)
+  # reset our paths to, hopefully, grab the new project
+  project.cfg = loadAllCfgs(project.repo)
+
+  # setup our dependency group
+  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  if not project.resolve(group):
+    notice &"unable to resolve all dependencies for {project}"
+
+  # see if we can find this project in the dependencies
+  let needed = group.projectForPath(cloned.repo)
+
+  # if it's in there, let's get its requirement and roll to meet it
+  block relocated:
+    if needed.isSome:
+      let requirement = group.reqForProject(cloned)
+      if requirement.isNone:
+        warn &"unable to retrieve requirement for {cloned.name}"
+      else:
+        # rollTowards will relocate us, too
+        if cloned.rollTowards(requirement.get):
+          notice &"rolled {cloned.name} to {cloned.version}"
+          # so skip the tail of this block (and a 2nd relocate)
+          break relocated
+        notice &"unable to meet {requirement} with {cloned}"
+    # rename the directory to match head release
+    project.relocateDependency(cloned)
 
   # try to point it at github if it looks like it's our repo
   if not cloned.promote:
