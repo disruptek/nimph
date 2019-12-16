@@ -83,66 +83,6 @@ proc newVersionMask(input: string): VersionMask =
   if dotted.len > 2:
     result.patch = dotted[2].starOrDigits
 
-proc newRelease*(version: Version): Release =
-  ## create a new release using a version
-  if not version.isValid:
-    raise newException(ValueError, &"invalid version `{version}`")
-  result = Release(kind: Equal, version: version)
-
-proc newRelease*(reference: string; operator = Equal): Release =
-  ## parse a version, mask, or tag with an operator hint from the requirement
-  if reference.startsWith("#") or operator == Tag:
-    result = Release(kind: Tag, reference: reference)
-    removePrefix(result.reference, {'#'})
-  elif reference in ["", "any version"]:
-    result = Release(kind: Wild, accepts: newVersionMask("*"))
-  elif "*" in reference:
-    result = Release(kind: Wild, accepts: newVersionMask(reference))
-  elif operator in Wildlings:
-    # thanks, jasper
-    case operator:
-    of Wildlings:
-      result = Release(kind: operator, accepts: newVersionMask(reference))
-    else:
-      raise newException(Defect, "inconceivable!")
-  elif count(reference, '.') < 2:
-    result = Release(kind: Wild, accepts: newVersionMask(reference))
-  else:
-    try:
-      result = newRelease(parseDottedVersion(reference))
-    except ValueError:
-      raise newException(ValueError, &"parse error on version `{reference}`")
-
-proc `$`*(field: VersionMaskField): string =
-  if field.isNone:
-    result = "*"
-  else:
-    result = $field.get
-
-proc `$`*(mask: VersionMask): string =
-  result = $mask.major
-  result &= "." & $mask.minor
-  result &= "." & $mask.patch
-
-proc omitStars*(mask: VersionMask): string =
-  result = $mask.major
-  if mask.minor.isSome:
-    result &= "." & $mask.minor
-  if mask.patch.isSome:
-    result &= "." & $mask.patch
-
-proc `$`*(spec: Release): string =
-  case spec.kind
-  of Tag:
-    result = $spec.kind & $spec.reference
-  of Equal, AtLeast, Over, Under, NotMore:
-    result = $spec.version
-  of Wild, Caret, Tilde:
-    result = spec.accepts.omitStars
-
-proc `$`*(req: Requirement): string =
-  result = &"{req.identity}{req.operator}{req.release}"
-
 proc isValid*(release: Release): bool =
   ## true if the release seems plausible
   const sensible = @[
@@ -184,6 +124,14 @@ proc isValid*(req: Requirement): bool =
   else:
     result = req.release.kind in {Equal}
 
+proc newRelease*(version: Version): Release =
+  ## create a new release using a version
+  if not version.isValid:
+    raise newException(ValueError, &"invalid version `{version}`")
+  result = Release(kind: Equal, version: version)
+
+proc newRelease*(reference: string; operator = Equal): Release
+
 proc parseVersionLoosely*(content: string): Option[Release] =
   ## a very relaxed parser for versions found in tags, etc.
   ## only valid releases are emitted, however
@@ -203,6 +151,64 @@ proc parseVersionLoosely*(content: string): Option[Release] =
   except Exception as e:
     let emsg = &"parse error in `{content}`: {e.msg}" # noqa
     warn emsg
+
+proc newRelease*(reference: string; operator = Equal): Release =
+  ## parse a version, mask, or tag with an operator hint from the requirement
+  if reference.startsWith("#") or operator == Tag:
+    result = Release(kind: Tag, reference: reference)
+    removePrefix(result.reference, {'#'})
+  elif reference in ["", "any version"]:
+    result = Release(kind: Wild, accepts: newVersionMask("*"))
+  elif "*" in reference:
+    result = Release(kind: Wild, accepts: newVersionMask(reference))
+  elif operator in Wildlings:
+    # thanks, jasper
+    case operator:
+    of Wildlings:
+      result = Release(kind: operator, accepts: newVersionMask(reference))
+    else:
+      raise newException(Defect, "inconceivable!")
+  elif count(reference, '.') < 2:
+    result = Release(kind: Wild, accepts: newVersionMask(reference))
+  else:
+    try:
+      result = newRelease(parseDottedVersion(reference))
+    except ValueError:
+      let loose = parseVersionLoosely(reference)
+      if loose.isNone:
+        let emsg = &"parse error on version `{reference}`" # noqa
+        raise newException(ValueError, emsg)
+      result = loose.get
+
+proc `$`*(field: VersionMaskField): string =
+  if field.isNone:
+    result = "*"
+  else:
+    result = $field.get
+
+proc `$`*(mask: VersionMask): string =
+  result = $mask.major
+  result &= "." & $mask.minor
+  result &= "." & $mask.patch
+
+proc omitStars*(mask: VersionMask): string =
+  result = $mask.major
+  if mask.minor.isSome:
+    result &= "." & $mask.minor
+  if mask.patch.isSome:
+    result &= "." & $mask.patch
+
+proc `$`*(spec: Release): string =
+  case spec.kind
+  of Tag:
+    result = $spec.kind & $spec.reference
+  of Equal, AtLeast, Over, Under, NotMore:
+    result = $spec.version
+  of Wild, Caret, Tilde:
+    result = spec.accepts.omitStars
+
+proc `$`*(req: Requirement): string =
+  result = &"{req.identity}{req.operator}{req.release}"
 
 proc `==`*(a, b: VersionMaskField): bool =
   result = a.isNone == b.isNone
@@ -295,7 +301,8 @@ proc isSpecific*(release: Release): bool =
 proc specifically*(release: Release): Version =
   ## a full X.Y.Z version the release will match
   if not release.isSpecific:
-    raise newException(Defect, &"release {release} is not specific")
+    let emsg = &"release {release} is not specific" # noqa
+    raise newException(Defect, emsg)
   if release.kind in Wildlings:
     result = (major: release.accepts.major.get,
               minor: release.accepts.minor.get,
