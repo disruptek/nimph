@@ -434,11 +434,11 @@ proc pathForName*(dependencies: DependencyGroup; name: string): Option[string] =
   if dependencies.imports.hasKey(name):
     result = dependencies.imports[name].some
 
-proc projectForPath*(dependencies: DependencyGroup; path: string): Project =
+proc projectForPath*(deps: DependencyGroup; path: string): Option[Project] =
   ## retrieve a project from the dependencies using its path
-  for dependency in dependencies.values:
+  for dependency in deps.values:
     if dependency.projects.hasKey(path):
-      result = dependency.projects[path]
+      result = dependency.projects[path].some
       break
 
 proc reqForProject*(group: DependencyGroup; project: Project): Option[Requirement] =
@@ -454,7 +454,7 @@ proc projectForName*(group: DependencyGroup; name: string): Option[Project] =
     path = group.pathForName(name)
   if path.isNone:
     return
-  result = group.projectForPath(path.get).some
+  result = group.projectForPath(path.get)
 
 proc isHappy*(dependency: Dependency): bool =
   ## true if the dependency is being met successfully
