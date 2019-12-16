@@ -1040,3 +1040,12 @@ proc upgradeAvailable*(project: var Project): bool =
     project.fetchTagTable
   let readonly = project
   result = readonly.upgradeAvailable
+
+proc nextTagFor*(tags: GitTagTable; version: Version): string =
+  ## produce a new tag given previous tags
+  var latest: string
+  # due to sorting, the last tag should be the latest version
+  for tag in tags.keys:
+    latest = tag
+  # add any silly v. prefix as necessary
+  result = pluckVAndDot(latest) & $version
