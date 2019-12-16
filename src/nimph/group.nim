@@ -130,6 +130,10 @@ iterator values*[K, V](group: Group[K, V]): V =
   for value in group.table.values:
     yield value
 
+iterator keys*[K, V](group: Group[K, V]): K =
+  for key in group.table.keys:
+    yield key
+
 iterator mvalues*[K, V](group: Group[K, V]): var V =
   for value in group.table.mvalues:
     yield value
