@@ -5,3 +5,5 @@ tests/tspec
 tests/tgit
 nim.cfg
 nimph.json
+nimph
+nimph.exe
