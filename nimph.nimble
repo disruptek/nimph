@@ -14,3 +14,18 @@ requires "https://github.com/stefantalpalaru/nim-unittest2 >= 0.0.1"
 
 bin = @["nimph"]
 srcDir = "src"
+
+proc execCmd(cmd: string) =
+  echo "execCmd:" & cmd
+  exec cmd
+
+proc execTest(test: string) =
+  execCmd "nim c -f -r " & test
+  execCmd "nim cpp -r " & test
+
+task test, "run tests for travis":
+  execTest("tests/tpackage.nim")
+  execTest("tests/tconfig.nim")
+  execTest("tests/tspec.nim")
+  execTest("tests/tnimble.nim")
+  execTest("tests/tgit.nim")
