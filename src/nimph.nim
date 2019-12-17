@@ -592,7 +592,10 @@ when isMainModule:
   try:
     case sub:
     of scNimble:
-      # invoke nimble with the original parameters
+      # remove any gratuitous `nimble` specified by user or alias
+      if params[0] == "nimble":
+        params = params[1..^1]
+      # invoke nimble with the remaining parameters
       quit runnimble(cmdline = params)
     of scVersion:
       # report the version
