@@ -615,8 +615,14 @@ proc rollTowards*(project: var Project; requirement: Requirement): bool =
     return
   if project.tags == nil:
     project.fetchTagTable
+
+  # reverse the order of matching releases so that we start with the latest
+  # valid release, first and proceed to lesser versions thereafter
+  var releases = toSeq project.symbolicMatch(requirement)
+  releases.reverse
+
   # iterate over all matching tags
-  for match in project.symbolicMatch(requirement):
+  for match in releases.items:
     # try to point to the matching release
     result = project.setHeadToRelease(match)
     if not result:
