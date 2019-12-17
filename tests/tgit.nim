@@ -46,5 +46,5 @@ suite "git":
     let
       versioned = project.versionChangingCommits
       required = project.requirementChangingCommits
-    check $versioned[v"0.0.38"].oid == "29b4a67fe348030f118ff4a7d9b9f92c9cdd3a4e"
-    check $versioned[v"0.0.37"].oid == "aa681bd65e6472c7c65135b535a7cfdbaad314e3"
+    check $versioned[v"0.4.0"].oid == "faf061ead9e7ec491b6fc96ecf488e951708a155"
+    check $versioned[v"0.3.7"].oid == "e54f3bee818108c1ce1684a3ff5d44a19c53f307"
