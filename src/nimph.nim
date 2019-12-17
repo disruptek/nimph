@@ -615,8 +615,6 @@ when isMainModule:
       # produce help for nimble subcommands
       runnimble.dumpHelp(nimbleUse)
 
-#      discard runnimble(cmdline = @["--help"], prefix = "    ",
-#                         usage = nimbleUse)
       echo "\n    Some additional subcommands are implemented as aliases:"
       for alias, arguments in trueAliases.pairs:
         let alias = "nimph " & alias
