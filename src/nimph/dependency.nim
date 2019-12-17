@@ -591,7 +591,7 @@ proc newDependencyGroup*(project: Project;
   # collect all the packages from the environment
   result.projects = project.childProjects
 
-proc setHeadToRelease(project: var Project; release: Release): bool =
+proc setHeadToRelease*(project: var Project; release: Release): bool =
   ## advance the head of a project to a particular release
   if project.dist != Git:
     return
@@ -660,6 +660,36 @@ proc `[]`*(group: VersionTags; ver: Version): var GitThing =
 proc newVersionTags(flags = defaultFlags): VersionTags =
   result = VersionTags(flags: flags)
   result.init(flags, mode = modeStyleInsensitive)
+
+template returnToHeadAfter*(project: var Project; body: untyped) =
+  let
+    previous = project.getHeadOid
+
+  # we may have no head; if that's the case, we have no tags either
+  if previous.isSome:
+
+    # this could just be a bad idea all the way aroun'
+    if not project.repoLockReady:
+      error "refusing to roll the repo when it's dirty"
+    else:
+      # if we have no way to get back, don't even depart
+      var home: GitReference
+      gitTrap home, referenceDWIM(home, project.repo, "HEAD"):
+        raise newException(IOError, "i'm lost; where am i?")
+
+      defer:
+        # there's no place like home
+        if not project.setHeadToRelease(newRelease($previous.get, operator = Tag)):
+          raise newException(IOError, "cannot detach head to " & $previous.get)
+
+        # re-attach the head if we can
+        gitTrap setHead(project.repo, $home.name):
+          raise newException(IOError, "cannot set head to " & home.name)
+
+        # be sure to reload the project specifics now that we're home
+        project.refresh
+
+      body
 
 proc versionChangingCommits*(project: var Project): VersionTags =
   # a table of the commits that changed the Version of a Project's

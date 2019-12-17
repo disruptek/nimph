@@ -34,13 +34,14 @@ suite "git":
       cute = deps.projectForPath(path.get).get
 
   test "roll between versions":
-    for ver in ["0.3.7", "0.4.0"]:
-      let
-        release = newRelease(ver, operator = Tag)
-        req = newRequirement("https://github.com/disruptek/nimph", operator = Tag, release)
-      check project.rollTowards(req)
-      for stat in project.repo.status:
-        check gsfIndexModified notin stat.flags
+    project.returnToHeadAfter:
+      for ver in ["0.4.0", "0.3.7"]:
+        let
+          release = newRelease(ver, operator = Tag)
+          req = newRequirement($project.url, operator = Tag, release)
+        check project.rollTowards(req)
+        for stat in project.repo.status:
+          check gsfIndexModified notin stat.flags
 
   test "commits changing project version":
     let
