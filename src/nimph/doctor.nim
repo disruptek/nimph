@@ -4,7 +4,6 @@ import std/strutils
 import std/options
 import std/os
 import std/strformat
-import std/sequtils
 
 import bump
 

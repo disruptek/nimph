@@ -703,8 +703,8 @@ proc reset*(dependencies: var DependencyGroup; project: var Project) =
   # rescan for package dependencies applicable to this project
   dependencies.projects = project.childProjects
 
-proc upgrade*(project: var Project; requirement: Requirement;
-              dry_run = false): bool =
+proc roll*(project: var Project; requirement: Requirement;
+           goal: RollGoal; dry_run = false): bool =
   ## true if the project is fully upgraded per the requirement
   if project.dist != Git:
     return
@@ -723,8 +723,16 @@ proc upgrade*(project: var Project; requirement: Requirement;
 
   var
     releases = toSeq project.symbolicMatch(requirement)
-  # iterate over all matching tags in reverse order
-  for match in releases.reversed:
+  case goal:
+  of Upgrade:
+    releases.reverse
+  of Downgrade:
+    discard
+  of Specific:
+    raise newException(Defect, "not implemented")
+
+  # iterate over all matching tags
+  for match in releases:
     # if we're at the next best release then we're done
     if match.kind == Tag and match.reference == $head.get:
       break
@@ -738,7 +746,7 @@ proc upgrade*(project: var Project; requirement: Requirement;
           $match
     if dry_run:
       # make some noise and don't actually do anything
-      info &"would upgrade {project.name} from {current} to {friendly}"
+      info &"would {goal} {project.name} from {current} to {friendly}"
       result = false
       break
 

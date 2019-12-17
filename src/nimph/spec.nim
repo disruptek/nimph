@@ -18,6 +18,11 @@ type
     Force
     Dry
 
+  RollGoal* = enum
+    Upgrade = "upgrade"
+    Downgrade = "downgrade"
+    Specific = "specific"
+
   ForkTargetResult* = object
     ok*: bool
     why*: string

@@ -33,6 +33,7 @@ import std/osproc
 import std/strtabs
 import std/asyncdispatch
 import std/algorithm
+import std/sequtils
 
 import bump
 
@@ -1036,25 +1037,50 @@ proc repoLockReady*(project: Project): bool =
     notice &"{project} repository has been modified"
     break
 
-proc latestRelease*(tags: GitTagTable): Version =
-  ## the latest tagged release parsable as a version
-  for tagged in tags.keys:
+proc bestRelease*(tags: GitTagTable; goal: RollGoal): Version =
+  ## the most ideal tagged release parsable as a version
+  var
+    names = toSeq tags.keys
+  case goal:
+  of Upgrade:
+    names.reverse
+  of Specific:
+    raise newException(Defect, "nonsensical")
+  else:
+    discard
+
+  for tagged in names.items:
     let parsed = parseVersionLoosely(tagged)
     if parsed.isSome and parsed.get.kind == Equal:
       result = parsed.get.version
 
-proc upgradeAvailable*(tags: GitTagTable; version: Version): bool =
-  ## true if there is a superior version available
-  for name in tags.keys:
+proc betterReleaseExists*(tags: GitTagTable; goal: RollGoal; version: Version): bool =
+  ## true if there is an ideal version available
+  var
+    names = toSeq tags.keys
+  case goal:
+  of Upgrade:
+    names.reverse
+  else:
+    discard
+
+  for name in names.items:
     # skip cases where a commit hash is tagged as itself, ie. head
     let parsed = parseVersionLoosely(name)
-    if parsed.isSome:
+    if parsed.isNone:
+      continue
+    case goal:
+    of Upgrade:
       result = parsed.get.effectively > version
-      if result:
-        break
+    of Downgrade:
+      result = parsed.get.effectively < version
+    of Specific:
+      result = parsed.get.effectively == version
+    if result:
+      break
 
-proc upgradeAvailable*(project: Project): bool =
-  ## true if there is a superior version available
+proc betterReleaseExists*(project: Project; goal: RollGoal): bool =
+  ## true if there is a (more) ideal version available
   if project.tags == nil:
     let emsg = &"unable to fetch tags for an immutable project {project.name}"
     raise newException(Defect, emsg)
@@ -1064,14 +1090,18 @@ proc upgradeAvailable*(project: Project): bool =
   if head.isNone:
     return
 
-  result = upgradeAvailable(project.tags, project.version)
+  # make sure this isn't a nonsensical request
+  if goal notin {Upgrade, Downgrade}:
+    raise newException(Defect, "not implemented")
 
-proc upgradeAvailable*(project: var Project): bool =
-  ## true if there is a superior version available
+  result = betterReleaseExists(project.tags, goal, project.version)
+
+proc betterReleaseExists*(project: var Project; goal: RollGoal): bool =
+  ## true if there is a (more) ideal version available
   if project.tags == nil:
     project.fetchTagTable
   let readonly = project
-  result = readonly.upgradeAvailable
+  result = readonly.betterReleaseExists(goal)
 
 proc nextTagFor*(tags: GitTagTable; version: Version): string =
   ## produce a new tag given previous tags

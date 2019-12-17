@@ -174,28 +174,55 @@ proc runner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
           error &"{exe} didn't like that in {child.repo}"
           result = 1
 
-proc upgradeChild(child: var Project; requirement: Requirement;
-                  dry_run = false): bool =
+proc rollChild(child: var Project; requirement: Requirement;
+               goal: RollGoal; dry_run = false): bool =
+  ## try to roll a project to meet the goal inside a given requirement
+
+  # early termination means there's nowhere else to go from here
   result = true
+
   block:
     if child.dist != Git:
       break
     if child.name in ["Nim", "nim", "compiler"]:
       debug &"ignoring the compiler"
       break
-    if not child.upgradeAvailable:
-      debug &"no upgrade available for {child.name}"
-      break
-    let latest = child.tags.latestRelease
-    if not child.upgrade(requirement, dry_run = dry_run):
-      if not dry_run:
-        warn &"unable to upgrade {child.name}"
-      result = false
-    elif child.version < latest:
-      notice &"the latest {child.name} release of {latest} is masked"
 
-proc upgrader*(names: seq[string]; log_level = logLevel; dry_run = false): int =
-  ## perform upgrades of dependencies within project requirement specifications
+    # this would be... odd
+    if goal == Specific:
+      raise newException(Defect, "not implemented")
+
+    # if there's no suitable release available, we're done
+    if not child.betterReleaseExists(goal):
+      debug &"no {goal} available for {child.name}"
+      break
+
+    # if we're successful in rolling the project, we're done
+    result = child.roll(requirement, goal = goal, dry_run = dry_run)
+    if result:
+      break
+
+    # else let's see if we can offer useful output
+    let
+      best = child.tags.bestRelease(goal)
+    case goal:
+    of Upgrade:
+      if child.version < best:
+        notice &"the latest {child.name} release of {best} is masked"
+        break
+    of Downgrade:
+      if child.version > best:
+        notice &"the earliest {child.name} release of {best} is masked"
+        break
+    else:
+      discard
+    if not dry_run:
+      warn &"unable to {goal} {child.name}"
+
+proc roller*(names: seq[string]; goal: RollGoal;
+             log_level = logLevel; dry_run = false): int =
+  ## perform upgrades or downgrades of dependencies
+  ## within project requirement specifications
 
   # user's choice, our default
   setLogFilter(log_level)
@@ -212,26 +239,26 @@ proc upgrader*(names: seq[string]; log_level = logLevel; dry_run = false): int =
   if names.len == 0:
     for requirement, dependency in group.pairs:
       for child in dependency.projects.mvalues:
-        if not child.upgradeChild(requirement, dry_run = dry_run):
+        if not child.rollChild(requirement, goal = goal, dry_run = dry_run):
           result = 1
   else:
     for name in names.items:
       let found = group.projectForName(name)
       if found.isSome:
         var child = found.get
-        let required = group.reqForProject(found.get)
-        if required.isSome:
-          if not child.upgradeChild(required.get, dry_run = dry_run):
-            result = 1
-        else:
-          raise newException(Defect, &"found `{name}` but not its requirement")
+        let require = group.reqForProject(found.get)
+        if require.isNone:
+          let emsg = &"found `{name}` but not its requirement" # noqa
+          raise newException(ValueError, emsg)
+        if not child.rollChild(require.get, goal = goal, dry_run = dry_run):
+          result = 1
       else:
         error &"couldn't find `{name}` among our installed dependencies"
 
   if result == 0:
-    fatal &"👌{project.name} is up-to-date"
+    fatal &"👌{project.name} is lookin' good"
   else:
-    notice &"{project.name} is not fully up-to-date"
+    fatal &"👎{project.name} is not where you want it"
 
 
 proc dumpLockList(project: Project) =
@@ -449,7 +476,7 @@ when isMainModule:
       scUnlock = "unlock"
       scTag = "tag"
       scRun = "run"
-      scUpgrade = "upgrade"
+      scRoll = "roll"
       scVersion = "--version"
 
     AliasTable = Table[string, seq[string]]
@@ -482,24 +509,29 @@ when isMainModule:
               doc="unlock dependencies")
   dispatchGen(tagger, cmdName = $scTag, dispatchName = "run" & $scTag,
               doc="tag versions")
-  dispatchGen(upgrader, cmdName = $scUpgrade, dispatchName = "run" & $scUpgrade,
-              doc="upgrade project dependencies")
+  dispatchGen(roller, cmdName = $scRoll, dispatchName = "run" & $scRoll,
+              doc="roll project dependency versions")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
   dispatchGen(runner, cmdName = $scRun, dispatchName = "run" & $scRun,
               stopWords = @["--"],
               doc="execute the program & arguments in every dependency directory")
+  const
+    # these commands exist only as aliases to other commands
+    trueAliases = {
+      # the nurse is aka `nimph` without arguments...
+      "nurse":       @[$scDoctor, "--dry-run"],
+      "fix":         @[$scDoctor],
+      "fetch":       @[$scRun, "--", "git", "fetch"],
+      "pull":        @[$scRun, "--", "git", "pull"],
+      "downgrade":   @[$scRoll, "--goal=downgrade"],
+      "upgrade":     @[$scRoll, "--goal=upgrade"],
+      "outdated":    @[$scRoll, "--goal=upgrade", "--dry-run"],
+    }.toTable
 
   proc makeAliases(passthrough: openArray[string]): AliasTable {.compileTime.} =
     # command aliases can go here
-    result = {
-      # the nurse is aka `nimph` without arguments...
-      "nurse":    @[$scDoctor, "--dry-run"],
-      "fix":      @[$scDoctor],
-      "fetch":    @[$scRun, "--", "git", "fetch"],
-      "pull":     @[$scRun, "--", "git", "pull"],
-      "outdated": @[$scUpgrade, "--dry-run"],
-    }.toTable
+    result = trueAliases
 
     # add in the default subcommands
     for sub in SubCommand.low .. SubCommand.high:
@@ -511,8 +543,8 @@ when isMainModule:
 
   const
     # these are our subcommands that we want to include in help
-    dispatchees = [rundoctor, runsearch, runclone, runpath, runfork,
-                   runlock, rununlock, runtag, runupgrade, runrun]
+    dispatchees = [scDoctor, scSearch, scClone, scPath, scFork,
+                   scLock, scUnlock, scTag, scRoll, scRun]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
@@ -529,7 +561,7 @@ when isMainModule:
       scUnlock: rununlock,
       scTag: runtag,
       scRun: runrun,
-      scUpgrade: runupgrade,
+      scRoll: runroll,
     }.toTable
 
     # setup the mapping between subcommand and expanded parameters
@@ -568,16 +600,27 @@ when isMainModule:
     of scHelp:
       # yield some help
       echo "run `nimph` for a non-destructive report, or use a subcommand;"
-      for fun in dispatchees.items:
+      for command in dispatchees.items:
+        let fun = dispatchers[command]
         once:
           fun.dumpHelp("all subcommands accept (at least) the following options:\n$options")
-        fun.dumpHelp("\n$command $args\n$doc")
+        case command:
+        of scRoll:
+          fun.dumpHelp("\n$command $args --goal=upgrade|downgrade\n$doc")
+        else:
+          fun.dumpHelp("\n$command $args\n$doc")
       echo ""
       echo "    " & passthrough.join(", ")
       let nimbleUse = "    $args\n$doc"
       # produce help for nimble subcommands
-      discard runnimble(cmdline = @["--help"], prefix = "    ",
-                         usage = nimbleUse)
+      runnimble.dumpHelp(nimbleUse)
+
+#      discard runnimble(cmdline = @["--help"], prefix = "    ",
+#                         usage = nimbleUse)
+      echo "\n    Some additional subcommands are implemented as aliases:"
+      for alias, arguments in trueAliases.pairs:
+        let alias = "nimph " & alias
+        echo &"""    {alias:>16} -> nimph {arguments.join(" ")}"""
     else:
       # we'll enhance logging for these subcommands
       if first in ["outdated", "nurse"]:
