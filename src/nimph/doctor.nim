@@ -1,8 +1,10 @@
+import std/strtabs
 import std/tables
 import std/strutils
 import std/options
 import std/os
 import std/strformat
+import std/sequtils
 
 import bump
 
@@ -31,11 +33,21 @@ proc fixTags*(project: var Project; dry_run = true): bool =
     if project.dist != Git or not project.repoLockReady:
       info "not looking for missing tags because the repository is unready"
       break
+
     # you gotta spend money to make money
     project.fetchTagTable
     if project.tags == nil:
-      info "not looking for missing tags because i couldn't fetch any"
+      notice "not looking for missing tags because i couldn't fetch any"
       break
+
+    # we're gonna fetch the dump to make sure our version is sane
+    if not project.fetchDump:
+      notice "not looking for missing tags because my dump failed"
+      break
+    if "version" notin project.dump or project.dump["version"].count(".") > 2:
+      notice &"refusing to tag {project.name} because its version is bizarre"
+      break
+
     # match up tags to versions to commits; we should probably
     # copy these structures and remove matches, for efficiency...
     var tagsNeeded = 0

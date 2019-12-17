@@ -669,6 +669,7 @@ proc determineSearchPath(project: Project): string =
   ## produce the search path to add for a given project
   if project.dump == nil:
     raise newException(Defect, "no dump available")
+
   block found:
     if "srcDir" in project.dump:
       let srcDir = project.dump["srcDir"]
@@ -739,11 +740,16 @@ proc relocateDependency*(parent: var Project; project: var Project) =
   if current == name:
     return
 
-  if dirExists(future):
-    warn &"cannot rename `{current}` to `{name}` -- already exists"
-  else:
+  block:
+    if dirExists(future):
+      warn &"cannot rename `{current}` to `{name}` -- already exists"
+      break
+
     # we'll need the dump in order to determine the search path
-    project.fetchDump
+    if not project.fetchDump:
+      notice &"error determining search path for {project.name}; dump failed"
+      break
+
     let
       previous = project.determineSearchPath
       nimble = future / project.nimble.package.addFileExt(project.nimble.ext)
