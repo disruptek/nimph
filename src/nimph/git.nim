@@ -25,8 +25,9 @@ type
   # separating out stuff we free via routines from libgit2
   GitHeapGits = git_repository | git_reference | git_remote | git_tag |
                 git_strarray | git_object | git_commit | git_status_list |
-                git_annotated_commit | git_tree_entry | git_revwalk |
-                git_pathspec | git_tree | git_diff | git_pathspec_match_list
+                git_annotated_commit | git_tree_entry | git_revwalk | git_buf |
+                git_pathspec | git_tree | git_diff | git_pathspec_match_list |
+                git_branch_iterator
 
   # or stuff we alloc and pass to libgit2, and then free later ourselves
   NimHeapGits = git_clone_options | git_status_options | git_checkout_options |
@@ -35,35 +36,40 @@ type
   GitTreeWalkCallback* = proc (root: cstring; entry: ptr git_tree_entry;
                                payload: pointer): cint
 
+  GitBranchType* = enum
+    gbtLocal  = (GIT_BRANCH_LOCAL, "local")
+    gbtRemote = (GIT_BRANCH_REMOTE, "remote")
+    gbtAll    = (GIT_BRANCH_ALL, "all")
+
   GitTreeWalkMode* = enum
     gtwPre  = (GIT_TREEWALK_PRE, "pre")
     gtwPost = (GIT_TREEWALK_POST, "post")
 
   GitRepoState* = enum
-    rsNone                  = (GIT_REPOSITORY_STATE_NONE,
-                               "none")
-    rsMerge                 = (GIT_REPOSITORY_STATE_MERGE,
-                               "merge")
-    rsRevert                = (GIT_REPOSITORY_STATE_REVERT,
-                               "revert")
-    rsRevertSequence        = (GIT_REPOSITORY_STATE_REVERT_SEQUENCE,
-                               "revert sequence")
-    rsCherrypick            = (GIT_REPOSITORY_STATE_CHERRYPICK,
-                               "cherrypick")
-    rsCherrypickSequence    = (GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE,
-                               "cherrypick sequence")
-    rsBisect                = (GIT_REPOSITORY_STATE_BISECT,
-                               "bisect")
-    rsRebase                = (GIT_REPOSITORY_STATE_REBASE,
-                               "rebase")
-    rsRebaseInteractive     = (GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,
-                               "rebase interactive")
-    rsRebaseMerge           = (GIT_REPOSITORY_STATE_REBASE_MERGE,
-                               "rebase merge")
-    rsApplyMailbox          = (GIT_REPOSITORY_STATE_APPLY_MAILBOX,
-                               "apply mailbox")
-    rsApplyMailboxOrRebase  = (GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
-                               "apply mailbox or rebase")
+    grsNone                  = (GIT_REPOSITORY_STATE_NONE,
+                                "none")
+    grsMerge                 = (GIT_REPOSITORY_STATE_MERGE,
+                                "merge")
+    grsRevert                = (GIT_REPOSITORY_STATE_REVERT,
+                                "revert")
+    grsRevertSequence        = (GIT_REPOSITORY_STATE_REVERT_SEQUENCE,
+                                "revert sequence")
+    grsCherrypick            = (GIT_REPOSITORY_STATE_CHERRYPICK,
+                                "cherrypick")
+    grsCherrypickSequence    = (GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE,
+                                "cherrypick sequence")
+    grsBisect                = (GIT_REPOSITORY_STATE_BISECT,
+                                "bisect")
+    grsRebase                = (GIT_REPOSITORY_STATE_REBASE,
+                                "rebase")
+    grsRebaseInteractive     = (GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,
+                                "rebase interactive")
+    grsRebaseMerge           = (GIT_REPOSITORY_STATE_REBASE_MERGE,
+                                "rebase merge")
+    grsApplyMailbox          = (GIT_REPOSITORY_STATE_APPLY_MAILBOX,
+                                "apply mailbox")
+    grsApplyMailboxOrRebase  = (GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
+                                "apply mailbox or rebase")
 
   GitPathSpecFlag* = enum
     gpsDefault              = (GIT_PATHSPEC_DEFAULT, "default")
@@ -83,36 +89,36 @@ type
                                "workdir only")
 
   GitStatusOption* = enum
-    soIncludeUntracked      = (GIT_STATUS_OPT_INCLUDE_UNTRACKED,
-                               "include untracked")
-    soIncludeIgnored        = (GIT_STATUS_OPT_INCLUDE_IGNORED,
-                               "include ignored")
-    soIncludeUnmodified     = (GIT_STATUS_OPT_INCLUDE_UNMODIFIED,
-                               "include unmodified")
-    soExcludeSubmodules     = (GIT_STATUS_OPT_EXCLUDE_SUBMODULES,
-                               "exclude submodules")
-    soRecurseUntrackedDirs  = (GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS,
-                               "recurse untracked dirs")
-    soDisablePathspecMatch  = (GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH,
-                               "disable pathspec match")
-    soRecurseIgnoredDirs    = (GIT_STATUS_OPT_RECURSE_IGNORED_DIRS,
-                               "recurse ignored dirs")
-    soRenamesHeadToIndex    = (GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX,
-                               "renames head to index")
-    soRenamesIndexToWorkdir = (GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR,
-                               "renames index to workdir")
-    soSortCaseSensitively   = (GIT_STATUS_OPT_SORT_CASE_SENSITIVELY,
-                               "sort case sensitively")
-    soSortCaseInsensitively = (GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY,
-                               "sort case insensitively")
-    soRenamesFromRewrites   = (GIT_STATUS_OPT_RENAMES_FROM_REWRITES,
-                               "renames from rewrites")
-    soNoRefresh             = (GIT_STATUS_OPT_NO_REFRESH,
-                               "no refresh")
-    soUpdateIndex           = (GIT_STATUS_OPT_UPDATE_INDEX,
-                               "update index")
-    soIncludeUnreadable     = (GIT_STATUS_OPT_INCLUDE_UNREADABLE,
-                               "include unreadable")
+    gsoIncludeUntracked      = (GIT_STATUS_OPT_INCLUDE_UNTRACKED,
+                                "include untracked")
+    gsoIncludeIgnored        = (GIT_STATUS_OPT_INCLUDE_IGNORED,
+                                "include ignored")
+    gsoIncludeUnmodified     = (GIT_STATUS_OPT_INCLUDE_UNMODIFIED,
+                                "include unmodified")
+    gsoExcludeSubmodules     = (GIT_STATUS_OPT_EXCLUDE_SUBMODULES,
+                                "exclude submodules")
+    gsoRecurseUntrackedDirs  = (GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS,
+                                "recurse untracked dirs")
+    gsoDisablePathspecMatch  = (GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH,
+                                "disable pathspec match")
+    gsoRecurseIgnoredDirs    = (GIT_STATUS_OPT_RECURSE_IGNORED_DIRS,
+                                "recurse ignored dirs")
+    gsoRenamesHeadToIndex    = (GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX,
+                                "renames head to index")
+    gsoRenamesIndexToWorkdir = (GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR,
+                                "renames index to workdir")
+    gsoSortCaseSensitively   = (GIT_STATUS_OPT_SORT_CASE_SENSITIVELY,
+                                "sort case sensitively")
+    gsoSortCaseInsensitively = (GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY,
+                                "sort case insensitively")
+    gsoRenamesFromRewrites   = (GIT_STATUS_OPT_RENAMES_FROM_REWRITES,
+                                "renames from rewrites")
+    gsoNoRefresh             = (GIT_STATUS_OPT_NO_REFRESH,
+                                "no refresh")
+    gsoUpdateIndex           = (GIT_STATUS_OPT_UPDATE_INDEX,
+                                "update index")
+    gsoIncludeUnreadable     = (GIT_STATUS_OPT_INCLUDE_UNREADABLE,
+                                "include unreadable")
 
   GitStatusFlag* = enum
     gsfCurrent           = (GIT_STATUS_CURRENT, "current")
@@ -282,6 +288,7 @@ type
     else:
       discard
 
+  GitBuf* = ptr git_buf
   GitDiff* = ptr git_diff
   GitPathSpec* = ptr git_pathspec
   GitRevWalker* = ptr git_revwalk
@@ -329,28 +336,31 @@ const
   ].toHashSet
 
   commonDefaultStatusFlags: set[GitStatusOption] = {
-    soIncludeUntracked,
-    soIncludeIgnored,
-    soIncludeUnmodified,
-    soExcludeSubmodules,
-    soDisablePathspecMatch,
-    soRenamesHeadToIndex,
-    soRenamesIndexToWorkdir,
-    soRenamesFromRewrites,
-    soUpdateIndex,
-    soIncludeUnreadable,
+    gsoIncludeUntracked,
+    gsoIncludeIgnored,
+    gsoIncludeUnmodified,
+    gsoExcludeSubmodules,
+    gsoDisablePathspecMatch,
+    gsoRenamesHeadToIndex,
+    gsoRenamesIndexToWorkdir,
+    gsoRenamesFromRewrites,
+    gsoUpdateIndex,
+    gsoIncludeUnreadable,
   }
 
   defaultStatusFlags* =
     when FileSystemCaseSensitive:
-      commonDefaultStatusFlags + {soSortCaseSensitively}
+      commonDefaultStatusFlags + {gsoSortCaseSensitively}
     else:
-      commonDefaultStatusFlags + {soSortCaseInsensitively}
+      commonDefaultStatusFlags + {gsoSortCaseInsensitively}
 
 template dumpError() =
   let err = git_error_last()
   if err != nil:
-    error $gec(err.klass) & " error: " & $err.message
+    let emsg = $gec(err.klass) & " error: " & $err.message
+    error emsg
+    when defined(gitErrorsAreFatal):
+      raise newException(Defect, emsg)
 
 template gitFail*(allocd: typed; code: GitResultCode; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
@@ -454,6 +464,10 @@ proc free*[T: GitHeapGits](point: ptr T) =
         git_pathspec_match_list_free(point)
       elif T is git_diff:
         git_diff_free(point)
+      elif T is git_buf:
+        git_buf_dispose(point)
+      elif T is git_branch_iterator:
+        git_branch_iterator_free(point)
       else:
         {.error: "missing a free definition for " & $typeof(T).}
 
@@ -488,6 +502,9 @@ proc short*(oid: GitOid; size: int): string =
     git_oid_nfmt(output, size.uint, oid)
     result = $output
     dealloc(output)
+
+proc `$`*(buffer: ptr git_buf): string =
+  result = $cast[cstring](buffer)
 
 proc `$`*(annotated: ptr git_annotated_commit): string =
   withGit:
@@ -524,21 +541,48 @@ proc oid*(tag: GitTag): GitOid =
   withGit:
     result = git_tag_id(tag)
 
-proc name*(got: GitReference): string =
-  withGit:
-    result = $git_reference_name(got)
-
 proc name*(entry: GitTreeEntry): string =
   withGit:
     result = $git_tree_entry_name(entry)
+
+proc branchName*(got: GitReference): string =
+  ## fetch a branch name assuming the reference is a branch
+  withGit:
+    # we're going to assume that the reference name is
+    # no longer than the branch_name; we're using this
+    # assumption to create a name: cstring of the right
+    # size so we can branc_name into it safely...
+    var
+      name = git_reference_name(got)
+    block:
+      gitTrap git_branch_name(addr name, got).grc:
+        dumpError()
+        break
+      result = $name
+
+proc isTag*(got: GitReference): bool =
+  withGit:
+    result = git_reference_is_tag(got) == 1
+
+proc isBranch*(got: GitReference): bool =
+  withGit:
+    result = git_reference_is_branch(got) == 1
+
+proc name*(got: GitReference): string =
+  withGit:
+    result = $git_reference_name(got)
 
 proc owner*(thing: GitThing): GitRepository =
   ## retrieve the repository that owns this thing
   result = git_object_owner(thing.o)
 
-proc isTag*(got: GitReference): bool =
-  withGit:
-    result = git_reference_is_tag(got) == 1
+proc owner*(commit: GitCommit): GitRepository =
+  ## retrieve the repository that owns this commit
+  result = git_commit_owner(commit)
+
+proc owner*(reference: GitReference): GitRepository =
+  ## retrieve the repository that owns this reference
+  result = git_reference_owner(reference)
 
 proc flags*(status: GitStatus): set[GitStatusFlag] =
   ## produce the set of flags indicating the status of the file
@@ -674,11 +718,6 @@ proc clone*(got: var GitClone; uri: Uri; path: string;
 
   result = git_clone(addr got.repo, got.url, got.directory, got.options).grc
 
-proc headReference*(repo: GitRepository; tag: var GitReference): GitResultCode =
-  ## get the reference that points to HEAD
-  withGit:
-    result = git_repository_head(addr tag, repo).grc
-
 proc setHeadDetached*(repo: GitRepository; oid: GitOid): GitResultCode =
   ## detach the HEAD and point it at the given OID
   withGit:
@@ -700,6 +739,20 @@ proc openRepository*(got: var GitOpen; path: string): GitResultCode =
   got.path = path
   withGit:
     result = git_repository_open(addr got.repo, got.path).grc
+
+proc repositoryHead*(head: var GitReference; repo: GitRepository): GitResultCode =
+  ## fetch the reference for the repository's head
+  withGit:
+    result = git_repository_head(addr head, repo).grc
+
+proc repositoryHead*(head: var GitReference; path: string): GitResultCode =
+  ## fetch the reference for the head of the repository at the given path
+  withGitRepoAt(path):
+    result = repositoryHead(head, repo)
+
+proc headReference*(repo: GitRepository; tag: var GitReference): GitResultCode =
+  ## alias for repositoryHead
+  result = repositoryHead(tag, repo)
 
 proc remoteLookup*(remote: var GitRemote; repo: GitRepository;
                    name: string): GitResultCode =
@@ -831,7 +884,7 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
     result = lookupThing(thing, repo, name)
     if result != grcOk:
       debug &"failed lookup for `{name}`"
-      return
+      continue
 
     if thing.kind != goTag:
       target = thing
@@ -840,7 +893,7 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
       free(thing)
       if result != grcOk:
         debug &"failed target for `{name}`"
-        return
+        continue
     tags.add name, target
 
 proc tagTable*(path: string; tags: var GitTagTable): GitResultCode =
@@ -1321,3 +1374,82 @@ proc tagCreateLightweight*(oid: var GitOid; path: string; name: string;
   ## create a new lightweight tag in the repository
   withGitRepoAt(path):
     result = tagCreateLightweight(oid, repo, name, target, force = force)
+
+proc branchUpstream*(upstream: var GitReference;
+                     branch: GitReference): GitResultCode =
+  ## retrieve remote tracking reference for a branch reference
+  withGit:
+    result = git_branch_upstream(addr upstream, branch).grc
+
+proc setBranchUpstream*(branch: GitReference; name: string): GitResultCode =
+  ## set the upstream for the branch to the given branch name
+  withGit:
+    result = git_branch_set_upstream(branch, name).grc
+
+proc branchRemoteName*(buffer: var GitBuf; repo: GitRepository;
+                       branch: string): GitResultCode =
+  ## try to fetch a single remote for a remote tracking branch
+  withGit:
+    var
+      buff: git_buf
+    # "1024 bytes oughta be enough for anybody"
+    result = git_buf_grow(addr buff, 1024.cuint).grc
+    if result == grcOk:
+      result = git_branch_remote_name(addr buff, repo, branch).grc
+      if result == grcOk:
+        buffer = addr buff
+      else:
+        git_buf_dispose(addr buff)
+
+proc branchRemoteName*(buffer: var GitBuf; path: string;
+                       branch: string): GitResultCode =
+  ## try to fetch a single remote for a remote tracking branch
+  withGitRepoAt(path):
+    result = branchRemoteName(buffer, repo, branch)
+
+iterator branches*(repo: GitRepository;
+                   flags = {gbtLocal, gbtRemote}): GitReference =
+  ## this time, you're just gonna have to guess at what this proc might do...
+  if gbtAll in flags or flags.len == 0:
+    raise newException(Defect, "now see here, chuckles")
+
+  withGit:
+    var
+      grc: GitResultCode
+      gbt: GitBranchType = gbtAll
+      iter: ptr git_branch_iterator
+      branch: GitReference
+      list: git_branch_t
+    # i know this is cookin' your noodle, but
+    if gbtLocal notin flags:
+      gbt = gbtRemote
+    elif gbtRemote notin flags:
+      gbt = gbtLocal
+
+    # we're gonna need to take the addr of this value
+    list = cast[git_branch_t](gbt.ord)
+
+    # follow close 'cause it's about to get weird
+    block iteration:
+      # create an iterator
+      grc = git_branch_iterator_new(addr iter, repo, list).grc
+      gitTrap iter, grc:
+        dumpError()
+        break iteration
+      # iterate
+      while true:
+        grc = git_branch_next(addr branch, addr list, iter).grc
+        gitFail branch, grc:
+          if grc != grcIterOver:
+            dumpError()
+          break iteration
+        yield branch
+    # now, look, i tol' you it was gonna get weird; it's
+    # your own fault you weren't paying attention
+
+iterator branches*(path: string;
+                   flags = {gbtLocal, gbtRemote}): GitReference =
+  ## we've been here before
+  withGitRepoAt(path):
+    for branch in repo.branches(flags = flags):
+      yield branch

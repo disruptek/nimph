@@ -757,6 +757,29 @@ proc relocateDependency*(parent: var Project; project: var Project) =
     # and point the parent to the new one
     parent.addMissingSearchPathsTo(project)
 
+proc addMissingUpstreams*(project: Project) =
+  ## review the local branches and add any missing tracking branches
+  var
+    upstream: GitReference
+    grc: GitResultCode
+  for branch in project.repo.branches({gbtLocal}):
+    let
+      name = branch.branchName
+    debug &"branch: {name}"
+    grc = branchUpstream(upstream, branch)
+    case grc:
+    of grcOk:
+      discard
+    of grcNotFound:
+      block:
+        grc = branch.setBranchUpstream(name)
+        gitFail grc:
+          notice &"unable to add upstream tracking branch for {name}: {grc}"
+          break
+        info &"added upstream tracking branch for {name}"
+    else:
+      notice "error fetching upstream for {name}: {grc}"
+
 proc clone*(project: var Project; url: Uri; name: string;
             cloned: var Project): bool =
   ## clone a package into the project's nimbleDir
@@ -769,21 +792,15 @@ proc clone*(project: var Project; url: Uri; name: string;
     tag = bare.anchor
   bare.anchor = ""
 
-  when false:
-    {.warning: "clone into a temporary directory".}
-    # FIXME: we should probably clone into a temporary directory that we
-    # can confirm does not exist; then investigate the contents and consider
-    # renaming it to match its commit hash or tag.
+  {.warning: "clone into a temporary directory".}
+  # we have to strip the # from a version tag for the compiler's benefit
+  let loose = parseVersionLoosely(tag)
+  if loose.isSome and loose.get.isValid:
+    directory = directory / name & "-" & $loose.get
+  elif tag.len != 0:
+    directory = directory / name & "-#" & tag
   else:
-    # we have to strip the # from a version tag for the compiler's benefit
-    #
-    let loose = parseVersionLoosely(tag)
-    if loose.isSome and loose.get.isValid:
-      directory = directory / name & "-" & $loose.get
-    elif tag.len != 0:
-      directory = directory / name & "-#" & tag
-    else:
-      directory = directory / name & "-#head"
+    directory = directory / name & "-#head"
 
   if directory.dirExists:
     error &"i wanted to clone into {directory}, but it already exists"
@@ -816,6 +833,10 @@ proc clone*(project: var Project; url: Uri; name: string;
       oid = $head.get
     if not writeNimbleMeta(directory, bare, oid):
       warn &"unable to write {nimbleMeta} in {directory}"
+
+    # review the local branches and add any missing tracking branches
+    cloned.addMissingUpstreams
+
     result = true
   else:
     error "couldn't make sense of the project i just cloned"
@@ -915,11 +936,12 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
     let emsg = &"nonsensical promotion on {project.dist} distribution" # noqa
     raise newException(Defect, emsg)
 
-  gitTrap remote, remoteLookup(remote, project.repo, name):
-    warn &"unable to fetch remote `{name}` from repo in {path}"
-    return
-
+  # we'll add missing upstreams after this block
   block donehere:
+    gitTrap remote, remoteLookup(remote, project.repo, name):
+      warn &"unable to fetch remote `{name}` from repo in {path}"
+      break
+
     try:
       # maybe we've already pointed at the repo via ssh?
       if remote.url == ssh:
@@ -948,7 +970,7 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
         break
       # success
       result = true
-      return
+      break
 
     try:
       # upstream exists, so, i dunno, just warn the user?
@@ -960,26 +982,30 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
     except:
       warn &"unparseable remote `{upstreamRemote}` from repo in {path}"
 
+  # review the local branches and add any missing tracking branches
+  project.addMissingUpstreams
+
 proc promote*(project: Project; name = defaultRemote;
              user: HubResult = nil): bool =
   ## promote a project's remote to a user's repo, if it's theirs
   var
     user: HubResult = user
-  try:
-    let gotUser = waitfor getGitHubUser()
-    if gotUser.isSome:
-      user = gotUser.get
-    else:
-      debug &"unable to fetch github user"
-      return
-  except Exception as e:
-    warn e.msg
-    return
+  block:
+    try:
+      let gotUser = waitfor getGitHubUser()
+      if gotUser.isSome:
+        user = gotUser.get
+      else:
+        debug &"unable to fetch github user"
+        break
+    except Exception as e:
+      warn e.msg
+      break
 
-  let
-    target = project.url.forkTarget
-  if target.ok and target.owner == user.login:
-    result = project.promoteRemoteLike(project.url, name = name)
+    let
+      target = project.url.forkTarget
+    if target.ok and target.owner == user.login:
+      result = project.promoteRemoteLike(project.url, name = name)
 
 proc newRequirementsTags(flags = defaultFlags): RequirementsTags =
   result = RequirementsTags(flags: flags)
@@ -996,7 +1022,7 @@ proc repoLockReady*(project: Project): bool =
     return
   result = true
   let state = repositoryState(project.repo)
-  if state != GitRepoState.rsNone:
+  if state != GitRepoState.grsNone:
     result = false
     notice &"{project} repository in invalid {state} state"
   for n in status(project.repo, ssIndexAndWorkdir):

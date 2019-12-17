@@ -321,8 +321,9 @@ proc forker*(names: seq[string]; log_level = logLevel; dry_run = false): int =
       error &"couldn't find `{name}` among our installed dependencies"
       result = 1
       continue
-    let
+    var
       child = found.get
+    let
       fork = child.forkTarget
     if not fork.ok:
       error fork.why
@@ -334,7 +335,8 @@ proc forker*(names: seq[string]; log_level = logLevel; dry_run = false): int =
       result = 1
       continue
     fatal &"🔱{forked.get.web}"
-    if child.dist == Git:
+    case child.dist:
+    of Git:
       let name = defaultRemote
       if not child.promoteRemoteLike(forked.get.git, name = name):
         notice &"unable to promote new fork to {name}"
