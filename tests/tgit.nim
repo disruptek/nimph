@@ -33,13 +33,13 @@ suite "git":
     var
       cute = deps.projectForPath(path.get).get
 
-  test "roll a dep":
-    for ver in ["1.0.2", "1.1.1"]:
+  test "roll between versions":
+    for ver in ["0.3.7", "0.4.0"]:
       let
         release = newRelease(ver, operator = Tag)
-        req = newRequirement("cutelog", operator = Tag, release)
-      check cute.rollTowards(req)
-      for stat in cute.repo.status:
+        req = newRequirement("https://github.com/disruptek/nimph", operator = Tag, release)
+      check project.rollTowards(req)
+      for stat in project.repo.status:
         check gsfIndexModified notin stat.flags
 
   test "commits changing project version":
