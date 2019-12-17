@@ -411,7 +411,6 @@ iterator pathSubsFor(config: ConfigRef; sub: string; conf: string): string =
           else:
             yield search
           break found
-        raise newException(ValueError, "unable to compute $" & sub)
   else:
     yield config.pathSubs(&"${sub}", conf) / ""
 
