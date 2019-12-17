@@ -653,6 +653,10 @@ proc `[]=`*(group: var VersionTags; ver: Version; thing: GitThing) =
   group.del ver
   group.add ver, thing
 
+proc `[]`*(group: VersionTags; ver: Version): var GitThing =
+  ## get a git thing by version
+  result = group.table[ver]
+
 proc newVersionTags(flags = defaultFlags): VersionTags =
   result = VersionTags(flags: flags)
   result.init(flags, mode = modeStyleInsensitive)

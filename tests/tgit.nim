@@ -31,7 +31,7 @@ suite "git":
       path = deps.pathForName("cutelog")
     check path.isSome
     var
-      cute = deps.projectForPath(path.get)
+      cute = deps.projectForPath(path.get).get
 
   test "roll a dep":
     for ver in ["1.0.2", "1.1.1"]:
@@ -46,5 +46,5 @@ suite "git":
     let
       versioned = project.versionChangingCommits
       required = project.requirementChangingCommits
-    check versioned[v"0.0.38"].oid == "29b4a67fe348030f118ff4a7d9b9f92c9cdd3a4e"
-    check versioned[v"0.0.37"].oid == "aa681bd65e6472c7c65135b535a7cfdbaad314e3"
+    check $versioned[v"0.0.38"].oid == "29b4a67fe348030f118ff4a7d9b9f92c9cdd3a4e"
+    check $versioned[v"0.0.37"].oid == "aa681bd65e6472c7c65135b535a7cfdbaad314e3"
