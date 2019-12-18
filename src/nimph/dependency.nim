@@ -662,10 +662,11 @@ proc newVersionTags(flags = defaultFlags): VersionTags =
   result.init(flags, mode = modeStyleInsensitive)
 
 template returnToHeadAfter*(project: var Project; body: untyped) =
-  let
-    previous = project.getHeadOid
+  ## run some code in the body if you can, and then return the
+  ## project to where it was in git before you left
 
   # we may have no head; if that's the case, we have no tags either
+  let previous = project.getHeadOid
   if previous.isSome:
 
     # this could just be a bad idea all the way aroun'
@@ -679,7 +680,8 @@ template returnToHeadAfter*(project: var Project; body: untyped) =
 
       defer:
         # there's no place like home
-        if not project.setHeadToRelease(newRelease($previous.get, operator = Tag)):
+        if not project.setHeadToRelease(newRelease($previous.get,
+                                                   operator = Tag)):
           raise newException(IOError, "cannot detach head to " & $previous.get)
 
         # re-attach the head if we can
@@ -696,43 +698,20 @@ proc versionChangingCommits*(project: var Project): VersionTags =
   # dotNimble file
   result = newVersionTags()
   let
+    # this is the package.nimble file without any other path parts
     package = project.nimble.package.addFileExt(project.nimble.ext)
-    previous = project.getHeadOid
 
-  # we may have no head; if that's the case, we have no tags either
-  if previous.isNone:
-    return
-
-  # this could just be a bad idea all the way aroun'
-  if not project.repoLockReady:
-    error "refusing to roll the repo when it's dirty"
-    return
-
-  # if we have no way to get back, don't even depart
-  var home: GitReference
-  gitTrap home, referenceDWIM(home, project.repo, "HEAD"):
-    raise newException(IOError, "i'm lost; where am i?")
-
-  for commit in commitsForSpec(project.repo, @[package]):
-    var
-      thing = commit.toThing
-    let release = newRelease($thing.oid, operator = Tag)
-    if not project.setHeadToRelease(release):
-      continue
-    # freshen project version, release, etc.
-    project.refresh
-    result[project.version] = thing
-
-  # there's no place like home
-  if not project.setHeadToRelease(newRelease($previous.get, operator = Tag)):
-    raise newException(IOError, "cannot detach head to " & $previous.get)
-
-  # re-attach the head if we can
-  gitTrap setHead(project.repo, $home.name):
-    raise newException(IOError, "cannot set head to " & home.name)
-
-  # be sure to reload the project specifics now that we're home
-  project.refresh
+  project.returnToHeadAfter:
+    # iterate over commits to the dotNimble file
+    for commit in commitsForSpec(project.repo, @[package]):
+      var
+        thing = commit.toThing
+      let release = newRelease($thing.oid, operator = Tag)
+      if not project.setHeadToRelease(release):
+        continue
+      # freshen project version, release, etc.
+      project.refresh
+      result[project.version] = thing
 
 proc reset*(dependencies: var DependencyGroup; project: var Project) =
   ## reset a dependency group and prepare to resolve dependencies again
