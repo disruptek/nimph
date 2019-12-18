@@ -67,7 +67,7 @@ proc parseDottedVersion(input: string): Version =
   let
     dotted = input.split('.')
   block:
-    if dotted.len != 3:
+    if dotted.len < 3:
       break
     try:
       result = (major: dotted[0].parseUInt,
@@ -175,14 +175,7 @@ proc newRelease*(reference: string; operator = Equal): Release =
   elif count(reference, '.') < 2:
     result = Release(kind: Wild, accepts: newVersionMask(reference))
   else:
-    try:
-      result = newRelease(parseDottedVersion(reference))
-    except ValueError:
-      let loose = parseVersionLoosely(reference)
-      if loose.isNone:
-        let emsg = &"parse error on version `{reference}`" # noqa
-        raise newException(ValueError, emsg)
-      result = loose.get
+    result = newRelease(parseDottedVersion(reference))
 
 proc `$`*(field: VersionMaskField): string =
   if field.isNone:
