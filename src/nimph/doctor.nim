@@ -16,6 +16,7 @@ import nimph/package
 import nimph/dependency
 import nimph/group
 import nimph/git
+import nimph/version
 
 type
   StateKind* = enum
@@ -103,8 +104,10 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
               notice &"rolled to {child.release} to meet {requirement}"
               break
           # else report the problem and set failure
-          notice &"{requirement} unmet by {child}"
-          result = false
+          for req in requirement.orphans:
+            if not req.isSatisfiedBy(child, child.release):
+              notice &"{req.describe} unmet by {child}"
+              result = false
 
       # the dependency is fine, but maybe we don't have it in our paths?
       for child in dependency.projects.mvalues:

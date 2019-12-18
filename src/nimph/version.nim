@@ -1,3 +1,4 @@
+import std/algorithm
 import std/uri
 import std/strformat
 import std/hashes
@@ -476,28 +477,24 @@ proc adopt*(parent: var Requirement; child: Requirement) =
   else:
     parent.child.adopt child
 
-iterator children*(parent: Requirement): Requirement =
+iterator children*(parent: Requirement; andParent = false): Requirement =
   ## yield the children of a parent requirement
   var req = parent
+  if andParent:
+    yield req
   while req.child != nil:
     req = req.child
     yield req
 
-iterator family*(parent: Requirement): Requirement =
-  ## yield each requirement in the list
-  yield parent
-  for child in parent.children:
-    yield child
-
 proc newRequirement*(id: string; operator: Operator;
-                     release: Release): Requirement =
+                     release: Release, notes = ""): Requirement =
   ## create a requirement from a release, eg. that of a project
   when defined(debug):
     if id != id.strip:
       warn &"whitespace around requirement identity: `{id}`"
   if id == "":
     raise newException(ValueError, "requirements must have length, if not girth")
-  result = Requirement(identity: id.strip, release: release)
+  result = Requirement(identity: id.strip, release: release, notes: notes)
   # if it parsed as Caret, Tilde, or Wild, then paint the requirement as such
   if result.release in Wildlings:
     result.operator = result.release.kind
@@ -520,6 +517,12 @@ proc newRequirement(id: string; operator: string; spec: string): Requirement =
   if operator != "":
     op = parseEnum[Operator](operator)
   result = newRequirement(id, op, spec)
+
+iterator orphans*(parent: Requirement): Requirement =
+  ## yield each requirement without their kids
+  for child in parent.children(andParent = true):
+    yield newRequirement(id = child.identity, operator = child.operator,
+                         release = child.release, notes = child.notes)
 
 proc parseRequires*(input: string): Option[Requires] =
   ## parse a `requires` string output from `nimble dump`

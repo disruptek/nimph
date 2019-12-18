@@ -263,7 +263,7 @@ proc symbolicMatch*(project: var Project; req: Requirement): bool =
   let readonly = project
   result = readonly.symbolicMatch(req)
 
-proc isSatisfiedBy(req: Requirement; project: Project; release: Release): bool =
+proc isSatisfiedBy*(req: Requirement; project: Project; release: Release): bool =
   block satisfied:
     if req.release.kind == Tag:
       # the requirement is for a particular tag...
@@ -298,7 +298,7 @@ proc isSatisfiedBy(req: Requirement; project: Project; release: Release): bool =
   if result and req.child != nil:
     result = req.child.isSatisfiedBy(project, release)
 
-proc isSatisfiedBy(req: Requirement; project: Project): bool =
+proc isSatisfiedBy*(req: Requirement; project: Project): bool =
   ## true if a requirement is satisfied by the given project,
   ## at any known/available version for the project
   # first, check that the identity matches

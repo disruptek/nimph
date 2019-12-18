@@ -263,7 +263,7 @@ proc roller*(names: seq[string]; goal: RollGoal;
 proc graphDep(dependency: Dependency; requirement: Requirement) =
   ## dump something vaguely useful to describe a dependency
   fatal ""
-  for req in requirement.family:
+  for req in requirement.orphans:
     fatal "requirement: " & req.describe
   for pack in dependency.packages.keys:
     fatal "    package: " & $pack
