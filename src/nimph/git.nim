@@ -1011,8 +1011,12 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
         commit.free
 
       # setup our checkout options
-      result = git_checkout_options_init(options,
-                                         GIT_CHECKOUT_OPTIONS_VERSION).grc
+      when git2SetVer == "master":
+        result = git_checkout_options_init(options,
+                                           GIT_CHECKOUT_OPTIONS_VERSION).grc
+      else:
+        result = git_checkout_init_options(options,
+                                           GIT_CHECKOUT_OPTIONS_VERSION).grc
       if result != grcOk:
         break
 
@@ -1060,8 +1064,12 @@ proc checkoutHead*(repo: GitRepository;
 
     block:
       # setup our checkout options
-      result = git_checkout_options_init(options,
-                                         GIT_CHECKOUT_OPTIONS_VERSION).grc
+      when git2SetVer == "master":
+        result = git_checkout_options_init(options,
+                                           GIT_CHECKOUT_OPTIONS_VERSION).grc
+      else:
+        result = git_checkout_init_options(options,
+                                           GIT_CHECKOUT_OPTIONS_VERSION).grc
       if result != grcOk:
         break
 
@@ -1296,8 +1304,12 @@ iterator commitsForSpec*(repo: GitRepository;
         grc: GitResultCode
 
       # options for matching against n parent trees
-      if grcOk != git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc:
-        break
+      when git2SetVer == "master":
+        if grcOk != git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc:
+          break
+      else:
+        if grcOk != git_diff_init_options(options, GIT_DIFF_OPTIONS_VERSION).grc:
+          break
       options.pathspec.count = len(spec).cuint
       options.pathspec.strings = cast[ptr cstring](allocCStringArray(spec))
       defer:
