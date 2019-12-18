@@ -8,7 +8,7 @@ requires "cligen >= 0.9.41"
 requires "bump >= 1.8.17"
 requires "nimgit2 >= 0.1.1"
 requires "npeg >= 0.21.3"
-requires "https://github.com/disruptek/cutelog#1.1.1"
+requires "https://github.com/disruptek/cutelog >= 1.1.0"
 requires "https://github.com/stefantalpalaru/nim-unittest2 >= 0.0.1"
 
 bin = @["nimph"]
