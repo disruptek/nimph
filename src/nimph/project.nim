@@ -1032,10 +1032,14 @@ proc repoLockReady*(project: Project): bool =
   if state != GitRepoState.grsNone:
     result = false
     notice &"{project} repository in invalid {state} state"
-  for n in status(project.repo, ssIndexAndWorkdir):
+  if not git.hasWorkingStatus:
+    warn "you need a newer libgit2 to safely roll repositories"
     result = false
-    notice &"{project} repository has been modified"
-    break
+  else:
+    for n in status(project.repo, ssIndexAndWorkdir):
+      result = false
+      notice &"{project} repository has been modified"
+      break
 
 proc bestRelease*(tags: GitTagTable; goal: RollGoal): Version =
   ## the most ideal tagged release parsable as a version

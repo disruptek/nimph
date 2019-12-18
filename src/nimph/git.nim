@@ -14,6 +14,8 @@ when git2SetVer == "master":
   discard
 elif git2SetVer == "v0.28.3":
   discard
+elif git2SetVer == "v0.28.4":
+  discard
 else:
   {.error: "libgit2 version `" & git2SetVer & "` unsupported".}
 
@@ -942,6 +944,8 @@ proc repositoryState*(path: string): GitRepoState =
     result = repositoryState(repo)
 
 when git2SetVer == "master":
+  const
+    hasWorkingStatus* = true
   iterator status*(repository: GitRepository; show: GitStatusShow;
                    flags = defaultStatusFlags): GitStatus =
     ## iterate over files in the repo using the given search flags
@@ -972,6 +976,8 @@ when git2SetVer == "master":
           yield git_status_byindex(statum, index.cuint)
 
 else:
+  const
+    hasWorkingStatus* = false
   iterator status*(repository: GitRepository; show: GitStatusShow;
                    flags = defaultStatusFlags): GitStatus =
     raise newException(ValueError, "you need a newer libgit2 to do that")
