@@ -320,15 +320,16 @@ proc lockfiler*(names: seq[string]; log_level = logLevel; dry_run = false): int 
     project: Project
   setupLocalProject(project)
 
-  let name = names.join(" ")
-  if name == "":
-    project.dumpLockList
-    fatal &"give me some arguments so i can name the lock"
-    result = 1
-  else:
-    if project.lock(name):
-      fatal &"👌locked {project} as `{name}`"
+  block:
+    let name = names.join(" ")
+    if name == "":
+      project.dumpLockList
+      fatal &"give me some arguments so i can name the lock"
     else:
+      if project.lock(name):
+        fatal &"👌locked {project} as `{name}`"
+        break
+      fatal &"👎unable to lock {project} as `{name}`"
       result = 1
 
 proc unlockfiler*(names: seq[string]; log_level = logLevel;
@@ -342,16 +343,17 @@ proc unlockfiler*(names: seq[string]; log_level = logLevel;
     project: Project
   setupLocalProject(project)
 
-  let name = names.join(" ")
-  if name == "":
-    project.dumpLockList
-    fatal &"give me some arguments so i can fetch the lock by name"
-    result = 1
-  else:
-    if project.unlock(name):
-      fatal &"👌unlocked {project} via `{name}`"
+  block:
+    let name = names.join(" ")
+    if name == "":
+      project.dumpLockList
+      fatal &"give me some arguments so i can fetch the lock by name"
     else:
-      result = 1
+      if project.unlock(name):
+        fatal &"👌unlocked {project} via `{name}`"
+        break
+      fatal &"👎unable to unlock {project} via `{name}`"
+    result = 1
 
 proc tagger*(log_level = logLevel; dry_run = false): int =
   ## cli entry to add missing tags

@@ -87,9 +87,9 @@ proc toJson*(requirement: Requirement): JsonNode =
   result["release"] = requirement.release.toJson
 
 proc toRequirement*(js: JsonNode): Requirement =
-  result.identity = js["identity"].getStr
-  result.operator = js["operator"].toOperator
-  result.release = js["release"].toRelease
+  result = newRequirement(js["identity"].getStr,
+                          operator = js["operator"].toOperator,
+                          release = js["release"].toRelease)
 
 proc toJson*(dist: DistMethod): JsonNode =
   result = newJString($dist)
