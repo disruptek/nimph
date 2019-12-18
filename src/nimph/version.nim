@@ -65,14 +65,15 @@ proc parseDottedVersion(input: string): Version =
   ## try to parse `1.2.3` into a `Version`
   let
     dotted = input.split('.')
-  if dotted.len != 3:
-    return
-  try:
-    result = (major: dotted[0].parseUInt,
-              minor: dotted[1].parseUInt,
-              patch: dotted[2].parseUInt)
-  except ValueError:
-    discard
+  block:
+    if dotted.len != 3:
+      break
+    try:
+      result = (major: dotted[0].parseUInt,
+                minor: dotted[1].parseUInt,
+                patch: dotted[2].parseUInt)
+    except ValueError:
+      discard
 
 proc newVersionMask(input: string): VersionMask =
   ## try to parse `1.2` or `1.2.*` into a `VersionMask`

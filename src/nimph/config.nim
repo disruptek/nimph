@@ -35,18 +35,9 @@ type
   ConfigSection = enum
     LockerRooms = "lockfiles"
 
-when defined(tomlConfig):
-  import parsetoml
-
-  type
-    NimphConfig* = ref object
-      path: string
-      toml: TomlValueRef
-else:
-  type
-    NimphConfig* = ref object
-      path: string
-      js: JsonNode
+  NimphConfig* = ref object
+    path: string
+    js: JsonNode
 
 proc loadProjectCfg*(path: string): Option[ConfigRef] =
   ## use the compiler to parse a nim.cfg
@@ -66,26 +57,27 @@ proc overlayConfig*(config: var ConfigRef; directory: string): bool =
       nextProjectPath = AbsoluteDir getCurrentDir()
       filename = nextProjectPath.string / NimCfg
 
-    # if there's no config file, we're done
-    result = filename.fileExists
-    if not result:
-      return
+    block complete:
+      # if there's no config file, we're done
+      result = filename.fileExists
+      if not result:
+        break complete
 
-    # remember to reset the config's project path
-    defer:
-      config.projectPath = priorProjectPath
-    # set the new project path for substitution purposes
-    config.projectPath = nextProjectPath
+      # remember to reset the config's project path
+      defer:
+        config.projectPath = priorProjectPath
+      # set the new project path for substitution purposes
+      config.projectPath = nextProjectPath
 
-    var cache = newIdentCache()
-    result = readConfigFile(filename.AbsoluteFile, cache, config)
+      var cache = newIdentCache()
+      result = readConfigFile(filename.AbsoluteFile, cache, config)
 
-    if result:
-      # this config is now authoritative, so force the project path
-      priorProjectPath = nextProjectPath
-    else:
-      let emsg = &"unable to read config in {nextProjectPath}" # noqa
-      warn emsg
+      if result:
+        # this config is now authoritative, so force the project path
+        priorProjectPath = nextProjectPath
+      else:
+        let emsg = &"unable to read config in {nextProjectPath}" # noqa
+        warn emsg
 
 proc loadAllCfgs*(directory: string): ConfigRef =
   ## use the compiler to parse all the usual nim.cfgs;
@@ -133,121 +125,102 @@ proc appendConfig*(path: Target; config: string): bool =
     if not tryRemoveFile(temp):
       warn &"unable to remove temporary file `{temp}`"
 
-  try:
-    # if there's already a config, we'll start there
-    if fileExists($path):
-      debug &"copying {path} to {temp}"
-      copyFile($path, temp)
-  except Exception as e:
-    discard e
-    return
+  block complete:
+    try:
+      # if there's already a config, we'll start there
+      if fileExists($path):
+        debug &"copying {path} to {temp}"
+        copyFile($path, temp)
+    except Exception as e:
+      warn &"unable make a copy of {path} to to {temp}: {e.msg}"
+      break complete
 
-  block writing:
-    # open our temp file for writing
-    var
-      writer = temp.open(fmAppend)
-    # but remember to close the temp file in any event
-    defer:
-      writer.close
+    block writing:
+      # open our temp file for writing
+      var
+        writer = temp.open(fmAppend)
+      # but remember to close the temp file in any event
+      defer:
+        writer.close
 
-    # add our new content with a trailing newline
-    writer.writeLine config
+      # add our new content with a trailing newline
+      writer.writeLine config
 
-  # make sure the compiler can parse our new config
-  let
-    parsed = loadProjectCfg(temp)
-  if parsed.isNone:
-    return
+    # make sure the compiler can parse our new config
+    let
+      parsed = loadProjectCfg(temp)
+    if parsed.isNone:
+      break complete
 
-  # copy the temp file over the original config
-  try:
-    debug &"copying {temp} over {path}"
-    copyFile(temp, $path)
-  except Exception as e:
-    discard e
-    return
+    # copy the temp file over the original config
+    try:
+      debug &"copying {temp} over {path}"
+      copyFile(temp, $path)
+    except Exception as e:
+      warn &"unable make a copy of {temp} to to {path}: {e.msg}"
+      break complete
 
-  # it worked, thank $deity
-  result = true
+    # it worked, thank $deity
+    result = true
 
 proc parseProjectCfg*(input: Target): ProjectCfgParsed =
   ## parse a .cfg for any lines we are entitled to mess with
   result = ProjectCfgParsed(ok: false, table: newTable[string, string]())
   var
-    content: string
     table = result.table
 
-  if not fileExists($input):
-    result.why = &"config file {input} doesn't exist"
-    return
+  block success:
+    if not fileExists($input):
+      result.why = &"config file {input} doesn't exist"
+      break success
 
-  try:
-    content = readFile($input)
-  except:
-    result.why = &"i couldn't read {input}"
-    return
+    let
+      content = readFile($input)
+      peggy = peg "document":
+        nl <- ?'\r' * '\n'
+        white <- {'\t', ' '}
+        equals <- *white * {'=', ':'} * *white
+        assignment <- +(1 - equals)
+        comment <- '#' * *(1 - nl)
+        strvalue <- '"' * *(1 - '"') * '"'
+        endofval <- white | comment | nl
+        anyvalue <- +(1 - endofval)
+        hyphens <- '-'[0..2]
+        ending <- *white * ?comment * nl
+        nimblekeys <- i"nimblePath" | i"clearNimblePath" | i"noNimblePath"
+        otherkeys <- i"path" | i"p" | i"define" | i"d"
+        keys <- nimblekeys | otherkeys
+        strsetting <- hyphens * >keys * equals * >strvalue * ending:
+          table.add $1, unescape($2)
+        anysetting <- hyphens * >keys * equals * >anyvalue * ending:
+          table.add $1, $2
+        toggle <- hyphens * >keys * ending:
+          table.add $1, "it's enabled, okay?"
+        line <- strsetting | anysetting | toggle | (*(1 - nl) * nl)
+        document <- *line * !1
+      parsed = peggy.match(content)
+    try:
+      result.ok = parsed.ok
+      if result.ok:
+        break success
+      result.why = parsed.repr
+    except Exception as e:
+      result.why = &"parse error in {input}: {e.msg}"
 
-  let
-    peggy = peg "document":
-      nl <- ?'\r' * '\n'
-      white <- {'\t', ' '}
-      equals <- *white * {'=', ':'} * *white
-      assignment <- +(1 - equals)
-      comment <- '#' * *(1 - nl)
-      strvalue <- '"' * *(1 - '"') * '"'
-      endofval <- white | comment | nl
-      anyvalue <- +(1 - endofval)
-      hyphens <- '-'[0..2]
-      ending <- *white * ?comment * nl
-      nimblekeys <- i"nimblePath" | i"clearNimblePath" | i"noNimblePath"
-      otherkeys <- i"path" | i"p" | i"define" | i"d"
-      keys <- nimblekeys | otherkeys
-      strsetting <- hyphens * >keys * equals * >strvalue * ending:
-        table.add $1, unescape($2)
-      anysetting <- hyphens * >keys * equals * >anyvalue * ending:
-        table.add $1, $2
-      toggle <- hyphens * >keys * ending:
-        table.add $1, "it's enabled, okay?"
-      line <- strsetting | anysetting | toggle | (*(1 - nl) * nl)
-      document <- *line * !1
-    parsed = peggy.match(content)
-  try:
-    result.ok = parsed.ok
-    if result.ok:
-      return
-    result.why = parsed.repr
-  except Exception as e:
-    result.why = &"parse error in {input}: {e.msg}"
+proc isEmpty*(config: NimphConfig): bool =
+  result = config.js.kind == JNull
 
-when defined(tomlConfig):
-  proc isEmpty*(config: NimphConfig): bool =
-    result = config.toml.kind == TomlValueKind.None
-  proc newNimphConfig*(path: string): NimphConfig =
-    ## instantiate a new nimph config using the given path
-    result = NimphConfig(path: path.absolutePath)
-    if not result.path.fileExists:
-      result.toml = newTNull()
-    else:
-      try:
-        result.toml = parseFile(path)
-      except Exception as e:
-        error &"unable to parse {path}:"
-        error e.msg
-else:
-  proc isEmpty*(config: NimphConfig): bool =
-    result = config.js.kind == JNull
-
-  proc newNimphConfig*(path: string): NimphConfig =
-    ## instantiate a new nimph config using the given path
-    result = NimphConfig(path: path.absolutePath)
-    if not result.path.fileExists:
-      result.js = newJNull()
-    else:
-      try:
-        result.js = parseFile(path)
-      except Exception as e:
-        error &"unable to parse {path}:"
-        error e.msg
+proc newNimphConfig*(path: string): NimphConfig =
+  ## instantiate a new nimph config using the given path
+  result = NimphConfig(path: path.absolutePath)
+  if not result.path.fileExists:
+    result.js = newJNull()
+  else:
+    try:
+      result.js = parseFile(path)
+    except Exception as e:
+      error &"unable to parse {path}:"
+      error e.msg
 
 template isStdLib*(config: ConfigRef; path: string): bool =
   path.startsWith(config.libpath.string / "")
@@ -462,40 +435,61 @@ proc removeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
   ## successful and false if any error prevented success
   let
     fn = $nimcfg
-  if not fn.fileExists:
-    return
-  let
-    cfg = fn.loadProjectCfg
-    parsed = nimcfg.parseProjectCfg
-  if cfg.isNone:
-    error &"the compiler couldn't parse {nimcfg}"
-    return
 
-  if not parsed.ok:
-    error &"i couldn't parse {nimcfg}:"
-    error parsed.why
-    return
-  var
-    content = fn.readFile
-  when defined(debug):
-    if path.absolutePath != path:
-      raise newException(Defect, &"path `{path}` is not absolute")
-  for key, value in parsed.table.pairs:
-    if key.toLowerAscii notin ["p", "path", "nimblepath"]:
-      continue
-    for sub in config.pathSubstitutions(path, nimcfg.repo, write = false):
-      if sub notin [value, value / ""]:
+  block success:
+    # well, that was easy
+    if not fn.fileExists:
+      break success
+
+    # make sure we can parse the configuration with the compiler
+    let
+      cfg = fn.loadProjectCfg
+    if cfg.isNone:
+      error &"the compiler couldn't parse {nimcfg}"
+      break success
+
+    # make sure we can parse the configuration using our "naive" npeg parser
+    let
+      parsed = nimcfg.parseProjectCfg
+    if not parsed.ok:
+      error &"could not parse {nimcfg} naïvely:"
+      error parsed.why
+      break success
+
+    # sanity
+    when defined(debug):
+      if path.absolutePath != path:
+        raise newException(Defect, &"path `{path}` is not absolute")
+
+    var
+      content = fn.readFile
+    # iterate over the entries we parsed naively,
+    for key, value in parsed.table.pairs:
+      # skipping anything that it's a path,
+      if key.toLowerAscii notin ["p", "path", "nimblepath"]:
         continue
-      let
-        regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key.escapeRe &
-                    "[:=]\"?" & value.escapeRe & "/?\"?)\\s*")
-        swapped = content.replace(regexp, "")
-      if swapped == content:
-        continue
-      # make sure we search the new content next time through the loop
-      content = swapped
-      fn.writeFile(content)
-      result = true
+      # and perform substitutions to see if one might match the value
+      # we are trying to remove; the write flag is false so that we'll
+      # use any $nimbleDir substitutions available to us, if possible
+      for sub in config.pathSubstitutions(path, nimcfg.repo, write = false):
+        if sub notin [value, value / ""]:
+          continue
+        # perform a regexp substition to remove the entry from the content
+        let
+          regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key.escapeRe &
+                      "[:=]\"?" & value.escapeRe & "/?\"?)\\s*")
+          swapped = content.replace(regexp, "")
+        # if that didn't work, cry a bit and move on
+        if swapped == content:
+          notice &"failed regex edit to remove path `{value}`"
+          continue
+        # make sure we search the new content next time through the loop
+        content = swapped
+        result = true
+        # keep performing more substitutions
+
+    # finally, write the edited content
+    fn.writeFile(content)
 
 proc addSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
   let
@@ -518,59 +512,29 @@ iterator extantSearchPaths*(config: ConfigRef; least = 0): string =
     if dirExists(path):
       yield path
 
-when defined(tomlConfig):
-  converter fromJson*(js: JsonNode): TomlValueRef =
-    if js == nil:
-      result = nil
-    else:
-      case js.kind:
-      of JNull:
-        result = newTNull()
-      of JBool:
-        result = newTBool(js.getBool)
-      of JInt:
-        result = newTInt(js.getInt)
-      of JFloat:
-        result = newTFloat(js.getFloat)
-      of JString:
-        result = newTString(js.getStr)
-      of JArray:
-        result = newTArray()
-        for j in js.items:
-          result.add j.fromJson
-      of JObject:
-        result = newTTable()
-        for k, v in js.pairs:
-          result.add k, v.fromJson
+proc addLockerRoom*(config: var NimphConfig; name: string; room: JsonNode) =
+  ## add the named lockfile (in json form) to the configuration file
+  if config.isEmpty:
+    config.js = newJObject()
+  if $LockerRooms notin config.js:
+    config.js[$LockerRooms] = newJObject()
+  config.js[$LockerRooms][name] = room
+  writeFile(config.path, config.js.pretty)
 
-  proc addLockerRoom*(config: var NimphConfig; name: string; room: JsonNode) =
-    if config.isEmpty:
-      config.toml = newTTable()
-    if $LockerRooms notin config.toml:
-      config.toml[$LockerRooms] = newTTable()
-    config.toml[$LockerRooms][name] = room.fromJson
-    writeFile(config.path, config.toml.toTomlString)
-else:
-  proc addLockerRoom*(config: var NimphConfig; name: string; room: JsonNode) =
-    if config.isEmpty:
-      config.js = newJObject()
-    if $LockerRooms notin config.js:
-      config.js[$LockerRooms] = newJObject()
-    config.js[$LockerRooms][name] = room
-    writeFile(config.path, config.js.pretty)
+proc getAllLockerRooms*(config: NimphConfig): JsonNode =
+  ## retrieve a JObject holding all lockfiles in the configuration file
+  block found:
+    if not config.isEmpty:
+      if $LockerRooms in config.js:
+        result = config.js[$LockerRooms]
+        break
+    result = newJObject()
 
-  proc getAllLockerRooms*(config: NimphConfig): JsonNode =
-    block found:
-      if not config.isEmpty:
-        if $LockerRooms in config.js:
-          result = config.js[$LockerRooms]
-          break
-      result = newJObject()
-
-  proc getLockerRoom*(config: NimphConfig; name: string): JsonNode =
-    let
-      rooms = config.getAllLockerRooms
-    if name in rooms:
-      result = rooms[name]
-    else:
-      result = newJNull()
+proc getLockerRoom*(config: NimphConfig; name: string): JsonNode =
+  ## retrieve the named lockfile (or JNull) from the configuration
+  let
+    rooms = config.getAllLockerRooms
+  if name in rooms:
+    result = rooms[name]
+  else:
+    result = newJNull()

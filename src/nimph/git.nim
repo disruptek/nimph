@@ -710,15 +710,12 @@ proc clone*(got: var GitClone; uri: Uri; path: string;
     else:
       result = git_clone_init_options(got.options,
                                       GIT_CLONE_OPTIONS_VERSION).grc
-    if result != grcOk:
-      return
-
-    if branch != "":
-      got.options.checkout_branch = branch
-    got.url = $uri
-    got.directory = path
-
-  result = git_clone(addr got.repo, got.url, got.directory, got.options).grc
+    if result == grcOk:
+      if branch != "":
+        got.options.checkout_branch = branch
+      got.url = $uri
+      got.directory = path
+      result = git_clone(addr got.repo, got.url, got.directory, got.options).grc
 
 proc setHeadDetached*(repo: GitRepository; oid: GitOid): GitResultCode =
   ## detach the HEAD and point it at the given OID
@@ -877,26 +874,27 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
   tags = newTagTable()
 
   result = tagList(repo, names)
-  if result != grcOk:
-    return
-
-  for name in names.items:
-    var
-      thing, target: GitThing
-    result = lookupThing(thing, repo, name)
+  block:
     if result != grcOk:
-      debug &"failed lookup for `{name}`"
-      continue
+      break
 
-    if thing.kind != goTag:
-      target = thing
-    else:
-      result = thing.target(target)
-      free(thing)
+    for name in names.items:
+      var
+        thing, target: GitThing
+      result = lookupThing(thing, repo, name)
       if result != grcOk:
-        debug &"failed target for `{name}`"
+        debug &"failed lookup for `{name}`"
         continue
-    tags.add name, target
+
+      if thing.kind != goTag:
+        target = thing
+      else:
+        result = thing.target(target)
+        free(thing)
+        if result != grcOk:
+          debug &"failed target for `{name}`"
+          continue
+      tags.add name, target
 
 proc tagTable*(path: string; tags: var GitTagTable): GitResultCode =
   ## compose a table of tags and their associated references
@@ -918,15 +916,16 @@ proc getHeadOid*(repository: GitRepository): Option[GitOid] =
   var
     head: GitReference
   withGit:
-    gitFail head, repository.headReference(head):
-      var code: GitResultCode
-      case code:
-      of grcOk, grcNotFound:
-        discard
-      else:
-        dumpError()
-      return
-    result = head.oid.some
+    block:
+      gitFail head, repository.headReference(head):
+        var code: GitResultCode
+        case code:
+        of grcOk, grcNotFound:
+          discard
+        else:
+          dumpError()
+        break
+      result = head.oid.some
 
 proc getHeadOid*(path: string): Option[GitOid] =
   ## try to retrieve the #head oid from a repository at the given path

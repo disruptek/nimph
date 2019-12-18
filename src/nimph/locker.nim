@@ -151,68 +151,83 @@ proc toLockerRoom*(js: JsonNode; name = ""): LockerRoom =
       result.add name, locker.toLocker
 
 proc getLockerRoom*(project: Project; name: string; room: var LockerRoom): bool =
+  ## true if we pulled the named lockerroom out of the project's configuration
   let
     js = project.config.getLockerRoom(name)
-  if js == nil or js.kind != JObject:
-    return
-  room = js.toLockerRoom(name)
-  result = true
+  if js != nil and js.kind == JObject:
+    room = js.toLockerRoom(name)
+    result = true
 
 iterator allLockerRooms*(project: Project): LockerRoom =
+  ## emit each lockerroom in the project's configuration
   for name, js in project.config.getAllLockerRooms.pairs:
     yield js.toLockerRoom(name)
 
 proc unlock*(project: var Project; name: string; flags = defaultFlags): bool =
+  ## unlock a project using the named lockfile
   var
     dependencies = project.newDependencyGroup(flags = {Flag.Quiet} + flags)
     room = newLockerRoom(name, flags)
 
-  if not project.getLockerRoom(name, room):
-    notice &"unable to find a lock named `{name}`"
-    return
+  block unlocked:
+    if not project.getLockerRoom(name, room):
+      notice &"unable to find a lock named `{name}`"
+      break unlocked
 
-  for name, locker in room.pairs:
-    if locker.dist != Git:
-      warn &"unsafe lock of `{name}` for {locker.requirement} as {locker.release}"
+    # warn about any locks performed against non-Git distributions
+    for name, locker in room.pairs:
+      if locker.dist != Git:
+        let emsg = &"unsafe lock of `{name}` for " &
+                   &"{locker.requirement} as {locker.release}" # noqa
+        warn emsg
 
-  # perform doctor resolution of dependencies, etc.
-  var
-    state = DrState(kind: DrRetry)
-  while state.kind == DrRetry:
-    # resolve dependencies for the lock
-    if not dependencies.populate(room, project):
-      notice &"unable to resolve all dependencies for `{name}`"
-      result = false
-      state.kind = DrError
-    # see if we can converge the environment to the lock
-    elif not project.fixDependencies(dependencies, state):
-      result = false
-    # if the doctor doesn't want us to try again, we're done
-    if state.kind notin {DrRetry}:
-      break
-    # empty the dependencies and rescan for projects
-    dependencies.reset(project)
+    # perform doctor resolution of dependencies, etc.
+    var
+      state = DrState(kind: DrRetry)
+    while state.kind == DrRetry:
+      # resolve dependencies for the lock
+      if not dependencies.populate(room, project):
+        notice &"unable to resolve all dependencies for `{name}`"
+        result = false
+        state.kind = DrError
+      # see if we can converge the environment to the lock
+      elif not project.fixDependencies(dependencies, state):
+        result = false
+      # if the doctor doesn't want us to try again, we're done
+      if state.kind notin {DrRetry}:
+        break
+      # empty the dependencies and rescan for projects
+      dependencies.reset(project)
 
 proc lock*(project: var Project; name: string; flags = defaultFlags): bool =
+  ## store a project's dependencies into the named lockfile
   var
     dependencies = project.newDependencyGroup(flags = {Flag.Quiet} + flags)
     room = newLockerRoom(project, flags)
-  if project.getLockerRoom(name, room):
-    notice &"lock `{name}` already exists; choose a new name"
-    return
-  result = project.resolve(dependencies)
-  if not result:
-    notice &"unable to resolve all dependencies for {project}"
-    return
-  result = room.populate(dependencies)
-  if not result:
-    notice &"not confident enough to lock {project}"
-    return
-  for exists in project.allLockerRooms:
-    if exists == room:
-      notice &"already locked these dependencies as `{exists.name}`"
-      result = false
-      return
-  var
-    js = room.toJson
-  project.config.addLockerRoom name, js
+
+  block locked:
+    if project.getLockerRoom(name, room):
+      notice &"lock `{name}` already exists; choose a new name"
+      break locked
+
+    # if we cannot resolve our dependencies, we can't lock the project
+    result = project.resolve(dependencies)
+    if not result:
+      notice &"unable to resolve all dependencies for {project}"
+      break locked
+
+    # if the lockerroom isn't confident, we can't lock the project
+    result = room.populate(dependencies)
+    if not result:
+      notice &"not confident enough to lock {project}"
+      break locked
+
+    # compare this lockerroom to pre-existing lockerrooms and don't dupe it
+    for exists in project.allLockerRooms:
+      if exists == room:
+        notice &"already locked these dependencies as `{exists.name}`"
+        result = false
+        break locked
+
+    # write the lockerroom to the project's configuration
+    project.config.addLockerRoom name, room.toJson

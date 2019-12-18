@@ -37,58 +37,59 @@ proc stripPkgs*(nimbledir: string): string =
 
 proc runSomething*(exe: string; args: seq[string]; options: set[ProcessOption];
                    nimbleDir = ""): NimbleOutput =
-  ## run nimble
+  ## run a program with arguments, perhaps with a particular nimbleDir
   var
     command = findExe(exe)
     arguments = args
     opts = options
-  if command == "":
-    result = NimbleOutput(output: &"unable to find {exe} in path")
-    warn result.output
-    return
+  block ran:
+    if command == "":
+      result = NimbleOutput(output: &"unable to find {exe} in path")
+      warn result.output
+      break ran
 
-  if exe == "nimble":
-    when defined(debug):
-      arguments = @["--verbose"].concat arguments
-    when defined(debugNimble):
-      arguments = @["--debug"].concat arguments
-
-  if nimbleDir != "":
-    # we want to strip any trailing PkgDir arriving from elsewhere...
-    var nimbleDir = nimbleDir.stripPkgs
-    if not nimbleDir.dirExists:
-      let emsg = &"{nimbleDir} is missing; can't run {exe}" # noqa
-      raise newException(IOError, emsg)
-    # the ol' belt-and-suspenders approach to specifying nimbleDir
     if exe == "nimble":
-      arguments = @["--nimbleDir=" & nimbleDir].concat arguments
-    putEnv("NIMBLE_DIR", nimbleDir)
+      when defined(debug):
+        arguments = @["--verbose"].concat arguments
+      when defined(debugNimble):
+        arguments = @["--debug"].concat arguments
 
-  if poParentStreams in opts or poInteractive in opts:
-    # sorry; i just find this easier to read than union()
-    opts.incl poInteractive
-    opts.incl poParentStreams
-    # the user wants interactivity
-    when defined(debug):
-      debug command, arguments.join(" ")
-    let
-      process = startProcess(command, args = arguments, options = opts)
-    result = NimbleOutput(ok: process.waitForExit == 0)
-  else:
-    # the user wants to capture output
-    command &= " " & quoteShellCommand(arguments)
-    when defined(debug):
-      debug command
-    let
-      (output, code) = execCmdEx(command, opts)
-    result = NimbleOutput(output: output, ok: code == 0)
+    if nimbleDir != "":
+      # we want to strip any trailing PkgDir arriving from elsewhere...
+      var nimbleDir = nimbleDir.stripPkgs
+      if not nimbleDir.dirExists:
+        let emsg = &"{nimbleDir} is missing; can't run {exe}" # noqa
+        raise newException(IOError, emsg)
+      # the ol' belt-and-suspenders approach to specifying nimbleDir
+      if exe == "nimble":
+        arguments = @["--nimbleDir=" & nimbleDir].concat arguments
+      putEnv("NIMBLE_DIR", nimbleDir)
 
-  # for utility, also return the arguments we used
-  result.arguments = arguments
+    if poParentStreams in opts or poInteractive in opts:
+      # sorry; i just find this easier to read than union()
+      opts.incl poInteractive
+      opts.incl poParentStreams
+      # the user wants interactivity
+      when defined(debug):
+        debug command, arguments.join(" ")
+      let
+        process = startProcess(command, args = arguments, options = opts)
+      result = NimbleOutput(ok: process.waitForExit == 0)
+    else:
+      # the user wants to capture output
+      command &= " " & quoteShellCommand(arguments)
+      when defined(debug):
+        debug command
+      let
+        (output, code) = execCmdEx(command, opts)
+      result = NimbleOutput(output: output, ok: code == 0)
 
-  # a failure is worth noticing
-  if not result.ok:
-    notice exe & " " & arguments.join(" ")
+    # for utility, also return the arguments we used
+    result.arguments = arguments
+
+    # a failure is worth noticing
+    if not result.ok:
+      notice exe & " " & arguments.join(" ")
 
 proc parseNimbleDump*(input: string): Option[StringTableRef] =
   ## parse output from `nimble dump`
@@ -113,22 +114,23 @@ proc parseNimbleDump*(input: string): Option[StringTableRef] =
 proc fetchNimbleDump*(path: string; nimbleDir = ""): DumpResult =
   ## parse nimble dump output into a string table
   result = DumpResult(ok: false)
-  withinDirectory(path):
-    let
-      nimble = runSomething("nimble",
-                            @["dump", path], {poDaemon}, nimbleDir = nimbleDir)
-    if not nimble.ok:
-      result.why = "nimble execution failed"
-      error nimble.output
-      return
+  block fetched:
+    withinDirectory(path):
+      let
+        nimble = runSomething("nimble",
+                              @["dump", path], {poDaemon}, nimbleDir = nimbleDir)
+      if not nimble.ok:
+        result.why = "nimble execution failed"
+        error nimble.output
+        break fetched
 
-  let
-    parsed = parseNimbleDump(nimble.output)
-  if parsed.isNone:
-    result.why = &"unable to parse `nimble dump` output"
-    return
-  result.table = parsed.get
-  result.ok = true
+    let
+      parsed = parseNimbleDump(nimble.output)
+    if parsed.isNone:
+      result.why = &"unable to parse `nimble dump` output"
+      break fetched
+    result.table = parsed.get
+    result.ok = true
 
 proc hasUrl*(meta: NimbleMeta): bool =
   ## true if the metadata includes a url
@@ -148,31 +150,34 @@ proc url*(meta: NimbleMeta): Uri =
 
 proc writeNimbleMeta*(path: string; url: Uri; revision: string): bool =
   ## try to write a new nimblemeta.json
-  if not dirExists(path):
-    warn &"{path} is not a directory; cannot write {nimbleMeta}"
-    return
-  var
-    revision = revision
-  removePrefix(revision, {'#'})
-  var
-    js = %* {
-      "url": $url,
-      "vcsRevision": revision,
-      "files": @[],
-      "binaries": @[],
-      "isLink": false,
-    }
-    writer = open(path / nimbleMeta, fmWrite)
-  defer:
-    writer.close
-  writer.write($js)
-  result = true
+  block complete:
+    if not dirExists(path):
+      warn &"{path} is not a directory; cannot write {nimbleMeta}"
+      break complete
+    var
+      revision = revision
+    removePrefix(revision, {'#'})
+    var
+      js = %* {
+        "url": $url,
+        "vcsRevision": revision,
+        "files": @[],
+        "binaries": @[],
+        "isLink": false,
+      }
+      writer = open(path / nimbleMeta, fmWrite)
+    defer:
+      writer.close
+    writer.write($js)
+    result = true
 
 proc isLink*(meta: NimbleMeta): bool =
+  ## true if the metadata says it's a link
   if meta.js.kind == JObject:
     result = meta.js.getOrDefault("isLink").getBool
 
 proc isValid*(meta: NimbleMeta): bool =
+  ## true if the metadata appears to hold some data
   result = meta.js != nil and meta.js.len > 0
 
 proc fetchNimbleMeta*(path: string): NimbleMeta =

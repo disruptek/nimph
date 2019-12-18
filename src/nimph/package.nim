@@ -204,10 +204,10 @@ proc toUrl*(requirement: Requirement; group: PackageGroup): Option[Uri] =
         package = group.get(requirement.identity)
       if package.dist notin {Local, Git}:
         warn &"the `{package.dist}` distribution method is unsupported"
-        return
-      url = package.url
-      result = url.some
-      debug "parsed in packages", requirement
+      else:
+        url = package.url
+        result = url.some
+        debug "parsed in packages", requirement
 
   # maybe stuff the reference into the anchor
   if result.isSome:

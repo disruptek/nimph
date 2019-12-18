@@ -43,20 +43,21 @@ proc toJson*(mask: VersionMask): JsonNode =
         result.add newJInt(value.get.int)
 
 proc toVersionMask*(js: JsonNode): VersionMask =
-  if js.kind == JString:
-    # it's a *.*.*
-    return
-
-  # it's an array with items in it
-  let
-    e = js.getElems
-  if e.high > VersionIndex.high:
-    let emsg = &"dunno what to do with a version mask of len {e.len}"
-    raise newException(ValueError, emsg)
-  for index in VersionIndex.low .. VersionIndex.high:
-    if index > e.high:
+  block:
+    if js.kind == JString:
+      # it's a *.*.*
       break
-    result[index] = e[index].getInt.uint.some
+
+    # it's an array with items in it
+    let
+      e = js.getElems
+    if e.high > VersionIndex.high:
+      let emsg = &"dunno what to do with a version mask of len {e.len}"
+      raise newException(ValueError, emsg)
+    for index in VersionIndex.low .. VersionIndex.high:
+      if index > e.high:
+        break
+      result[index] = e[index].getInt.uint.some
 
 proc toJson*(release: Release): JsonNode =
   result = newJObject()

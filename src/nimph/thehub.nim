@@ -118,7 +118,7 @@ proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
 
   # impart a bit of sanity
   if js == nil or js.kind != JObject:
-    return nil
+    raise newException(Defect, "nonsensical input: " & js.pretty)
 
   let
     tz = utc()
@@ -188,6 +188,7 @@ proc add*(group: var HubGroup; hub: HubResult) =
   add[Uri, HubResult](group, hub.htmlUrl, hub)
 
 proc authorize*(request: Recallable): bool =
+  ## find and inject credentials into a github request
   let token = findGithubToken()
   result = token.isSome
   if result:
@@ -198,23 +199,56 @@ proc authorize*(request: Recallable): bool =
 
 proc queryOne(recallable: Recallable; kind: HubKind): Future[Option[HubResult]]
   {.async.} =
-  ## issue a recallable query and parse the response
+  ## issue a recallable query and parse the response as a single item
+  block success:
+    # start with installing our credentials into the request
+    if not recallable.authorize:
+      break success
 
-  # start with our credentials
-  if not recallable.authorize:
-    return
+    # send the request to github and see if they like it
+    let response = await recallable.issueRequest()
+    if not response.code.is2xx:
+      notice &"got response code {response.code} from github"
+      break success
 
-  let response = await recallable.issueRequest()
-  if not response.code.is2xx:
-    notice &"got response code {response.code} from github"
-    return
-  let
-    body = await response.body
-    js = parseJson(body)
-  try:
+    # read the response and parse it to json
+    let js = parseJson(await response.body)
+
+    # turn the json into a hub result object
     result = newHubResult(kind, js).some
-  except Exception as e:
-    warn "error parsing github: " & e.msg
+
+proc queryMany(recallable: Recallable; kind: HubKind): Future[Option[HubGroup]]
+  {.async.} =
+  ## issue a recallable query and parse the response as a group of items
+  block success:
+    # start with installing our credentials into the request
+    if not recallable.authorize:
+      break success
+
+    # send the request to github and see if they like it
+    let response = await recallable.issueRequest()
+    if not response.code.is2xx:
+      notice &"got response code {response.code} from github"
+      break success
+
+    # read the response and parse it to json
+    let js = parseJson(await response.body)
+
+    # we know now that we'll be returning a group of some size
+    var
+      group = newHubGroup()
+    result = group.some
+
+    # add any parseable results to the group
+    for node in js["items"].items:
+      try:
+        let item = newHubResult(kind, node)
+        # if these are repositories, ignore forks
+        if kind == HubRepo and not item.original:
+          continue
+        group.add item
+      except Exception as e:
+        warn "error parsing repo: " & e.msg
 
 proc getGitHubUser*(): Future[Option[HubResult]] {.async.} =
   ## attempt to retrieve the authorized user
@@ -238,28 +272,8 @@ proc searchHub*(keywords: seq[string]; sort = Best;
     req = getSearchRepositories.call(q = query.join(" "),
                                      sort = $sort,
                                      order = $order)
-  # add our credentials
-  if not req.authorize:
-    return
-
-  let
-    response = await req.issueRequest()
-  if not response.code.is2xx:
-    notice &"got response code {response.code} from github"
-    return
-  let
-    body = await response.body
-    js = parseJson(body)
-  var
-    group = newHubGroup()
-  for node in js["items"].items:
-    try:
-      let repo = newHubResult(HubRepo, node)
-      if repo.original:
-        group.add repo
-    except Exception as e:
-      warn "error parsing repo: " & e.msg
-  result = group.some
+  debug &"searching github for {query}"
+  result = await req.queryMany(HubRepo)
 
 when not defined(ssl):
   {.error: "this won't work without defining `ssl`".}

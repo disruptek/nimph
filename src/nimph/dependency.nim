@@ -110,16 +110,17 @@ proc childProjects*(project: Project): ProjectGroup =
 
 proc determineDeps*(project: Project): Option[Requires] =
   ## try to parse requirements of a project
-  if project.dump == nil:
-    error "unable to determine deps without issuing a dump"
-    return
-  result = parseRequires(project.dump["requires"])
-  if result.isSome:
-    # this is (usually) gratuitous, but it's also the right place
-    # to perform this assignment, so...  go ahead and do it
-    for a, b in result.get.mpairs:
-      a.notes = project.name
-      b.notes = project.name
+  block:
+    if project.dump == nil:
+      error "unable to determine deps without issuing a dump"
+      break
+    result = parseRequires(project.dump["requires"])
+    if result.isSome:
+      # this is (usually) gratuitous, but it's also the right place
+      # to perform this assignment, so...  go ahead and do it
+      for a, b in result.get.mpairs:
+        a.notes = project.name
+        b.notes = project.name
 
 proc determineDeps*(project: var Project): Option[Requires] =
   ## try to parse requirements of a (mutable) project
@@ -470,9 +471,8 @@ proc projectForName*(group: DependencyGroup; name: string): Option[Project] =
   ## try to retrieve a project given an import name
   let
     path = group.pathForName(name)
-  if path.isNone:
-    return
-  result = group.projectForPath(path.get)
+  if path.isSome:
+    result = group.projectForPath(path.get)
 
 proc isHappy*(dependency: Dependency): bool =
   ## true if the dependency is being met successfully
