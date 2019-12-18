@@ -43,6 +43,7 @@ output (and optional repair) of the environment it finds itself in.
 - [Locking the Dependency Tree by Name](https://github.com/disruptek/nimph#lock)
 - [Rolling the Dependency Tree by Name](https://github.com/disruptek/nimph#unlock)
 - [Upgrading Dependencies Automatically](https://github.com/disruptek/nimph#upgrade)
+- [Downgrading Dependencies Automatically](https://github.com/disruptek/nimph#downgrade)
 - [Cutting New Release Versions+Tags](https://github.com/disruptek/nimph#bump)
 - [Adding Any Missing Tags Automatically](https://github.com/disruptek/nimph#tag)
 - [Running Commands on All Dependencies](https://github.com/disruptek/nimph#run)
@@ -246,15 +247,10 @@ The `outdated` subcommand is an alias equivalent to `upgrade --dry-run`:
 
 ```
 $ nimph outdated
-would upgrade swayipc from 3.1.0 to 3.1.3
-would upgrade foreach from 1.0.0 to 1.0.2
-would upgrade cutelog from 1.0.1 to 1.1.1
-would upgrade bump from 1.8.11 to 1.8.16
-would upgrade github from 1.0.1 to 1.0.2
-would upgrade nimph from 0.1.0 to 0.2.1
-would upgrade regex from 0.10.0 to v0.13.0
-would upgrade unicodedb from 0.6.0 to v0.7.2
-bot is not fully up-to-date
+would upgrade bump from 1.8.16 to 1.8.17
+would upgrade nimph from 0.3.2 to 0.4.1
+would upgrade nimterop from 0.3.3 to v0.3.5
+👎bot is not where you want it
 ```
 
 Upgrade individual packages by specifying the _import name_.
@@ -279,6 +275,25 @@ rolled nimph from 0.1.0 to 0.2.1
 rolled regex from 0.10.0 to v0.13.0
 rolled unicodedb from 0.6.0 to v0.7.2
 👌bot is up-to-date
+```
+
+### Downgrade
+
+The `downgrade` subcommand performs the opposite action to the upgrade
+subcommand.
+
+```
+$ nimph downgrade
+rolled swayipc from 3.1.4 to 3.1.0
+rolled cligen from 0.9.41 to v0.9.40
+rolled foreach from 1.0.2 to 1.0.0
+rolled cutelog from 1.1.1 to 1.0.1
+rolled bump from 1.8.16 to 1.8.11
+rolled github from 1.0.2 to 1.0.1
+rolled nimph from 0.3.2 to 0.3.0
+rolled regex from 0.13.0 to v0.10.0
+rolled unicodeplus from 0.5.1 to v0.5.0
+👌bot is lookin' good
 ```
 
 ### Bump

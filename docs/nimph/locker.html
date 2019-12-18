@@ -1005,9 +1005,10 @@ function main() {
 <a id="unlock,Project,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#unlock%2CProject%2Cstring"><span class="Identifier">unlock</span></a><span class="Other">(</span><span class="Identifier">project</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="project.html#Project"><span class="Identifier">Project</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">flags</span> <span class="Other">=</span> <span class="Identifier">defaultFlags</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
     <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span>
-    <span class="Identifier">ERecoverableError</span><span class="Other">,</span> <span class="Identifier">EOFError</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span>
-    <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">WriteDirEffect</span><span class="Other">,</span>
-    <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">ERecoverableError</span><span class="Other">,</span> <span class="Identifier">EOFError</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">SyntaxError</span><span class="Other">,</span> <span class="Identifier">StudyError</span><span class="Other">,</span> <span class="Identifier">FieldError</span><span class="Other">,</span>
+    <span class="Identifier">IndexError</span><span class="Other">,</span> <span class="Identifier">AccessViolationError</span><span class="Other">,</span> <span class="Identifier">RegexInternalError</span><span class="Other">,</span> <span class="Identifier">InvalidUnicodeError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span>
+    <span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span>
+    <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">WriteDirEffect</span><span class="Other">,</span> <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
@@ -1047,7 +1048,7 @@ function main() {
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-15 01:23:33 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-18 01:17:29 UTC</small>
       </div>
     </div>
   </div>
