@@ -402,7 +402,7 @@ head didn't like that in /home/adavidoff/git/nimph/deps/pkgs/unittest2-#head
 
 ### Graph
 
-The `graph` subcommand dumps some _very basic_ details about each discovered
+The `graph` subcommand dumps some _very basic_ details about discovered
 dependencies and their associated packages and projects.
 
 ```
@@ -415,9 +415,9 @@ requirement: cligen>=0.9.40 from bump
     project: cligen-#b144d5b3392bac63ed49df3e1f176becbbf04e24
 ```
 
-Like other subcommands, you can provide a single _import name_ to retrieve the
-retail for only that dependency, or omit any additional arguments to display
-all dependencies.
+Like other subcommands, you can provide _import names_ to retrieve the retail
+for only those dependencies, or omit any additional arguments to display all
+dependencies.
 
 ```
 $ nimph graph
