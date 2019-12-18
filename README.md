@@ -415,7 +415,7 @@ requirement: cligen>=0.9.40 from bump
     project: cligen-#b144d5b3392bac63ed49df3e1f176becbbf04e24
 ```
 
-Like other subcommands, you can provide _import names_ to retrieve the retail
+Like other subcommands, you can provide _import names_ to retrieve the detail
 for only those dependencies, or omit any additional arguments to display all
 dependencies.
 
