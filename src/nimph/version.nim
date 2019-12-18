@@ -41,10 +41,12 @@ type
       version*: Version
 
   # the specification of a package requirement
-  Requirement* = object
+  Requirement* = ref object
     identity*: string
     operator*: Operator
     release*: Release
+    child*: Requirement
+    notes*: string
 
   Requires* = OrderedTableRef[Requirement, Requirement]
 
@@ -457,12 +459,34 @@ proc hash*(req: Requirement): Hash =
   h = h !& req.identity.hash
   h = h !& req.operator.hash
   h = h !& req.release.hash
+  if req.child != nil:
+    h = h !& req.child.hash
   result = !$h
 
 proc toMask*(version: Version): VersionMask =
   ## populate a versionmask with values from a version
   for i, field in version.pairs:
     result[i] = field.some
+
+proc adopt*(parent: var Requirement; child: Requirement) =
+  ## combine two requirements
+  if parent.child == nil:
+    parent.child = child
+  else:
+    parent.child.adopt child
+
+iterator children*(parent: Requirement): Requirement =
+  ## yield the children of a parent requirement
+  var req = parent
+  while req.child != nil:
+    req = req.child
+    yield req
+
+iterator family*(parent: Requirement): Requirement =
+  ## yield each requirement in the list
+  yield parent
+  for child in parent.children:
+    yield child
 
 proc newRequirement*(id: string; operator: Operator;
                      release: Release): Requirement =
@@ -472,8 +496,7 @@ proc newRequirement*(id: string; operator: Operator;
       warn &"whitespace around requirement identity: `{id}`"
   if id == "":
     raise newException(ValueError, "requirements must have length, if not girth")
-  result.identity = id.strip
-  result.release = release
+  result = Requirement(identity: id.strip, release: release)
   # if it parsed as Caret, Tilde, or Wild, then paint the requirement as such
   if result.release in Wildlings:
     result.operator = result.release.kind
@@ -580,3 +603,9 @@ iterator likelyTags*(version: Version): string =
   yield "V"  & v
   yield "v." & v
   yield "V." & v
+
+proc describe*(requirement: Requirement): string =
+  ## describe a requirement and where it may have come from, if possible
+  result = $requirement
+  if requirement.notes != "":
+    result &= " from " & requirement.notes

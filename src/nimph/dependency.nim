@@ -114,10 +114,16 @@ proc determineDeps*(project: Project): Option[Requires] =
     error "unable to determine deps without issuing a dump"
     return
   result = parseRequires(project.dump["requires"])
+  if result.isSome:
+    # this is (usually) gratuitous, but it's also the right place
+    # to perform this assignment, so...  go ahead and do it
+    for a, b in result.get.mpairs:
+      a.notes = project.name
+      b.notes = project.name
 
 proc determineDeps*(project: var Project): Option[Requires] =
   ## try to parse requirements of a (mutable) project
-  if not project.fetchDump():
+  if not project.fetchDump:
     debug "nimble dump failed, so computing deps is impossible"
     return
   let
@@ -287,6 +293,10 @@ proc isSatisfiedBy(req: Requirement; project: Project; release: Release): bool =
       debug &"project release match {result} {req}"
       break
 
+  # make sure we can satisfy prior requirements as well
+  if result and req.child != nil:
+    result = req.child.isSatisfiedBy(project, release)
+
 proc isSatisfiedBy(req: Requirement; project: Project): bool =
   ## true if a requirement is satisfied by the given project,
   ## at any known/available version for the project
@@ -316,12 +326,17 @@ proc isSatisfiedBy(req: Requirement; project: Project): bool =
     else:
       false
 
-proc get*[K: Requirement, V](group: Group[K, V]; key: K): V =
-  ## fetch a package from the group using style-insensitive lookup
+  # make sure we can satisfy prior requirements as well
+  if result and req.child != nil:
+    result = req.child.isSatisfiedBy(project)
+
+{.warning: "nim bug #12818".}
+proc get*[K: Requirement, V](group: Group[K, V]; key: Requirement): V =
+  ## fetch a dependency from the group using the requirement
   result = group.table[key]
 
 proc mget*[K: Requirement, V](group: var Group[K, V]; key: K): var V =
-  ## fetch a package from the group using style-insensitive lookup
+  ## fetch a dependency from the group using the requirement
   result = group.table[key]
 
 proc addName(dependency: var Dependency; name: string) =
@@ -359,11 +374,14 @@ proc newDependency*(project: Project): Dependency =
   ## convenience to form a new dependency on a specific project
   let
     requirement = newRequirement(project.name, Equal, project.release)
+  requirement.notes = project.name
   result = newDependency(requirement)
   result.add project.repo, project
 
 proc mergeContents(existing: var Dependency; dependency: Dependency): bool =
   ## combine two dependencies and yield true if a new project is added
+  # add the requirement to the existing requirement
+  existing.requirement.adopt dependency.requirement
   # adding the packages as a group will work
   existing.add dependency.packages
   # add projects according to their repo
@@ -397,8 +415,8 @@ proc add*(group: var DependencyGroup; req: Requirement; dep: Dependency) =
 
 proc addedRequirements(dependencies: var DependencyGroup;
                        dependency: var Dependency): bool =
-  ## true if the addition of a dependency added new requirements to
-  ## the dependency group
+  ## add a dependency to the group and return true if the
+  ## addition added new requirements to the group
   let
     required = dependency.requirement
   var
@@ -463,8 +481,8 @@ proc isHappy*(dependency: Dependency): bool =
 proc isHappyWithVersion*(dependency: Dependency): bool =
   ## true if the dependency is happy with the version of the project
   for project in dependency.projects.values:
-    if dependency.requirement.isSatisfiedBy(project, project.release):
-      result = true
+    result = dependency.requirement.isSatisfiedBy(project, project.release)
+    if result:
       break
 
 proc resolveUsing*(projects: ProjectGroup; packages: PackageGroup;
@@ -528,23 +546,26 @@ proc resolve*(project: var Project; dependencies: var DependencyGroup): bool =
   # assume innocence until the guilt is staining the carpet in the den
   result = true
 
-  # start with determining the dependencies of the project
-  let requires = project.determineDeps
-  if requires.isNone:
-    warn &"no requirements found for {project}"
-    return
-  let requirements = requires.get
+  block complete:
+    # start with determining the dependencies of the project
+    let requires = project.determineDeps
+    if requires.isNone:
+      warn &"no requirements found for {project}"
+      break complete
 
-  # next, iterate over each requirement
-  for requirement in requirements.values:
-    # and if it's not "virtual" (ie. the compiler)
-    if requirement.isVirtual:
-      continue
-    # and we haven't already processed the same exact requirement
-    if requirement in dependencies:
-      continue
-    # then try to stay truthy while resolving that requirement, too
-    result = result and project.resolve(dependencies, requirement)
+    # next, iterate over each requirement
+    for requirement in requires.get.values:
+      # and if it's not "virtual" (ie. the compiler)
+      if requirement.isVirtual:
+        continue
+      # and we haven't already processed the same exact requirement
+      if dependencies.table.hasKey(requirement):
+        continue
+      # then try to stay truthy while resolving that requirement, too
+      result = result and project.resolve(dependencies, requirement)
+      # if we failed, there's no point in continuing
+      if not result:
+        break complete
 
 proc resolve*(project: Project; deps: var DependencyGroup;
              req: Requirement): bool =
@@ -563,18 +584,22 @@ proc resolve*(project: Project; deps: var DependencyGroup;
   # this game is now ours to lose
   result = true
 
-  # if the addition of the dependency is not novel, we're done
-  if not deps.addedRequirements(resolved):
-    return
+  block complete:
+    # if the addition of the dependency is not novel, we're done
+    if not deps.addedRequirements(resolved):
+      break complete
 
-  # else, we'll resolve dependencies introduced in any new dependencies.
-  # note: we're using project.cfg and project.repo as a kind of scope
-  for recurse in resolved.projects.asFoundVia(project.cfg, project.repo):
-    # if one of the existing dependencies is using the same project, then
-    # we won't bother to recurse into it and process its requirements
-    if deps.isUsing(recurse.nimble, outside = resolved):
-      continue
-    result = result and recurse.resolve(deps)
+    # else, we'll resolve dependencies introduced in any new dependencies.
+    # note: we're using project.cfg and project.repo as a kind of scope
+    for recurse in resolved.projects.asFoundVia(project.cfg, project.repo):
+      # if one of the existing dependencies is using the same project, then
+      # we won't bother to recurse into it and process its requirements
+      if deps.isUsing(recurse.nimble, outside = resolved):
+        continue
+      result = result and recurse.resolve(deps)
+      # if we failed, there's no point in continuing
+      if not result:
+        break complete
 
 proc getOfficialPackages(project: Project): PackagesResult =
   result = getOfficialPackages(project.nimbleDir)

@@ -67,10 +67,6 @@ type
 
   ProjectGroup* = Group[string, Project]
 
-  Dependency* = object
-    url*: Uri
-    operator*: Operator
-
   Releases* = TableRef[string, Release]
 
   LinkedSearchResult* = ref object

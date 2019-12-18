@@ -47,6 +47,7 @@ output (and optional repair) of the environment it finds itself in.
 - [Cutting New Release Versions+Tags](https://github.com/disruptek/nimph#bump)
 - [Adding Any Missing Tags Automatically](https://github.com/disruptek/nimph#tag)
 - [Running Commands on All Dependencies](https://github.com/disruptek/nimph#run)
+- [Outputting the Dependency Graph](https://github.com/disruptek/nimph#graph)
 - [Git Subcommand Auto-Integration](https://github.com/disruptek/nimph#git-subcommands)
 - [Nimble Subcommand Auto-Integration](https://github.com/disruptek/nimph#nimble-subcommands)
 - [Tweaking Nimph Behavior Constants](https://github.com/disruptek/nimph#hacking)
@@ -397,6 +398,53 @@ MIT License
 /bin/head: cannot open 'LICENSE' for reading: No such file or directory
 head -1 LICENSE
 head didn't like that in /home/adavidoff/git/nimph/deps/pkgs/unittest2-#head
+```
+
+### Graph
+
+The `graph` subcommand dumps some _very basic_ details about each discovered
+dependencies and their associated packages and projects.
+
+```
+$ nimph graph cligen
+
+requirement: cligen>=0.9.41 from xs
+requirement: cligen>=0.9.40 from bump
+    package: https://github.com/c-blake/cligen.git
+  directory: /home/adavidoff/.nimble/pkgs/cligen-0.9.41
+    project: cligen-#b144d5b3392bac63ed49df3e1f176becbbf04e24
+```
+
+Like other subcommands, you can provide a single _import name_ to retrieve the
+retail for only that dependency, or omit any additional arguments to display
+all dependencies.
+
+```
+$ nimph graph
+
+requirement: swayipc>=3.1.4 from xs
+    package: https://github.com/disruptek/swayipc
+
+requirement: cligen>=0.9.41 from xs
+requirement: cligen>=0.9.40 from bump
+    package: https://github.com/c-blake/cligen.git
+  directory: /home/adavidoff/.nimble/pkgs/cligen-0.9.41
+    project: cligen-#b144d5b3392bac63ed49df3e1f176becbbf04e24
+
+requirement: dbus** from xs
+    package: https://github.com/zielmicha/nim-dbus
+
+requirement: irc>=0.2.1 from xs
+    package: https://github.com/nim-lang/irc
+
+requirement: https://github.com/disruptek/cutelog.git>=1.0.1 from xs
+requirement: git://github.com/disruptek/cutelog.git>=1.1.0 from bump
+    package: git://github.com/disruptek/cutelog.git
+
+requirement: bump>=1.8.11 from xs
+    package: file:///home/adavidoff/.nimble/pkgs/bump-1.8.13
+  directory: /home/adavidoff/.nimble/pkgs/bump-1.8.13
+    project: bump-1.8.13
 ```
 
 ### Git Subcommands

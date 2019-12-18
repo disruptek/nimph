@@ -246,7 +246,7 @@ proc roller*(names: seq[string]; goal: RollGoal;
       let found = group.projectForName(name)
       if found.isSome:
         var child = found.get
-        let require = group.reqForProject(found.get)
+        let require = group.reqForProject(child)
         if require.isNone:
           let emsg = &"found `{name}` but not its requirement" # noqa
           raise newException(ValueError, emsg)
@@ -260,6 +260,49 @@ proc roller*(names: seq[string]; goal: RollGoal;
   else:
     fatal &"👎{project.name} is not where you want it"
 
+proc graphDep(dependency: Dependency; requirement: Requirement) =
+  ## dump something vaguely useful to describe a dependency
+  fatal ""
+  for req in requirement.family:
+    fatal "requirement: " & req.describe
+  for pack in dependency.packages.keys:
+    fatal "    package: " & $pack
+  for directory, proj in dependency.projects.pairs:
+    fatal "  directory: " & directory
+    fatal "    project: " & $proj
+
+proc grapher*(names: seq[string]; log_level = logLevel; dry_run = false): int =
+  ## graph requirements for the project or any of its dependencies
+
+  # user's choice, our default
+  setLogFilter(log_level)
+
+  var
+    project: Project
+  setupLocalProject(project)
+
+  # setup our dependency group
+  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  if not project.resolve(group):
+    notice &"unable to resolve all dependencies for {project}"
+
+  if names.len == 0:
+    for requirement, dependency in group.pairs:
+      dependency.graphDep(requirement)
+  else:
+    for name in names.items:
+      let found = group.projectForName(name)
+      if found.isSome:
+        let require = group.reqForProject(found.get)
+        if require.isNone:
+          let emsg = &"found `{name}` but not its requirement" # noqa
+          raise newException(ValueError, emsg)
+        {.warning: "nim bug #12818".}
+        for requirement, dependency in group.pairs:
+          if requirement == require.get:
+            dependency.graphDep(requirement)
+      else:
+        error &"couldn't find `{name}` among our installed dependencies"
 
 proc dumpLockList(project: Project) =
   for room in project.allLockerRooms:
@@ -477,6 +520,7 @@ when isMainModule:
       scTag = "tag"
       scRun = "run"
       scRoll = "roll"
+      scGraph = "graph"
       scVersion = "--version"
 
     AliasTable = Table[string, seq[string]]
@@ -511,6 +555,8 @@ when isMainModule:
               doc="tag versions")
   dispatchGen(roller, cmdName = $scRoll, dispatchName = "run" & $scRoll,
               doc="roll project dependency versions")
+  dispatchGen(grapher, cmdName = $scGraph, dispatchName = "run" & $scGraph,
+              doc="graph project dependencies")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
   dispatchGen(runner, cmdName = $scRun, dispatchName = "run" & $scRun,
@@ -544,7 +590,7 @@ when isMainModule:
   const
     # these are our subcommands that we want to include in help
     dispatchees = [scDoctor, scSearch, scClone, scPath, scFork,
-                   scLock, scUnlock, scTag, scRoll, scRun]
+                   scLock, scUnlock, scTag, scRoll, scGraph, scRun]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
@@ -562,6 +608,7 @@ when isMainModule:
       scTag: runtag,
       scRun: runrun,
       scRoll: runroll,
+      scGraph: rungraph,
     }.toTable
 
     # setup the mapping between subcommand and expanded parameters
