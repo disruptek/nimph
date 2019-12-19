@@ -203,8 +203,6 @@ iterator matchingReleases(requirement: Requirement; head = "";
 
 iterator symbolicMatch*(project: Project; req: Requirement): Release =
   ## see if a project can match a given requirement symbolically
-  if project.tags == nil:
-    raise newException(Defect, "fetch tags for the project first")
   if project.dist == Git:
     if project.tags == nil:
       warn &"i wanted to examine tags for {project} but they were empty"
