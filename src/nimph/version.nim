@@ -345,7 +345,7 @@ proc toMask*(version: Version): VersionMask =
 proc importName*(target: Target): string =
   ## a uniform name usable in code for imports
   assert target.repo.len > 0
-  result = target.repo.importName
+  result = target.repo.pathToImport.importName
 
 iterator likelyTags*(version: Version): string =
   ## produce tags with/without silly `v` prefixes
