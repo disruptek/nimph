@@ -167,7 +167,7 @@ proc importName*(url: Uri): string =
   elif url.scheme == "file":
     result = url.path.importName
   else:
-    result = url.packageName.importName
+    result = url.packageName.importName.toLowerAscii
 
 proc forkTarget*(url: Uri): ForkTargetResult =
   result.url = url.normalizeUrl
