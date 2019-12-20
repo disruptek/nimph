@@ -10,6 +10,7 @@ import nimph/spec
 import nimph/package
 import nimph/project
 import nimph/version
+import nimph/requirement
 
 const
   # how we'll render a release requirement like "package"
