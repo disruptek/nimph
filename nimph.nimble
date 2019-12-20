@@ -14,13 +14,15 @@ requires "https://github.com/stefantalpalaru/nim-unittest2#30c7d332d8ebab28d3240
 bin = @["nimph"]
 srcDir = "src"
 
+backend = "c"
+
 proc execCmd(cmd: string) =
   echo "execCmd:" & cmd
   exec cmd
 
 proc execTest(test: string) =
   execCmd "nim c -f -r " & test
-  execCmd "nim cpp -r " & test
+#  execCmd "nim cpp -r " & test
 
 task test, "run tests for travis":
   execTest("tests/tpackage.nim")
