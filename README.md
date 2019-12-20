@@ -1,4 +1,5 @@
-# nimph
+# nimph [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=master)](https://travis-ci.org/disruptek/nimph)
+
 nim package handler from the future
 
 or: _How I Learned to Stop Worrying and Love the Search Path_
