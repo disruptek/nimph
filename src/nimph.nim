@@ -436,7 +436,7 @@ proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
         uri = parseUri(args[0])
       if uri.isValid:
         url = uri
-        name = packageName(url.path.lastPathPart)
+        name = url.importName
     except:
       discard
 

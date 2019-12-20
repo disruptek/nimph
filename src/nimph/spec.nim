@@ -123,29 +123,42 @@ proc convertToSsh*(uri: Uri): Uri =
   result.scheme = ""
 
 proc packageName*(name: string): string =
-  ## return a string that is plausible as a module name
+  ## return a string that is plausible as a package name
+  when true:
+    result = name
+  else:
+    const capsOkay =
+      when FilesystemCaseSensitive:
+        true
+      else:
+        false
+    let
+      sane = name.sanitizeIdentifier(capsOkay = capsOkay)
+    if sane.isSome:
+      result = sane.get
+    else:
+      raise newException(ValueError, "unable to sanitize `" & name & "`")
+
+proc packageName*(url: Uri): string =
+  ## guess the name of a package from a url
+  when defined(debug) or defined(debugPath):
+    assert url.isValid
+  result = packageName(url.path.extractFilename.changeFileExt(""))
+
+proc importName*(path: string): string =
+  ## a uniform name usable in code for imports
+  assert path.len > 0
   const capsOkay =
     when FilesystemCaseSensitive:
       true
     else:
       false
   let
-    sane = name.sanitizeIdentifier(capsOkay = capsOkay)
+    sane = path.sanitizeIdentifier(capsOkay = capsOkay)
   if sane.isSome:
     result = sane.get
   else:
-    raise newException(ValueError, "unable to sanitize `" & name & "`")
-
-proc packageName*(url: Uri): string =
-  ## guess the import name of a package from a url
-  when defined(debug) or defined(debugPath):
-    assert url.isValid
-  result = packageName(url.path.extractFilename.changeFileExt("").split("-")[^1])
-
-proc importName*(path: string): string =
-  ## a uniform name usable in code for imports
-  assert path.len > 0
-  result = path.pathToImport.packageName
+    raise newException(ValueError, "unable to sanitize `" & path & "`")
 
 proc importName*(url: Uri): string =
   let url = url.normalizeUrl

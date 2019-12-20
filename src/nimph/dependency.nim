@@ -85,7 +85,6 @@ proc reportMultipleResolutions(project: Project; requirement: Requirement;
     if urls.len != 1:
       warn &"\t{package.url}\n"
     count.inc
-  fatal ""
 
 proc asPackage*(project: Project): Package =
   ## cast a project to a package
@@ -390,7 +389,7 @@ proc mget*[K: Requirement, V](group: var Group[K, V]; key: K): var V =
 proc addName(dependency: var Dependency; name: string) =
   ## add an import name to the dependency, as might be used in code
   let
-    package = name.importName
+    package = name.importName.toLowerAscii
   if package notin dependency.names:
     dependency.names.add package
 
@@ -398,7 +397,7 @@ proc add(dependency: var Dependency; package: Package) =
   ## add a package to the dependency
   if package.url notin dependency.packages:
     dependency.packages.add package.url, package
-  dependency.addName package.importName
+  dependency.addName package.name
 
 proc add(dependency: var Dependency; url: Uri) =
   ## add a url (as a package) to the dependency

@@ -49,7 +49,8 @@ type
     info: FileInfo
 
 proc importName*(package: Package): string =
-  result = package.name.split("-")[^1].packageName
+  result = package.name.importName.toLowerAscii
+  error &"import name {result} from {package.name}"
 
 proc newPackage*(name: string; path: string; dist: DistMethod;
                  url: Uri): Package =
@@ -63,7 +64,7 @@ proc newPackage*(name: string; dist: DistMethod; url: Uri): Package =
 
 proc newPackage*(url: Uri): Package =
   ## create a new package with only a url
-  result = newPackage(name = url.importName, dist = Git,
+  result = newPackage(name = url.packageName, dist = Git,
                       url = url.convertToGit)
   # flag this package as not necessarily named correctly;
   # we had to guess at what the final name might be...
