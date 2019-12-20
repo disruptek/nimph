@@ -493,7 +493,7 @@ proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
           notice &"rolled {cloned.name} to {cloned.version}"
           # so skip the tail of this block (and a 2nd relocate)
           break relocated
-        notice &"unable to meet {requirement} with {cloned}"
+        notice &"unable to meet {requirement.get} with {cloned}"
     # rename the directory to match head release
     project.relocateDependency(cloned)
 
