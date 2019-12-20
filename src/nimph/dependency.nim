@@ -16,7 +16,9 @@ import nimph/spec
 import nimph/package
 import nimph/project
 import nimph/version
+import nimph/versiontags
 import nimph/git
+import nimph/requirement
 import nimph/config
 
 import nimph/group
@@ -162,44 +164,59 @@ proc peelRelease*(project: Project; release: Release): Release =
 proc peelRelease*(project: Project): Release =
   result = project.peelRelease(project.release)
 
+proc happyProvision(requirement: Requirement; release: Release;
+                    head = ""; tags: GitTagTable = nil): bool =
+  ## true if the requirement (and children) are satisfied by the release
+  var
+    req = requirement
+
+  block failed:
+    while req != nil:
+      if req.release.kind == Tag:
+        let
+          required = releaseHashes(req.release, head = head)
+        block matched:
+          for viable, thing in tags.matches(required):
+            # the release may be a viable match for the requirement,
+            # which we've already established is a tag
+            if viable == release:
+              break matched
+          break failed
+      elif not req.isSatisfiedBy(release):
+        # the release hashes are provided, literally
+        let
+          provided = releaseHashes(release, head = head)
+        block matched:
+          for viable, thing in tags.matches(provided):
+            if req.isSatisfiedBy(viable):
+              break matched
+          break failed
+      req = req.child
+    result = true
+
 iterator matchingReleases(requirement: Requirement; head = "";
-                          tags: GitTagTable = nil): Release =
+                          tags: GitTagTable): Release =
   ## yield releases that satisfy the requirement, using the head and tags
-  case requirement.release.kind:
-  of Tag:
-    let reference = requirement.release.reference
-    # recognize "head" as matching a provided head oid
-    if reference.toLowerAscii == "head":
-      # if it exists, i mean
-      if head != "":
-        yield newRelease(head, operator = Tag)
-    else:
-      # if we have tags to work with, then we try to match
-      # against the tag and include the hash of the tag's oid
-      if tags != nil:
-        # this could be looking for `head`, by the way...
-        if tags.hasKey(reference):
-          if reference.toLowerAscii != "head":
-            yield newRelease($tags[reference].oid, operator = Tag)
-          else:
-            debug "found `head` in the tags table"
-        # now see if the specified reference matches a tag
-        for name, thing in tags.pairs:
-          if reference.toLowerAscii == $thing.oid:
-            yield newRelease($thing.oid, operator = Tag)
-        # we won't actually lookup a missing reference here; that really
-        # should be done in a proc that has access to the project
-  else:
-    # we just iterate over all the tags and see any can be
-    # converted to a version which satisfies the requirement
+
+  if tags != nil:
+    # we need to keep track if we've seen the head oid, because
+    # we don't want to issue it twice
+    var
+      sawTheHead = false
+
     if tags != nil:
-      for name, thing in tags.pairs:
-        let parsed = name.parseVersionLoosely
-        if parsed.isNone:
-          debug &"could not parse tag `{name}`"
-          continue
-        if requirement.isSatisfiedBy(parsed.get):
-          yield newRelease($thing.oid, operator = Tag)
+      for tag, thing in tags.pairs:
+        let
+          release = newRelease($thing.oid, operator = Tag)
+        if requirement.happyProvision(release, head = head, tags = tags):
+          sawTheHead = sawTheHead or $thing.oid == head
+          yield release
+
+    if head != "" and not sawTheHead:
+      let
+        release = newRelease(head, operator = Tag)
+      if requirement.happyProvision(release, head = head, tags = tags):
+        yield release
 
 iterator symbolicMatch*(project: Project; req: Requirement): Release =
   ## see if a project can match a given requirement symbolically
@@ -218,11 +235,12 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
     # this currently could duplicate a release emitted above, but that's okay
     if req.release.kind == Tag:
       var thing: GitThing
-      if grcOk == lookupThing(thing, project.repo, req.release.reference):
+      let grc = lookupThing(thing, project.repo, req.release.reference)
+      gitTrap thing, grc:
+        debug &"could not find {req.release.reference} in {project}"
+      if grc == grcOk:
         debug &"found {req.release.reference} in {project}"
         yield newRelease($thing.oid, operator = Tag)
-      else:
-        debug &"could not find {req.release.reference} in {project}"
   else:
     debug &"without a repo for {project.name}, i cannot match {req}"
     # if we don't have any tags or the head, it's a simple test
@@ -262,19 +280,50 @@ proc symbolicMatch*(project: var Project; req: Requirement): bool =
   result = readonly.symbolicMatch(req)
 
 proc isSatisfiedBy*(req: Requirement; project: Project; release: Release): bool =
+  ## true if the requirement is satisfied by the project at the given release
+  var
+    oid: string
   block satisfied:
+    if project.dist == Git:
+      let
+        head = project.getHeadOid
+      if head.isSome:
+        oid = $head.get
+
+      if project.tags == nil:
+        raise newException(Defect, "really expected to have tags here")
+
+      # match loosely on tag, version, etc.
+      for match in req.matchingReleases(head = oid, tags = project.tags):
+        result = match == release
+        if result:
+          break satisfied
+
+      # this is really our last gasp opportunity for a Tag requirement
+      if req.release.kind == Tag:
+        # match against a specific oid or symbol
+        if release.kind == Tag:
+          var thing: GitThing
+          let
+            grc = lookupThing(thing, project.repo, name = release.reference)
+          gitTrap thing, grc:
+            notice &"tag/oid `{release.reference}` in {project.name}: {grc}"
+          if grc == grcOk:
+            debug &"release reference {release.reference} is {thing}"
+            result = release.reference == req.release.reference
+          break satisfied
+
+    # basically, this could work if we've pulled a tag from nimblemeta
     if req.release.kind == Tag:
-      # the requirement is for a particular tag...
-      # compare tags, head, and versions
-      result = project.symbolicMatch(req, release)
-      debug &"project symbolic match {result} {req}"
-      # if the tag doesn't match, make sure we fail hard here
-      break
+      result = req.release.reference == release.reference
+      break satisfied
 
     # otherwise, if all we have is a tag but the requirement is for
     # something version-like, then we have to just use the version;
     # ditto if we don't even have a valid release, of course
-    elif not project.release.isValid or project.release.kind == Tag:
+    if not release.isValid or release.kind == Tag:
+      # we should only do this if we're trying to solve the project release
+      assert release == project.release
       if project.version.isValid:
         # fallback to the version indicated by nimble
         result = req.isSatisfiedBy newRelease(project.version)
@@ -282,15 +331,15 @@ proc isSatisfiedBy*(req: Requirement; project: Project; release: Release): bool 
       # we did our best
       break
 
-    # the project.release is valid and it's not a tag.
+    # the release is valid and it's not a tag.
     #
     # first we wanna see if our version is specific; if it is, we
     # will just see if that specific incarnation satisfies the req
-    if project.release.isSpecific:
+    if release.isSpecific:
       # try to use our release
-      result = req.isSatisfiedBy newRelease(project.release.specifically)
-      debug &"project release match {result} {req}"
-      break
+      result = req.isSatisfiedBy newRelease(release.specifically)
+      debug &"release match {result} {req}"
+      break satisfied
 
   # make sure we can satisfy prior requirements as well
   if result and req.child != nil:
@@ -614,128 +663,6 @@ proc newDependencyGroup*(project: Project;
   # collect all the packages from the environment
   result.projects = project.childProjects
 
-proc setHeadToRelease*(project: var Project; release: Release): bool =
-  ## advance the head of a project to a particular release
-  if project.dist != Git:
-    return
-  if not release.isValid or release.kind != Tag:
-    return
-  # we want the code because it'll tell us what went wrong
-  let code = checkoutTree(project.repo, release.reference)
-  case code:
-  of grcOk:
-    debug &"roll {project.name} to {release}"
-    result = true
-    # make sure we invalidate some data
-    project.dump = nil
-    project.version = (0'u, 0'u, 0'u)
-  else:
-    debug &"roll {project.name} to {release}: {code}"
-
-proc rollTowards*(project: var Project; requirement: Requirement): bool =
-  ## advance the head of a project to meet a given requirement
-  if project.dist != Git:
-    return
-  if project.tags == nil:
-    project.fetchTagTable
-
-  # reverse the order of matching releases so that we start with the latest
-  # valid release, first and proceed to lesser versions thereafter
-  var releases = toSeq project.symbolicMatch(requirement)
-  releases.reverse
-
-  # iterate over all matching tags
-  for match in releases.items:
-    # try to point to the matching release
-    result = project.setHeadToRelease(match)
-    if not result:
-      warn &"failed checkout of {match}"
-      continue
-    # freshen project version, release, etc.
-    project.refresh
-    # then, maybe rename the directory appropriately
-    if project.parent != nil:
-      project.parent.relocateDependency(project)
-    break
-
-proc addName*(group: var VersionTags; ver: Version; thing: GitThing) =
-  group.imports[$ver] = $thing.oid
-
-proc add*(group: var VersionTags; ver: Version; thing: GitThing) =
-  group.table.add ver, thing
-  group.addName ver, thing
-
-proc del*(group: var VersionTags; ver: Version) =
-  ## remove a version from the group
-  if group.table.hasKey(ver):
-    group.delName $group.table[ver].oid
-    group.table.del ver
-
-proc `[]=`*(group: var VersionTags; ver: Version; thing: GitThing) =
-  ## set a key to a single value
-  group.del ver
-  group.add ver, thing
-
-proc `[]`*(group: VersionTags; ver: Version): var GitThing =
-  ## get a git thing by version
-  result = group.table[ver]
-
-proc newVersionTags(flags = defaultFlags): VersionTags =
-  result = VersionTags(flags: flags)
-  result.init(flags, mode = modeStyleInsensitive)
-
-template returnToHeadAfter*(project: var Project; body: untyped) =
-  ## run some code in the body if you can, and then return the
-  ## project to where it was in git before you left
-
-  # we may have no head; if that's the case, we have no tags either
-  let previous = project.getHeadOid
-  if previous.isSome:
-
-    # this could just be a bad idea all the way aroun'
-    if not project.repoLockReady:
-      error "refusing to roll the repo when it's dirty"
-    else:
-      # if we have no way to get back, don't even depart
-      var home: GitReference
-      gitTrap home, referenceDWIM(home, project.repo, "HEAD"):
-        raise newException(IOError, "i'm lost; where am i?")
-
-      defer:
-        # there's no place like home
-        if not project.setHeadToRelease(newRelease($previous.get,
-                                                   operator = Tag)):
-          raise newException(IOError, "cannot detach head to " & $previous.get)
-
-        # re-attach the head if we can
-        gitTrap setHead(project.repo, $home.name):
-          raise newException(IOError, "cannot set head to " & home.name)
-
-        # be sure to reload the project specifics now that we're home
-        project.refresh
-
-      body
-
-proc versionChangingCommits*(project: var Project): VersionTags =
-  # a table of the commits that changed the Version of a Project's
-  # dotNimble file
-  result = newVersionTags()
-  let
-    # this is the package.nimble file without any other path parts
-    package = project.nimble.package.addFileExt(project.nimble.ext)
-
-  project.returnToHeadAfter:
-    # iterate over commits to the dotNimble file
-    for commit in commitsForSpec(project.repo, @[package]):
-      var
-        thing = commit.toThing
-      let release = newRelease($thing.oid, operator = Tag)
-      if not project.setHeadToRelease(release):
-        continue
-      # freshen project version, release, etc.
-      project.refresh
-      result[project.version] = thing
-
 proc reset*(dependencies: var DependencyGroup; project: var Project) =
   ## reset a dependency group and prepare to resolve dependencies again
   # empty the group of all requirements and dependencies
@@ -747,7 +674,7 @@ proc reset*(dependencies: var DependencyGroup; project: var Project) =
 
 proc roll*(project: var Project; requirement: Requirement;
            goal: RollGoal; dry_run = false): bool =
-  ## true if the project is fully upgraded per the requirement
+  ## true if the project meets the requirement and goal
   if project.dist != Git:
     return
   if project.tags == nil:
@@ -774,7 +701,12 @@ proc roll*(project: var Project; requirement: Requirement;
     raise newException(Defect, "not implemented")
 
   # iterate over all matching tags
-  for match in releases:
+  for index, match in releases.pairs:
+    # we may one day support arbitrary rolls
+    if match.kind != Tag:
+      debug &"dunno how to roll to {match}"
+      continue
+
     # if we're at the next best release then we're done
     if match.kind == Tag and match.reference == $head.get:
       break
@@ -811,4 +743,30 @@ proc roll*(project: var Project; requirement: Requirement;
     if project.parent != nil:
       project.parent.relocateDependency(project)
     result = true
+    break
+
+proc rollTowards*(project: var Project; requirement: Requirement): bool =
+  ## advance the head of a project to meet a given requirement
+  if project.dist != Git:
+    return
+  if project.tags == nil:
+    project.fetchTagTable
+
+  # reverse the order of matching releases so that we start with the latest
+  # valid release, first and proceed to lesser versions thereafter
+  var releases = toSeq project.symbolicMatch(requirement)
+  releases.reverse
+
+  # iterate over all matching tags
+  for match in releases.items:
+    # try to point to the matching release
+    result = project.setHeadToRelease(match)
+    if not result:
+      warn &"failed checkout of {match}"
+      continue
+    # freshen project version, release, etc.
+    project.refresh
+    # then, maybe rename the directory appropriately
+    if project.parent != nil:
+      project.parent.relocateDependency(project)
     break

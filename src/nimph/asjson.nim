@@ -9,6 +9,7 @@ import bump
 import nimph/spec
 import nimph/version
 import nimph/package
+import nimph/requirement
 
 proc toJson*(operator: Operator): JsonNode =
   result = newJString($operator)

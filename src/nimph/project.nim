@@ -44,6 +44,8 @@ import nimph/git
 import nimph/package
 import nimph/version
 import nimph/thehub
+import nimph/versiontags
+import nimph/requirement
 
 import nimph/group
 export group
@@ -74,7 +76,6 @@ type
     source: string
     search: SearchResult
 
-  VersionTags* = Group[Version, GitThing]
   # same as Requires, for now
   Requirements* = OrderedTableRef[Requirement, Requirement]
   RequirementsTags* = Group[Requirements, GitThing]
@@ -1111,3 +1112,73 @@ proc nextTagFor*(tags: GitTagTable; version: Version): string =
     latest = tag
   # add any silly v. prefix as necessary
   result = pluckVAndDot(latest) & $version
+
+proc setHeadToRelease*(project: var Project; release: Release): bool =
+  ## advance the head of a project to a particular release
+  if project.dist != Git:
+    return
+  if not release.isValid or release.kind != Tag:
+    return
+  # we want the code because it'll tell us what went wrong
+  let code = checkoutTree(project.repo, release.reference)
+  case code:
+  of grcOk:
+    debug &"roll {project.name} to {release}"
+    result = true
+    # make sure we invalidate some data
+    project.dump = nil
+    project.version = (0'u, 0'u, 0'u)
+  else:
+    debug &"roll {project.name} to {release}: {code}"
+
+template returnToHeadAfter*(project: var Project; body: untyped) =
+  ## run some code in the body if you can, and then return the
+  ## project to where it was in git before you left
+
+  # we may have no head; if that's the case, we have no tags either
+  let previous = project.getHeadOid
+  if previous.isSome:
+
+    # this could just be a bad idea all the way aroun'
+    if not project.repoLockReady:
+      error "refusing to roll the repo when it's dirty"
+    else:
+      # if we have no way to get back, don't even depart
+      var home: GitReference
+      gitTrap home, referenceDWIM(home, project.repo, "HEAD"):
+        raise newException(IOError, "i'm lost; where am i?")
+
+      defer:
+        # there's no place like home
+        if not project.setHeadToRelease(newRelease($previous.get,
+                                                   operator = Tag)):
+          raise newException(IOError, "cannot detach head to " & $previous.get)
+
+        # re-attach the head if we can
+        gitTrap setHead(project.repo, $home.name):
+          raise newException(IOError, "cannot set head to " & home.name)
+
+        # be sure to reload the project specifics now that we're home
+        project.refresh
+
+      body
+
+proc versionChangingCommits*(project: var Project): VersionTags =
+  # a table of the commits that changed the Version of a Project's
+  # dotNimble file
+  result = newVersionTags()
+  let
+    # this is the package.nimble file without any other path parts
+    package = project.nimble.package.addFileExt(project.nimble.ext)
+
+  project.returnToHeadAfter:
+    # iterate over commits to the dotNimble file
+    for commit in commitsForSpec(project.repo, @[package]):
+      var
+        thing = commit.toThing
+      let release = newRelease($thing.oid, operator = Tag)
+      if not project.setHeadToRelease(release):
+        continue
+      # freshen project version, release, etc.
+      project.refresh
+      result[project.version] = thing

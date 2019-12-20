@@ -20,6 +20,7 @@ import nimph/dependency
 import nimph/locker
 import nimph/group
 import nimph/version
+import nimph/requirement
 
 template crash(why: string) =
   ## a good way to exit nimph

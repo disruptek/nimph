@@ -15,6 +15,7 @@ import nimph/package
 import nimph/asjson
 import nimph/git
 import nimph/doctor
+import nimph/requirement
 
 type
   Locker* = ref object

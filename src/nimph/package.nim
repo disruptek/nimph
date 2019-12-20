@@ -15,6 +15,7 @@ import bump
 
 import nimph/spec
 import nimph/version
+import nimph/requirement
 
 import nimph/group
 export group

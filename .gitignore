@@ -3,6 +3,6 @@ tests/tnimble
 tests/tpackage
 tests/tspec
 tests/tgit
+tests/ttags
 nim.cfg
-nimph
 nimph.exe

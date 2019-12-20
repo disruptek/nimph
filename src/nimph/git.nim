@@ -672,6 +672,11 @@ proc free*(table: var GitTagTable) =
           obj.free
     table.clear
 
+proc hash*(oid: GitOid): Hash =
+  var h: Hash = 0
+  h = h !& hash($oid)
+  result = !$h
+
 proc hash*(tag: GitTag): Hash =
   var h: Hash = 0
   h = h !& hash($tag)

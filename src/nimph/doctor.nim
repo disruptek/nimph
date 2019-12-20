@@ -17,6 +17,7 @@ import nimph/dependency
 import nimph/group
 import nimph/git
 import nimph/version
+import nimph/requirement
 
 type
   StateKind* = enum
