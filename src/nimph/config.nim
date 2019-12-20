@@ -92,6 +92,7 @@ proc loadAllCfgs*(directory: string): ConfigRef =
   # maybe we should turn off configuration hints for these reads
   when not defined(debug) and not defined(debugPath):
     result.notes.excl hintConf
+  result.notes.excl hintLineTooLong
   when defined(debugPath):
     result.notes.incl hintPath
 
