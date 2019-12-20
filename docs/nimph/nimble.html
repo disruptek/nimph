@@ -943,7 +943,7 @@ omit and trailing /PkgDir from a path
     <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-run nimble
+run a program with arguments, perhaps with a particular nimbleDir
 
 </dd>
 <a id="parseNimbleDump,string"></a>
@@ -991,14 +991,14 @@ try to write a new nimblemeta.json
 <dt><pre><span class="Keyword">proc</span> <a href="#isLink%2CNimbleMeta"><span class="Identifier">isLink</span></a><span class="Other">(</span><span class="Identifier">meta</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+true if the metadata says it's a link
 
 </dd>
 <a id="isValid,NimbleMeta"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#isValid%2CNimbleMeta"><span class="Identifier">isValid</span></a><span class="Other">(</span><span class="Identifier">meta</span><span class="Other">:</span> <a href="nimble.html#NimbleMeta"><span class="Identifier">NimbleMeta</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+true if the metadata appears to hold some data
 
 </dd>
 <a id="fetchNimbleMeta,string"></a>
@@ -1019,7 +1019,7 @@ parse the nimblemeta.json file if it exists
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-18 01:17:23 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-20 21:08:23 UTC</small>
       </div>
     </div>
   </div>

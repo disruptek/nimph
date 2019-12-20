@@ -261,16 +261,32 @@ proc roller*(names: seq[string]; goal: RollGoal;
   else:
     fatal &"👎{project.name} is not where you want it"
 
-proc graphDep(dependency: Dependency; requirement: Requirement) =
+proc graphDep(dependency: var Dependency; requirement: Requirement;
+              log_level = logLevel) =
   ## dump something vaguely useful to describe a dependency
   fatal ""
   for req in requirement.orphans:
     fatal "requirement: " & req.describe
   for pack in dependency.packages.keys:
     fatal "    package: " & $pack
-  for directory, proj in dependency.projects.pairs:
+  for directory, project in dependency.projects.mpairs:
     fatal "  directory: " & directory
-    fatal "    project: " & $proj
+    fatal "    project: " & $project
+    if project.dist == Git:
+      # show tags for info or less
+      if log_level <= lvlInfo:
+        project.fetchTagTable
+        if project.tags != nil and project.tags.len > 0:
+          info "releases:"
+          for tag, thing in project.tags.pairs:
+            info &"    tag: {tag:<20} {thing}"
+      # show versions for info or less
+      if log_level <= lvlInfo:
+        let versions = project.versionChangingCommits
+        if versions != nil and versions.len > 0:
+          info "versions:"
+          for ver, thing in versions.pairs:
+            info &"    ver: {ver:<20} {thing}"
 
 proc grapher*(names: seq[string]; log_level = logLevel; dry_run = false): int =
   ## graph requirements for the project or any of its dependencies
@@ -288,8 +304,8 @@ proc grapher*(names: seq[string]; log_level = logLevel; dry_run = false): int =
     notice &"unable to resolve all dependencies for {project}"
 
   if names.len == 0:
-    for requirement, dependency in group.pairs:
-      dependency.graphDep(requirement)
+    for requirement, dependency in group.mpairs:
+      dependency.graphDep(requirement, log_level = log_level)
   else:
     for name in names.items:
       let found = group.projectForName(name)
@@ -299,9 +315,9 @@ proc grapher*(names: seq[string]; log_level = logLevel; dry_run = false): int =
           let emsg = &"found `{name}` but not its requirement" # noqa
           raise newException(ValueError, emsg)
         {.warning: "nim bug #12818".}
-        for requirement, dependency in group.pairs:
+        for requirement, dependency in group.mpairs:
           if requirement == require.get:
-            dependency.graphDep(requirement)
+            dependency.graphDep(requirement, log_level = log_level)
       else:
         error &"couldn't find `{name}` among our installed dependencies"
 

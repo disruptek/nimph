@@ -1021,6 +1021,8 @@ function main() {
                     gsoRenamesHeadToIndex, gsoRenamesIndexToWorkdir,
                     gsoSortCaseSensitively, gsoRenamesFromRewrites,
                     gsoUpdateIndex, gsoIncludeUnreadable}"><wbr />default<wbr />Status<wbr />Flags<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#hasWorkingStatus"
+    title="hasWorkingStatus = true"><wbr />has<wbr />Working<wbr />Status<span class="attachedType"></span></a></li>
 
   </ul>
 </li>
@@ -1107,6 +1109,8 @@ function main() {
     title="`$`(commit: GitCommit): string"><wbr />`$`<span class="attachedType">GitCommit</span></a></li>
   <li><a class="reference" href="#free%2CGitTagTable"
     title="free(table: var GitTagTable)"><wbr />free<span class="attachedType">GitTagTable</span></a></li>
+  <li><a class="reference" href="#hash%2CGitOid"
+    title="hash(oid: GitOid): Hash"><wbr />hash<span class="attachedType">GitOid</span></a></li>
   <li><a class="reference" href="#hash%2CGitTag"
     title="hash(tag: GitTag): Hash"><wbr />hash<span class="attachedType">GitTag</span></a></li>
   <li><a class="reference" href="#hash%2CGitThing"
@@ -1665,6 +1669,13 @@ function main() {
 
 
 </dd>
+<a id="hasWorkingStatus"></a>
+<dt><pre><a href="git.html#hasWorkingStatus"><span class="Identifier">hasWorkingStatus</span></a> <span class="Other">=</span> <span class="DecNumber">true</span></pre></dt>
+<dd>
+
+
+
+</dd>
 
 </dl></div>
 <div class="section" id="12">
@@ -1949,6 +1960,13 @@ produce a summary for a given commit
 <dd>
 
 free a tag table
+
+</dd>
+<a id="hash,GitOid"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#hash%2CGitOid"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">oid</span><span class="Other">:</span> <a href="git.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
 
 </dd>
 <a id="hash,GitTag"></a>
@@ -2563,7 +2581,7 @@ a version of gitTrap that expects failure; no error messages!
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-18 01:17:28 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-20 21:08:24 UTC</small>
       </div>
     </div>
   </div>

@@ -472,13 +472,13 @@ proc addedRequirements(dependencies: var DependencyGroup;
   # look for an existing dependency to merge into
   block found:
     # check to see if an existing project will work
-    for req, dep in dependencies.mpairs:
+    for req, dep in dependencies.pairs:
       for directory, project in dep.projects.pairs:
         if required.isSatisfiedBy(project):
           existing = dep
           break found
     # failing that, check to see if an existing package matches
-    for req, dep in dependencies.mpairs:
+    for req, dep in dependencies.pairs:
       for url, package in dep.packages.pairs:
         if package.url in dependency.packages:
           existing = dep

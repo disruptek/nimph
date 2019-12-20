@@ -864,7 +864,7 @@ proc allImportTargets*(config: ConfigRef; repo: string):
       continue
     result.add found.get, target
 
-iterator asFoundVia*(group: ProjectGroup; config: ConfigRef;
+iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef;
                      repo: string): var Project =
   ## yield projects from the group in the same order that they may be
   ## resolved by the compiler, if at all, given a particular configuration

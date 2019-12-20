@@ -844,6 +844,8 @@ function main() {
     title="runner(args: seq[string]; log_level = logLevel; dry_run = false): int"><wbr />runner<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#roller%2Cseq%5BT%5D%5Bstring%5D%2CRollGoal"
     title="roller(names: seq[string]; goal: RollGoal; log_level = logLevel; dry_run = false): int"><wbr />roller<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#grapher%2Cseq%5BT%5D%5Bstring%5D"
+    title="grapher(names: seq[string]; log_level = logLevel; dry_run = false): int"><wbr />grapher<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#lockfiler%2Cseq%5BT%5D%5Bstring%5D"
     title="lockfiler(names: seq[string]; log_level = logLevel; dry_run = false): int"><wbr />lockfiler<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#unlockfiler%2Cseq%5BT%5D%5Bstring%5D"
@@ -868,7 +870,7 @@ function main() {
   <div class="section" id="6">
 <h1><a class="toc-backref" href="#6">Imports</a></h1>
 <dl class="item">
-<a class="reference external" href="nimph/spec.html">nimph/spec</a>, <a class="reference external" href="nimph/nimble.html">nimph/nimble</a>, <a class="reference external" href="nimph/project.html">nimph/project</a>, <a class="reference external" href="nimph/doctor.html">nimph/doctor</a>, <a class="reference external" href="nimph/thehub.html">nimph/thehub</a>, <a class="reference external" href="nimph/config.html">nimph/config</a>, <a class="reference external" href="nimph/package.html">nimph/package</a>, <a class="reference external" href="nimph/dependency.html">nimph/dependency</a>, <a class="reference external" href="nimph/locker.html">nimph/locker</a>, <a class="reference external" href="nimph/group.html">nimph/group</a>, <a class="reference external" href="nimph/version.html">nimph/version</a>
+<a class="reference external" href="nimph/spec.html">nimph/spec</a>, <a class="reference external" href="nimph/nimble.html">nimph/nimble</a>, <a class="reference external" href="nimph/project.html">nimph/project</a>, <a class="reference external" href="nimph/doctor.html">nimph/doctor</a>, <a class="reference external" href="nimph/thehub.html">nimph/thehub</a>, <a class="reference external" href="nimph/config.html">nimph/config</a>, <a class="reference external" href="nimph/package.html">nimph/package</a>, <a class="reference external" href="nimph/dependency.html">nimph/dependency</a>, <a class="reference external" href="nimph/locker.html">nimph/locker</a>, <a class="reference external" href="nimph/group.html">nimph/group</a>, <a class="reference external" href="nimph/version.html">nimph/version</a>, <a class="reference external" href="nimph/requirement.html">nimph/requirement</a>
 </dl></div>
 <div class="section" id="12">
 <h1><a class="toc-backref" href="#12">Procs</a></h1>
@@ -939,6 +941,17 @@ this is another pather, basically, that invokes the arguments in the path
 perform upgrades or downgrades of dependencies within project requirement specifications
 
 </dd>
+<a id="grapher,seq[T][string]"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#grapher%2Cseq%5BT%5D%5Bstring%5D"><span class="Identifier">grapher</span></a><span class="Other">(</span><span class="Identifier">names</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">log_level</span> <span class="Other">=</span> <span class="Identifier">logLevel</span><span class="Other">;</span> <span class="Identifier">dry_run</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
+    <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ERecoverableError</span><span class="Other">,</span>
+    <span class="Identifier">EOFError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span>
+    <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">,</span> <span class="Identifier">WriteDirEffect</span><span class="Other">,</span>
+    <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+graph requirements for the project or any of its dependencies
+
+</dd>
 <a id="lockfiler,seq[T][string]"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#lockfiler%2Cseq%5BT%5D%5Bstring%5D"><span class="Identifier">lockfiler</span></a><span class="Other">(</span><span class="Identifier">names</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">log_level</span> <span class="Other">=</span> <span class="Identifier">logLevel</span><span class="Other">;</span> <span class="Identifier">dry_run</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
     <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ERecoverableError</span><span class="Other">,</span>
@@ -1007,7 +1020,7 @@ cli entry to clone a package into the environment
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-18 01:17:29 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-20 21:08:25 UTC</small>
       </div>
     </div>
   </div>

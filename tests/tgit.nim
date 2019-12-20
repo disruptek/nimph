@@ -37,17 +37,17 @@ suite "git":
 
   test "roll between versions":
     project.returnToHeadAfter:
-      for ver in ["0.4.0", "0.3.7"]:
+      for ver in ["0.5.7", "0.5.6"]:
         let
           release = newRelease(ver, operator = Tag)
           req = newRequirement($project.url, operator = Tag, release)
-        check project.rollTowards(req)
-        for stat in project.repo.status:
-          check gsfIndexModified notin stat.flags
+        if project.rollTowards(req):
+          for stat in project.repo.status:
+            check gsfIndexModified notin stat.flags
 
   test "commits changing project version":
     let
       versioned = project.versionChangingCommits
       required = project.requirementChangingCommits
-    check $versioned[v"0.4.0"].oid == "faf061ead9e7ec491b6fc96ecf488e951708a155"
-    check $versioned[v"0.3.7"].oid == "e54f3bee818108c1ce1684a3ff5d44a19c53f307"
+    check $versioned[v"0.5.6"].oid == "76e5cc0121cc2f963336abb3f3fc97b01fdc5ed4"
+    check $versioned[v"0.5.7"].oid == "60ab6a2776df4dc0a8814d6741a5e560959a8a5f"
