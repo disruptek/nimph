@@ -21,7 +21,7 @@ type
   RollGoal* = enum
     Upgrade = "upgrade"
     Downgrade = "downgrade"
-    Specific = "specific"
+    Specific = "roll"
 
   ForkTargetResult* = object
     ok*: bool

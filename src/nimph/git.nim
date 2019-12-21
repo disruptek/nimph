@@ -1475,3 +1475,10 @@ iterator branches*(path: string;
   withGitRepoAt(path):
     for branch in repo.branches(flags = flags):
       yield branch
+
+proc hasThing*(tags: GitTagTable; thing: GitThing): bool =
+  ## true if the thing is tagged
+  for commit in tags.values:
+    result = commit.oid == thing.oid
+    if result:
+      break

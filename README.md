@@ -214,6 +214,17 @@ $ nimph path nimterop irc
 /home/adavidoff/git/bot/deps/pkgs/irc-#v0.3.0
 ```
 
+If you want to limit your search to packages that are part of your project's
+dependency tree, add the `--strict` switch:
+
+```
+$ nimph path coco
+/home/adavidoff/git/nimph/deps/pkgs/coco-#head
+
+$ nimph path --strict coco
+couldn't find a dependency importable as `coco`
+```
+
 ### Lock
 
 The `lock` subcommand writes the current dependency tree to a JSON file; see
@@ -449,17 +460,16 @@ requirement: bump>=1.8.11 from xs
 ```
 
 Raising the log level of the `graph` command will cause retrieval and display
-of tags (releases) and the commits at which the package changed versions.  These
-are often the same, but not always!
+releases and any _other_ commits at which the package changed versions.
 
 ```
-$ nimph graph nimterop --log=lvlInfo
+$ nimph graph --log=lvlInfo nimterop
 
 requirement: nimterop>=0.3.3 from nimgit2
     package: https://github.com/genotrance/nimterop.git
-  directory: /home/adavidoff/git/nimph/deps/pkgs/nimterop-0.3.6
-    project: nimterop-#v0.3.6
-releases:
+  directory: /home/adavidoff/git/nimph/deps/pkgs/nimterop-0.4.0
+    project: nimterop-#v0.4.0
+tagged release commits:
     tag: v0.1.0               commit-c3734587a174ea2fc7e19943e6d11d024f06e091
     tag: v0.2.0               commit-3e9dc2fb0fd6257fd86897c1b13f10ed2a5279b4
     tag: v0.2.1               commit-e9120eee7840851bda8113afbc71062b29fff872
@@ -470,15 +480,8 @@ releases:
     tag: v0.3.4               commit-c878a4be05cadd512db2182181b187de2a566ce8
     tag: v0.3.5               commit-c4b6a01878f0f72d428a24c26153723c60f6695f
     tag: v0.3.6               commit-d032a2c107d7f342df79980e01a3cf35194764de
-versions:
-    ver: 0.3.6                commit-d032a2c107d7f342df79980e01a3cf35194764de
-    ver: 0.3.5                commit-c4b6a01878f0f72d428a24c26153723c60f6695f
-    ver: 0.3.4                commit-c878a4be05cadd512db2182181b187de2a566ce8
-    ver: 0.3.3                commit-751128e75859de66e07be9888c8341fe3b553816
-    ver: 0.3.2                commit-12cc08900d1bfd39579164567acad75ca021a86b
-    ver: 0.3.1                commit-1bca308ac472796329c212410ae198c0e31d3acb
-    ver: 0.3.0                commit-37f5faa43d446a415e8934cc1a713bb7f5c5564f
-    ver: 0.2.1                commit-e9120eee7840851bda8113afbc71062b29fff872
+    tag: v0.4.0               commit-f71cf837d297192f8cddfa136e8c3cd84bbc81eb
+untagged version commits:
     ver: 0.2.0                commit-3a2395360712d2c6f27221e0887b7e3cad0be7a1
     ver: 0.1.0                commit-9787797d15d281ce1dd792d247fac043c72dc769
 ```

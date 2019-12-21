@@ -1182,3 +1182,15 @@ proc versionChangingCommits*(project: var Project): VersionTags =
       # freshen project version, release, etc.
       project.refresh
       result[project.version] = thing
+
+proc pathForName*(group: ProjectGroup; name: string): Option[string] =
+  ## try to retrieve the directory for a given import name in the group
+  {.warning: "replace this with compiler code".}
+  proc destylize(s: string): string =
+    result = s.toLowerAscii.replace("_")
+
+  let name = name.destylize
+  for project in group.values:
+    if project.importName.destylize == name:
+      result = project.repo.some
+      break

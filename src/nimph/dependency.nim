@@ -32,8 +32,8 @@ type
     projects*: ProjectGroup
 
   DependencyGroup* = ref object of Group[Requirement, Dependency]
-    packages: PackageGroup
-    projects: ProjectGroup
+    packages*: PackageGroup
+    projects*: ProjectGroup
 
 proc name*(dependency: Dependency): string =
   result = dependency.names.join("|")
@@ -116,49 +116,52 @@ proc determineDeps*(project: Project): Option[Requires] =
       error "unable to determine deps without issuing a dump"
       break
     result = parseRequires(project.dump["requires"])
-    if result.isSome:
-      # this is (usually) gratuitous, but it's also the right place
-      # to perform this assignment, so...  go ahead and do it
-      for a, b in result.get.mpairs:
-        a.notes = project.name
-        b.notes = project.name
+    if result.isNone:
+      break
+    # this is (usually) gratuitous, but it's also the right place
+    # to perform this assignment, so...  go ahead and do it
+    for a, b in result.get.mpairs:
+      a.notes = project.name
+      b.notes = project.name
 
 proc determineDeps*(project: var Project): Option[Requires] =
   ## try to parse requirements of a (mutable) project
   if not project.fetchDump:
     debug "nimble dump failed, so computing deps is impossible"
-    return
-  let
-    immutable = project
-  result = determineDeps(immutable)
+  else:
+    let
+      readonly = project
+    result = determineDeps(readonly)
 
 proc peelRelease*(project: Project; release: Release): Release =
   var
     thing: GitThing
   result = release
 
-  # if there's no way to peel it, just bail
-  if project.dist != Git or result.kind != Tag:
-    return
+  block:
 
-  # else, look up the reference
-  gitTrap thing, lookupThing(thing, project.repo, result.reference):
-    warn &"unable to find release reference `{result.reference}`"
-    return
+    # if there's no way to peel it, just bail
+    if project.dist != Git or result.kind != Tag:
+      break
 
-  # it's a valid reference, let's try to convert it to a release
-  case thing.kind:
-  of goTag:
-    # the reference is a tag, so we need to resolve the target oid
-    result = project.peelRelease newRelease($thing.targetId,
-                                            operator = Tag)
-  of goCommit:
-    # good; we found a matching commit
-    result = newRelease($thing.oid, operator = Tag)
-  else:
-    # otherwise, it's some kinda git object we don't grok
-    let emsg = &"{thing.kind} references unimplemented" # noqa
-    raise newException(ValueError, emsg)
+    # else, look up the reference
+    gitTrap thing, lookupThing(thing, project.repo, result.reference):
+      warn &"unable to find release reference `{result.reference}`"
+      break
+
+    # it's a valid reference, let's try to convert it to a release
+    case thing.kind:
+    of goTag:
+      # the reference is a tag, so we need to resolve the target oid
+      result = project.peelRelease newRelease($thing.targetId,
+                                              operator = Tag)
+    of goCommit:
+      # good; we found a matching commit
+      result = newRelease($thing.oid, operator = Tag)
+    else:
+      # otherwise, it's some kinda git object we don't grok
+      let emsg = &"{thing.kind} references unimplemented" # noqa
+      raise newException(ValueError, emsg)
 
 proc peelRelease*(project: Project): Release =
   result = project.peelRelease(project.release)
@@ -765,7 +768,7 @@ proc rollTowards*(project: var Project; requirement: Requirement): bool =
     project.fetchTagTable
 
   # reverse the order of matching releases so that we start with the latest
-  # valid release, first and proceed to lesser versions thereafter
+  # valid release first and proceed to lesser versions thereafter
   var releases = toSeq project.symbolicMatch(requirement)
   releases.reverse
 

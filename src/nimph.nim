@@ -21,6 +21,7 @@ import nimph/locker
 import nimph/group
 import nimph/version
 import nimph/requirement
+import nimph/git
 
 template crash(why: string) =
   ## a good way to exit nimph
@@ -114,7 +115,8 @@ proc nimbler*(args: seq[string]; log_level = logLevel; dry_run = false): int =
   if not nimble.ok:
     crash &"nimble didn't like that"
 
-proc pather*(names: seq[string]; log_level = logLevel; dry_run = false): int =
+proc pather*(names: seq[string]; strict = false;
+             log_level = logLevel; dry_run = false): int =
   ## cli entry to echo the path(s) of any dependencies
 
   # user's choice, our default
@@ -138,11 +140,16 @@ proc pather*(names: seq[string]; log_level = logLevel; dry_run = false): int =
     group.add dependency.requirement, dependency
 
   for name in names.items:
-    let found = group.pathForName(name)
+    var
+      found = group.pathForName(name)
+      nature = "dependency"
+    if found.isNone and not strict:
+      found = group.projects.pathForName(name)
+      nature = "project"
     if found.isSome:
       echo found.get
     else:
-      error &"couldn't find `{name}` among our installed dependencies"
+      error &"couldn't find a {nature} importable as `{name}`"
       echo ""      # a failed find produces empty output
       result = 1   # and sets the return code to nonzero
 
@@ -185,18 +192,18 @@ proc rollChild(child: var Project; requirement: Requirement;
   block:
     if child.dist != Git:
       break
-    if child.name in ["Nim", "nim", "compiler"]:
+    if child.name.toLowerAscii in ["nim", "compiler"]:
       debug &"ignoring the compiler"
       break
 
-    # this would be... odd
-    if goal == Specific:
-      raise newException(Defect, "not implemented")
-
     # if there's no suitable release available, we're done
-    if not child.betterReleaseExists(goal):
-      debug &"no {goal} available for {child.name}"
-      break
+    case goal:
+    of Upgrade, Downgrade:
+      if not child.betterReleaseExists(goal):
+        debug &"no {goal} available for {child.name}"
+        break
+    of Specific:
+      discard
 
     # if we're successful in rolling the project, we're done
     result = child.roll(requirement, goal = goal, dry_run = dry_run)
@@ -215,8 +222,10 @@ proc rollChild(child: var Project; requirement: Requirement;
       if child.version > best:
         notice &"the earliest {child.name} release of {best} is masked"
         break
-    else:
+    of Specific:
       discard
+
+    # the user expected a change and got none
     if not dry_run:
       warn &"unable to {goal} {child.name}"
 
@@ -277,16 +286,17 @@ proc graphDep(dependency: var Dependency; requirement: Requirement;
       if log_level <= lvlInfo:
         project.fetchTagTable
         if project.tags != nil and project.tags.len > 0:
-          info "releases:"
+          info "tagged release commits:"
           for tag, thing in project.tags.pairs:
             info &"    tag: {tag:<20} {thing}"
       # show versions for info or less
       if log_level <= lvlInfo:
         let versions = project.versionChangingCommits
         if versions != nil and versions.len > 0:
-          info "versions:"
+          info "untagged version commits:"
           for ver, thing in versions.pairs:
-            info &"    ver: {ver:<20} {thing}"
+            if not project.tags.hasThing(thing):
+              info &"    ver: {ver:<20} {thing}"
 
 proc grapher*(names: seq[string]; log_level = logLevel; dry_run = false): int =
   ## graph requirements for the project or any of its dependencies
@@ -589,6 +599,7 @@ when isMainModule:
       "fix":         @[$scDoctor],
       "fetch":       @[$scRun, "--", "git", "fetch"],
       "pull":        @[$scRun, "--", "git", "pull"],
+      "roll":        @[$scRoll, "--goal=specific"],
       "downgrade":   @[$scRoll, "--goal=downgrade"],
       "upgrade":     @[$scRoll, "--goal=upgrade"],
       "outdated":    @[$scRoll, "--goal=upgrade", "--dry-run"],
@@ -600,11 +611,13 @@ when isMainModule:
 
     # add in the default subcommands
     for sub in SubCommand.low .. SubCommand.high:
-      result[$sub] = @[$sub]
+      if $sub notin result:
+        result[$sub] = @[$sub]
 
     # associate known nimble subcommands
     for sub in passthrough.items:
-      result[sub] = @[$scNimble, sub]
+      if sub notin result:
+        result[sub] = @[$scNimble, sub]
 
   const
     # these are our subcommands that we want to include in help
