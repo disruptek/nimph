@@ -30,3 +30,4 @@ task test, "run tests for travis":
   execTest("tests/tspec.nim")
   execTest("tests/tnimble.nim")
   execTest("tests/tgit.nim")
+  execTest("tests/ttags.nim")
