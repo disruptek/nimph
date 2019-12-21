@@ -42,7 +42,7 @@ output (and optional repair) of the environment it finds itself in.
 - [Quickly Forking an Installed Package](https://github.com/disruptek/nimph#fork)
 - [Finding a Path via Nim Import Name](https://github.com/disruptek/nimph#path)
 - [Locking the Dependency Tree by Name](https://github.com/disruptek/nimph#lock)
-- [Rolling the Dependency Tree by Name](https://github.com/disruptek/nimph#unlock)
+- [Specifying Arbitrary Package Versions](https://github.com/disruptek/nimph#roll)
 - [Upgrading Dependencies Automatically](https://github.com/disruptek/nimph#upgrade)
 - [Downgrading Dependencies Automatically](https://github.com/disruptek/nimph#downgrade)
 - [Cutting New Release Versions+Tags](https://github.com/disruptek/nimph#bump)
