@@ -10,14 +10,10 @@
         },
         "requirement": {
           "identity": "github",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              1,
-              0,
-              2
-            ]
+            "operator": "#",
+            "reference": "1.0.2"
           }
         },
         "dist": "git"
@@ -31,35 +27,27 @@
         },
         "requirement": {
           "identity": "npeg",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              0,
-              20,
-              0
-            ]
+            "operator": "#",
+            "reference": "0.21.3"
           }
         },
         "dist": "git"
       },
       "rest": {
         "name": "rest",
-        "url": "git@github.com:disruptek/rest.git",
+        "url": "git://github.com/disruptek/rest.git",
         "release": {
           "operator": "#",
           "reference": "1.0.0"
         },
         "requirement": {
           "identity": "https://github.com/disruptek/rest.git",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              1,
-              0,
-              0
-            ]
+            "operator": "#",
+            "reference": "1.0.0"
           }
         },
         "dist": "git"
@@ -73,14 +61,10 @@
         },
         "requirement": {
           "identity": "foreach",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              1,
-              0,
-              0
-            ]
+            "operator": "#",
+            "reference": "1.0.2"
           }
         },
         "dist": "git"
@@ -94,35 +78,27 @@
         },
         "requirement": {
           "identity": "cligen",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              0,
-              9,
-              41
-            ]
+            "operator": "#",
+            "reference": "v0.9.41"
           }
         },
         "dist": "git"
       },
       "bump": {
         "name": "bump",
-        "url": "git@github.com:disruptek/bump.git",
+        "url": "https://github.com/disruptek/bump",
         "release": {
           "operator": "#",
-          "reference": "1.8.17"
+          "reference": "1.8.18"
         },
         "requirement": {
           "identity": "bump",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              1,
-              8,
-              17
-            ]
+            "operator": "#",
+            "reference": "1.8.18"
           }
         },
         "dist": "git"
@@ -136,14 +112,10 @@
         },
         "requirement": {
           "identity": "https://github.com/disruptek/cutelog",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              1,
-              1,
-              0
-            ]
+            "operator": "#",
+            "reference": "1.1.1"
           }
         },
         "dist": "git"
@@ -157,14 +129,10 @@
         },
         "requirement": {
           "identity": "nimgit2",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              0,
-              1,
-              1
-            ]
+            "operator": "#",
+            "reference": "v0.1.1"
           }
         },
         "dist": "git"
@@ -174,39 +142,31 @@
         "url": "https://github.com/genotrance/nimterop.git",
         "release": {
           "operator": "#",
-          "reference": "v0.3.5"
+          "reference": "v0.3.6"
         },
         "requirement": {
           "identity": "nimterop",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              0,
-              3,
-              3
-            ]
+            "operator": "#",
+            "reference": "v0.3.6"
           }
         },
         "dist": "git"
       },
       "regex": {
         "name": "regex",
-        "url": "git://github.com/nitely/nim-regex.git",
+        "url": "https://github.com/nitely/nim-regex",
         "release": {
           "operator": "#",
           "reference": "v0.13.0"
         },
         "requirement": {
           "identity": "regex",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              0,
-              10,
-              0
-            ]
+            "operator": "#",
+            "reference": "v0.13.0"
           }
         },
         "dist": "git"
@@ -220,14 +180,10 @@
         },
         "requirement": {
           "identity": "unicodedb",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              0,
-              7,
-              2
-            ]
+            "operator": "#",
+            "reference": "v0.7.2"
           }
         },
         "dist": "git"
@@ -241,14 +197,10 @@
         },
         "requirement": {
           "identity": "unicodeplus",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              0,
-              5,
-              0
-            ]
+            "operator": "#",
+            "reference": "v0.5.1"
           }
         },
         "dist": "git"
@@ -258,18 +210,14 @@
         "url": "https://github.com/stefantalpalaru/nim-unittest2",
         "release": {
           "operator": "#",
-          "reference": "183eaaa57714694694f5dea5f896556db4b96325"
+          "reference": "30c7d332d8ebab28d3240018f48f145ff20af239"
         },
         "requirement": {
           "identity": "https://github.com/stefantalpalaru/nim-unittest2",
-          "operator": ">=",
+          "operator": "#",
           "release": {
-            "operator": "==",
-            "version": [
-              0,
-              0,
-              1
-            ]
+            "operator": "#",
+            "reference": "30c7d332d8ebab28d3240018f48f145ff20af239"
           }
         },
         "dist": "git"
@@ -279,14 +227,14 @@
         "url": "git@github.com:disruptek/nimph.git",
         "release": {
           "operator": "#",
-          "reference": "0.5.2"
+          "reference": "ce2d0a8dbf129b05f681438e2d21f932142eb5e6"
         },
         "requirement": {
           "identity": "nimph",
           "operator": "#",
           "release": {
             "operator": "#",
-            "reference": "0.5.2"
+            "reference": "ce2d0a8dbf129b05f681438e2d21f932142eb5e6"
           }
         },
         "dist": "git"

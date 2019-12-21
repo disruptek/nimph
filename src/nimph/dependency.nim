@@ -427,7 +427,7 @@ proc newDependency*(project: Project): Dependency =
 
 proc mergeContents(existing: var Dependency; dependency: Dependency): bool =
   ## combine two dependencies and yield true if a new project is added
-  # add the requirement to the existing requirement
+  # add the requirement as a child of the existing requirement
   existing.requirement.adopt dependency.requirement
   # adding the packages as a group will work
   existing.add dependency.packages
@@ -460,8 +460,8 @@ proc add*(group: var DependencyGroup; req: Requirement; dep: Dependency) =
   group.table.add req, dep
   group.addName req, dep
 
-proc addedRequirements(dependencies: var DependencyGroup;
-                       dependency: var Dependency): bool =
+proc addedRequirements*(dependencies: var DependencyGroup;
+                        dependency: var Dependency): bool =
   ## add a dependency to the group and return true if the
   ## addition added new requirements to the group
   let
@@ -469,27 +469,40 @@ proc addedRequirements(dependencies: var DependencyGroup;
   var
     existing: Dependency
 
-  # look for an existing dependency to merge into
-  block found:
-    # check to see if an existing project will work
-    for req, dep in dependencies.pairs:
-      for directory, project in dep.projects.pairs:
-        if required.isSatisfiedBy(project):
-          existing = dep
-          break found
-    # failing that, check to see if an existing package matches
-    for req, dep in dependencies.pairs:
-      for url, package in dep.packages.pairs:
-        if package.url in dependency.packages:
-          existing = dep
-          break found
-    # found nothing; install the dependency in the group
-    dependencies.add required, dependency
-    # we've added requirements we can analyze only if projects exist
-    result = dependency.projects.len > 0
+  block complete:
 
-  # if we found a good merge target, then merge our existing dependency
-  if existing != nil:
+    # we're looking for an existing dependency to merge into
+    block found:
+
+      # check to see if an existing project will work
+      for req, dep in dependencies.mpairs:
+        for directory, project in dep.projects.mpairs:
+          if required.isSatisfiedBy(project):
+            existing = dep
+            break found
+
+      # failing that, check to see if an existing package matches
+      for req, dep in dependencies.mpairs:
+        for url, package in dep.packages.pairs:
+          if package.url in dependency.packages:
+            existing = dep
+            break found
+
+      # as a last ditch effort which will be used for lockfile/unlock,
+      # try to match against an identity in the requirements exactly
+      for req, dep in dependencies.mpairs:
+        for child in req.orphans:
+          if child.identity == required.identity:
+            existing = dep
+            break found
+
+      # found nothing; install the dependency in the group
+      dependencies.add required, dependency
+      # we've added requirements we can analyze only if projects exist
+      result = dependency.projects.len > 0
+      break complete
+
+    # if we found a good merge target, then merge our existing dependency
     result = existing.mergeContents dependency
     # point to the merged dependency
     dependency = existing

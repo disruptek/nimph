@@ -135,10 +135,11 @@ proc hash*(req: Requirement): Hash =
 
 proc adopt*(parent: var Requirement; child: Requirement) =
   ## combine two requirements
-  if parent.child == nil:
-    parent.child = child
-  else:
-    parent.child.adopt child
+  if parent != child:
+    if parent.child == nil:
+      parent.child = child
+    else:
+      parent.child.adopt child
 
 iterator children*(parent: Requirement; andParent = false): Requirement =
   ## yield the children of a parent requirement

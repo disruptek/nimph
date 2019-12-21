@@ -118,12 +118,13 @@ proc add*[K: Uri, V](group: Group[K, V]; url: Uri; value: V) =
   group.table.add url, value
   group.addName url
 
-iterator pairs*[K, V](group: Group[K, V]): (K, V) =
+iterator pairs*[K, V](group: Group[K, V]): tuple[key: K; val: V] =
   for key, value in group.table.pairs:
     yield (key: key, val: value)
 
 {.warning: "nim bug #12945".}
-iterator mpairs*[K, V](group: var Group[K, V]): (K, var V) =
+#iterator mpairs*[K, V](group: var Group[K, V]): tuple[key: K; val: var V] =
+iterator mpairs*[K, V](group: Group[K, V]): tuple[key: K; val: var V] =
   for key, value in group.table.mpairs:
     #yield (key: key, val: value)
     yield (key, value)

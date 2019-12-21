@@ -90,7 +90,7 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
   result = true
   # but don't come back here
   state.kind = DrError
-  for requirement, dependency in group.pairs:
+  for requirement, dependency in group.mpairs:
     # if the dependency is being met,
     if dependency.isHappy:
       # but the version is not suitable,
@@ -146,7 +146,7 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
     # because it will make users happy sooner, and we love happy users
     else:
       block cloneokay:
-        for package in dependency.packages.values:
+        for package in dependency.packages.mvalues:
           var cloned: Project
           if project.clone(package.url, package.name, cloned):
             if cloned.rollTowards(requirement):
@@ -160,6 +160,7 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
             error &"error cloning {package}"
             # a subsequent iteration could clone successfully
         # no package was successfully cloned
+        notice &"unable to satisfy {requirement.describe}"
         result = false
 
     # okay, we did some stuff...  let's see where we are now

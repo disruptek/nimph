@@ -61,7 +61,9 @@ proc newLocker(requirement: Requirement): Locker =
   result = Locker(requirement: requirement)
 
 proc newLocker(req: Requirement; name: string; project: Project): Locker =
-  result = req.newLocker
+  ## we use the req's identity and the project's release; this might need
+  ## to change to simply use the project name, depending on an option...
+  result = newRequirement(req.identity, Equal, project.release).newLocker
   result.url = project.url
   result.name = name
   result.dist = project.dist
@@ -69,7 +71,7 @@ proc newLocker(req: Requirement; name: string; project: Project): Locker =
 
 proc newLockerRoom*(project: Project; flags = defaultFlags): LockerRoom =
   let
-    requirement = newRequirement(project.importName, Equal, project.release)
+    requirement = newRequirement(project.name, Equal, project.release)
   result = newLockerRoom(flags = flags)
   result.root = newLocker(requirement, rootName, project)
 
@@ -114,9 +116,12 @@ proc populate(room: var LockerRoom; dependencies: DependencyGroup): bool =
 proc populate(dependencies: var DependencyGroup;
               room: LockerRoom; project: Project): bool =
   result = true
-  for name, locker in room.pairs:
-    dependencies.add locker.requirement, newDependency(locker.requirement)
-    result = result and project.resolve(dependencies, locker.requirement)
+  for locker in room.values:
+    var
+      req = newRequirement(locker.requirement.identity, Equal, locker.release)
+      dependency = req.newDependency
+    discard dependencies.addedRequirements(dependency)
+    result = result and project.resolve(dependencies, req)
 
 proc toJson*(locker: Locker): JsonNode =
   result = newJObject()
@@ -186,6 +191,8 @@ proc unlock*(project: var Project; name: string; flags = defaultFlags): bool =
     var
       state = DrState(kind: DrRetry)
     while state.kind == DrRetry:
+      # it's our game to lose
+      result = true
       # resolve dependencies for the lock
       if not dependencies.populate(room, project):
         notice &"unable to resolve all dependencies for `{name}`"
@@ -193,6 +200,7 @@ proc unlock*(project: var Project; name: string; flags = defaultFlags): bool =
         state.kind = DrError
       # see if we can converge the environment to the lock
       elif not project.fixDependencies(dependencies, state):
+        notice "failed to fix all dependencies"
         result = false
       # if the doctor doesn't want us to try again, we're done
       if state.kind notin {DrRetry}:
