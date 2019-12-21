@@ -406,7 +406,7 @@ template withGit(body: untyped) =
   once:
     if not init():
       raise newException(OSError, "unable to init git")
-  when false:
+  when defined(gitShutsDown):
     defer:
       if not shutdown():
         raise newException(OSError, "unable to shut git")
