@@ -250,6 +250,47 @@ unsafe lock of `regex` for regex>=0.10.0 as #ff6ab8297c72f30e4da34daa9e8a60075ce
 rolled to #e3243f6ff2d05290f9c6f1e3d3f1c725091d60ab to meet git://github.com/disruptek/cutelog.git##1.1.1
 ```
 
+### Roll
+
+The `roll` subcommand lets you supply arbitrary requirements which are
+evaluated exactly as if they appeared in your package specification file. For
+shell escaping reasons, each such requirement should be a quoted string.
+
+```
+$ nimph roll "nimterop == 0.3.4"
+rolled to #v0.3.4 to meet nimterop>=0.3.3
+👌nimph is lookin' good
+```
+
+Nimph will ensure that the new requirement doesn't break any existing
+requirements of the project or any of its dependencies.
+
+```
+$ nimph roll "nimterop > 6"
+nimterop*6 unmet by nimterop-#v0.3.4
+failed to fix all dependencies
+👎nimph is not where you want it
+```
+
+As Nimble does not yet support caret (`^`), tilde (`~`), or wildcard (`*`),
+`roll` is the only way to experiment with these operators in requirements.
+
+```
+$ nimph roll "nimterop 0.3.*"
+rolled to #v0.3.6 to meet nimterop>=0.3.3
+👌nimph is lookin' good
+```
+
+You can also use `roll` to resolve packages that are named in Nimble's official
+package directory but aren't hosted on GitHub.
+
+```
+$ nimph roll nesm
+👭cloning https://gitlab.com/xomachine/NESM.git...
+rolled to #v0.4.5 to meet nesm**
+👌xs is lookin' good
+```
+
 ### Upgrade
 
 The `upgrade` subcommand resolves the project's dependencies and attempts to

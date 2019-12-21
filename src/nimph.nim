@@ -246,24 +246,74 @@ proc roller*(names: seq[string]; goal: RollGoal;
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
-  if names.len == 0:
-    for requirement, dependency in group.pairs:
-      for child in dependency.projects.mvalues:
-        if not child.rollChild(requirement, goal = goal, dry_run = dry_run):
+  # roll is basically three subcommands in one, two of which are similar
+  case goal:
+
+  # this is the odd-ball; we receive requirements and add them to the group,
+  # then we run fixDependencies to resolve them as best as can
+  of Specific:
+    if names.len == 0:
+      notice &"give me requirements as string arguments; eg. 'foo > 2.*'"
+      result = 1
+      return
+    else:
+      block doctor:
+        # parse the requirements as if we pulled them right outta a .nimble
+        let
+          requires = parseRequires(names.join(", "))
+        if requires.isNone:
+          notice &"unable to parse requirements statement(s)"
           result = 1
-  else:
-    for name in names.items:
-      let found = group.projectForName(name)
-      if found.isSome:
-        var child = found.get
-        let require = group.reqForProject(child)
-        if require.isNone:
-          let emsg = &"found `{name}` but not its requirement" # noqa
-          raise newException(ValueError, emsg)
-        if not child.rollChild(require.get, goal = goal, dry_run = dry_run):
-          result = 1
-      else:
-        error &"couldn't find `{name}` among our installed dependencies"
+          break doctor
+
+        # perform our usual dependency fixups using the doctor
+        var
+          state = DrState(kind: DrRetry)
+        while state.kind == DrRetry:
+          # everything seems groovy at the beginning
+          result = 0
+          # add each requirement to the dependency tree
+          for requirement in requires.get.values:
+            var
+              dependency = newDependency(requirement)
+            # we really don't care if requirements are added here
+            discard group.addedRequirements(dependency)
+            # make sure we can resolve the requirement
+            if not project.resolve(group, requirement):
+              notice &"unable to resolve dependencies for `{requirement}`"
+              result = 1
+              state.kind = DrError
+              # this is game over
+              break doctor
+          if not project.fixDependencies(group, state):
+            notice "failed to fix all dependencies"
+            result = 1
+          if state.kind notin {DrRetry}:
+            break
+          # reset the tree
+          group.reset(project)
+
+  # or, we receive import names (or not) and upgrade or downgrade them to
+  # opposite ends of the list of allowable versions, per our requirements
+  of Upgrade, Downgrade:
+    if names.len == 0:
+      for requirement, dependency in group.pairs:
+        for child in dependency.projects.mvalues:
+          if not child.rollChild(requirement, goal = goal, dry_run = dry_run):
+            result = 1
+    else:
+      for name in names.items:
+        let found = group.projectForName(name)
+        if found.isSome:
+          var child = found.get
+          let require = group.reqForProject(child)
+          if require.isNone:
+            let emsg = &"found `{name}` but not its requirement" # noqa
+            raise newException(ValueError, emsg)
+          if not child.rollChild(require.get, goal = goal, dry_run = dry_run):
+            result = 1
+        else:
+          error &"couldn't find `{name}` among our installed dependencies"
 
   if result == 0:
     fatal &"👌{project.name} is lookin' good"
@@ -599,7 +649,7 @@ when isMainModule:
       "fix":         @[$scDoctor],
       "fetch":       @[$scRun, "--", "git", "fetch"],
       "pull":        @[$scRun, "--", "git", "pull"],
-      "roll":        @[$scRoll, "--goal=specific"],
+      "roll":        @[$scRoll, "--goal=roll"],
       "downgrade":   @[$scRoll, "--goal=downgrade"],
       "upgrade":     @[$scRoll, "--goal=upgrade"],
       "outdated":    @[$scRoll, "--goal=upgrade", "--dry-run"],
@@ -699,6 +749,9 @@ when isMainModule:
 
       echo "\n    Some additional subcommands are implemented as aliases:"
       for alias, arguments in trueAliases.pairs:
+        # don't report aliases that are aliases of themselves 😜
+        if alias == arguments[0]:
+          continue
         let alias = "nimph " & alias
         echo &"""    {alias:>16} -> nimph {arguments.join(" ")}"""
     else:

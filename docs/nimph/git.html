@@ -1242,6 +1242,8 @@ function main() {
     title="branchRemoteName(buffer: var GitBuf; repo: GitRepository; branch: string): GitResultCode"><wbr />branch<wbr />Remote<wbr />Name<span class="attachedType">GitBuf</span></a></li>
   <li><a class="reference" href="#branchRemoteName%2CGitBuf%2Cstring%2Cstring"
     title="branchRemoteName(buffer: var GitBuf; path: string; branch: string): GitResultCode"><wbr />branch<wbr />Remote<wbr />Name<span class="attachedType">GitBuf</span></a></li>
+  <li><a class="reference" href="#hasThing%2CGitTagTable%2CGitThing"
+    title="hasThing(tags: GitTagTable; thing: GitThing): bool"><wbr />has<wbr />Thing<span class="attachedType">GitTagTable</span></a></li>
 
   </ul>
 </li>
@@ -2469,6 +2471,13 @@ try to fetch a single remote for a remote tracking branch
 try to fetch a single remote for a remote tracking branch
 
 </dd>
+<a id="hasThing,GitTagTable,GitThing"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#hasThing%2CGitTagTable%2CGitThing"><span class="Identifier">hasThing</span></a><span class="Other">(</span><span class="Identifier">tags</span><span class="Other">:</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">;</span> <span class="Identifier">thing</span><span class="Other">:</span> <a href="git.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+true if the thing is tagged
+
+</dd>
 
 </dl></div>
 <div class="section" id="15">
@@ -2581,7 +2590,7 @@ a version of gitTrap that expects failure; no error messages!
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-20 21:08:24 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-21 19:24:24 UTC</small>
       </div>
     </div>
   </div>

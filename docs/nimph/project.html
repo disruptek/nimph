@@ -978,6 +978,8 @@ function main() {
     title="setHeadToRelease(project: var Project; release: Release): bool"><wbr />set<wbr />Head<wbr />To<wbr />Release<span class="attachedType">Project</span></a></li>
   <li><a class="reference" href="#versionChangingCommits%2CProject"
     title="versionChangingCommits(project: var Project): VersionTags"><wbr />version<wbr />Changing<wbr />Commits<span class="attachedType">Project</span></a></li>
+  <li><a class="reference" href="#pathForName%2CProjectGroup%2Cstring"
+    title="pathForName(group: ProjectGroup; name: string): Option[string]"><wbr />path<wbr />For<wbr />Name<span class="attachedType">ProjectGroup</span></a></li>
 
   </ul>
 </li>
@@ -1598,6 +1600,14 @@ advance the head of a project to a particular release
 
 
 </dd>
+<a id="pathForName,ProjectGroup,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#pathForName%2CProjectGroup%2Cstring"><span class="Identifier">pathForName</span></a><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="project.html#ProjectGroup"><span class="Identifier">ProjectGroup</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+try to retrieve the directory for a given import name in the group
+
+</dd>
 
 </dl></div>
 <div class="section" id="15">
@@ -1745,7 +1755,7 @@ run some code in the body if you can, and then return the project to where it wa
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-20 21:08:25 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-21 19:24:25 UTC</small>
       </div>
     </div>
   </div>

@@ -889,9 +889,9 @@ function main() {
   <a class="reference reference-toplevel" href="#15" id="65">Iterators</a>
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#pairs.i%2CGroup%5BK%2CV%5D"
-    title="pairs[K, V](group: Group[K, V]): (K, V)"><wbr />pairs<span class="attachedType">Group</span></a></li>
+    title="pairs[K, V](group: Group[K, V]): tuple[key: K, val: V]"><wbr />pairs<span class="attachedType">Group</span></a></li>
   <li><a class="reference" href="#mpairs.i%2CGroup%5BK%2CV%5D"
-    title="mpairs[K, V](group: var Group[K, V]): (K, var V)"><wbr />mpairs<span class="attachedType">Group</span></a></li>
+    title="mpairs[K, V](group: Group[K, V]): tuple[key: K, val: var V]"><wbr />mpairs<span class="attachedType">Group</span></a></li>
   <li><a class="reference" href="#values.i%2CGroup%5BK%2CV%5D"
     title="values[K, V](group: Group[K, V]): V"><wbr />values<span class="attachedType">Group</span></a></li>
   <li><a class="reference" href="#keys.i%2CGroup%5BK%2CV%5D"
@@ -1075,14 +1075,14 @@ clear the group without any other disruption
 <h1><a class="toc-backref" href="#15">Iterators</a></h1>
 <dl class="item">
 <a id="pairs.i,Group[K,V]"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#pairs.i%2CGroup%5BK%2CV%5D"><span class="Identifier">pairs</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Other">(</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">)</span></pre></dt>
+<dt><pre><span class="Keyword">iterator</span> <a href="#pairs.i%2CGroup%5BK%2CV%5D"><span class="Identifier">pairs</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">val</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">]</span></pre></dt>
 <dd>
 
 
 
 </dd>
 <a id="mpairs.i,Group[K,V]"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#mpairs.i%2CGroup%5BK%2CV%5D"><span class="Identifier">mpairs</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Other">(</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Keyword">var</span> <span class="Identifier">V</span><span class="Other">)</span></pre></dt>
+<dt><pre><span class="Keyword">iterator</span> <a href="#mpairs.i%2CGroup%5BK%2CV%5D"><span class="Identifier">mpairs</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">val</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">V</span><span class="Other">]</span></pre></dt>
 <dd>
 
 
@@ -1126,7 +1126,7 @@ yield values in reverse order of entry
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-20 21:08:24 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-21 19:24:24 UTC</small>
       </div>
     </div>
   </div>
