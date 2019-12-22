@@ -41,8 +41,9 @@ proc hash*(locker: Locker): Hash =
   result = !$h
 
 proc hash*(room: LockerRoom): Hash =
+  ## the hash of a lockerroom is the hash of its root and all lockers
   var h: Hash = 0
-  for name, locker in room.pairs:
+  for locker in room.values:
     h = h !& locker.hash
   h = h !& room.root.hash
   result = !$h
@@ -70,6 +71,7 @@ proc newLocker(req: Requirement; name: string; project: Project): Locker =
   result.release = project.release
 
 proc newLockerRoom*(project: Project; flags = defaultFlags): LockerRoom =
+  ## a new lockerroom using the project release as the root
   let
     requirement = newRequirement(project.name, Equal, project.release)
   result = newLockerRoom(flags = flags)
@@ -77,6 +79,8 @@ proc newLockerRoom*(project: Project; flags = defaultFlags): LockerRoom =
 
 proc add*(room: var LockerRoom; req: Requirement; name: string;
           project: Project) =
+  ## create a new locker for the requirement from the project and
+  ## safely add it to the lockerroom
   var locker = newLocker(req, name, project)
   block found:
     for existing in room.values:
@@ -85,8 +89,9 @@ proc add*(room: var LockerRoom; req: Requirement; name: string;
         break found
     room.add name, locker
 
-proc populate(room: var LockerRoom; dependencies: DependencyGroup): bool =
-  ## fill a lockerroom with lockers
+proc fillRoom(room: var LockerRoom; dependencies: DependencyGroup): bool =
+  ## fill a lockerroom with lockers constructed from the dependency tree;
+  ## returns true if there were no missing/unready/shadowed dependencies
   result = true
   for requirement, dependency in dependencies.pairs:
     var shadowed = false
@@ -113,8 +118,10 @@ proc populate(room: var LockerRoom; dependencies: DependencyGroup): bool =
       warn &"shadowed project {project}"
       result = false
 
-proc populate(dependencies: var DependencyGroup;
+proc fillDeps(dependencies: var DependencyGroup;
               room: LockerRoom; project: Project): bool =
+  ## fill a dependency tree with lockers and run dependency resolution
+  ## using the project; returns true if there were no resolution failures
   result = true
   for locker in room.values:
     var
@@ -124,6 +131,7 @@ proc populate(dependencies: var DependencyGroup;
     result = result and project.resolve(dependencies, req)
 
 proc toJson*(locker: Locker): JsonNode =
+  ## convert a Locker to a JObject
   result = newJObject()
   result["name"] = newJString(locker.name)
   result["url"] = locker.url.toJson
@@ -132,6 +140,7 @@ proc toJson*(locker: Locker): JsonNode =
   result["dist"] = locker.dist.toJson
 
 proc toLocker*(js: JsonNode): Locker =
+  ## convert a JObject to a Locker
   let
     req = js["requirement"].toRequirement
   result = req.newLocker
@@ -141,12 +150,14 @@ proc toLocker*(js: JsonNode): Locker =
   result.dist = js["dist"].toDistMethod
 
 proc toJson*(room: LockerRoom): JsonNode =
+  ## convert a LockerRoom to a JObject
   result = newJObject()
   for name, locker in room.pairs:
     result[locker.name] = locker.toJson
   result[room.root.name] = room.root.toJson
 
 proc toLockerRoom*(js: JsonNode; name = ""): LockerRoom =
+  ## convert a JObject to a LockerRoom
   result = newLockerRoom(name)
   for name, locker in js.pairs:
     if name == rootName:
@@ -194,7 +205,7 @@ proc unlock*(project: var Project; name: string; flags = defaultFlags): bool =
       # it's our game to lose
       result = true
       # resolve dependencies for the lock
-      if not dependencies.populate(room, project):
+      if not dependencies.fillDeps(room, project):
         notice &"unable to resolve all dependencies for `{name}`"
         result = false
         state.kind = DrError
@@ -226,7 +237,7 @@ proc lock*(project: var Project; name: string; flags = defaultFlags): bool =
       break locked
 
     # if the lockerroom isn't confident, we can't lock the project
-    result = room.populate(dependencies)
+    result = room.fillRoom(dependencies)
     if not result:
       notice &"not confident enough to lock {project}"
       break locked

@@ -50,8 +50,10 @@ proc isSatisfiedBy(requirement: Requirement; version: Version): bool =
     op = requirement.operator
   case op:
   of Tag:
+    # try to parse a version from the tag and see if it matches exactly
     result = version == requirement.release.effectively
   of Caret:
+    # the caret logic is designed to match that of cargo
     block caret:
       let accepts = requirement.release.accepts
       for index, field in accepts.pairs:
@@ -67,6 +69,7 @@ proc isSatisfiedBy(requirement: Requirement; version: Version): bool =
           result = false
           break caret
   of Tilde:
+    # the tilde logic is designed to match that of cargo
     block tilde:
       let accepts = requirement.release.accepts
       for index, field in accepts.pairs:
@@ -77,16 +80,13 @@ proc isSatisfiedBy(requirement: Requirement; version: Version): bool =
           break tilde
       result = true
   of Wild:
-    block:
-      let accepts = requirement.release.accepts
-      # all the fields must be acceptable
-      if acceptable(accepts.major, op, version.major):
-        if acceptable(accepts.minor, op, version.minor):
-          if acceptable(accepts.patch, op, version.patch):
-            result = true
-            break
-      # or it's a failure
-      result = false
+    # wildcards match 3.1.* or simple strings like "3" (3.*.*)
+    let accepts = requirement.release.accepts
+    # all the fields must be acceptable
+    if acceptable(accepts.major, op, version.major):
+      if acceptable(accepts.minor, op, version.minor):
+        if acceptable(accepts.patch, op, version.patch):
+          result = true
   of Equal:
     result = version == requirement.release.version
   of AtLeast:
@@ -117,9 +117,10 @@ proc isSatisfiedBy*(req: Requirement; spec: Release): bool =
     # check if the wildcard matches everything (only Wild, in theory)
     if req.release.accepts.major.isNone:
       result = true
-    # otherwise, we have to compare it to a version
+    # otherwise, we might be able to treat it as a version
     elif spec.isSpecific:
       result = req.isSatisfiedBy spec.specifically
+    # else we're gonna have to abstract "3" to "3.0.0"
     else:
       result = req.isSatisfiedBy spec.effectively
 
@@ -164,16 +165,17 @@ proc newRequirement*(id: string; operator: Operator;
     result.operator = result.release.kind
   elif result.release in {Tag}:
     # eventually, we'll support tag comparisons...
+    {.warning: "tag comparisons unsupported".}
     result.operator = result.release.kind
   else:
     result.operator = operator
 
 proc newRequirement*(id: string; operator: Operator; spec: string): Requirement =
-  ## parse a requirement
+  ## parse a requirement from a string
   result = newRequirement(id, operator, newRelease(spec, operator = operator))
 
 proc newRequirement(id: string; operator: string; spec: string): Requirement =
-  ## parse a requirement
+  ## parse a requirement with the given operator from a string
   var
     op = Equal
   # using "" to mean "==" was retarded and i refuse to map my Equal
@@ -190,7 +192,7 @@ iterator orphans*(parent: Requirement): Requirement =
 
 proc parseRequires*(input: string): Option[Requires] =
   ## parse a `requires` string output from `nimble dump`
-  ## also supports `~` and `^` operators a la cargo
+  ## also supports `~` and `^` and `*` operators a la cargo
   var
     requires = Requires()
     lastname: string
@@ -234,15 +236,24 @@ proc isUrl*(requirement: Requirement): bool =
   ## a terrible way to determine if the requirement is a url
   result = ':' in requirement.identity
 
+proc asUrlAnchor*(release: Release): string =
+  ## produce a suitable url anchor referencing a release
+  case release.kind:
+  of Tag:
+    result = release.reference
+  of Equal:
+    result = $release.version
+  else:
+    raise newException(Defect, "not yet implemented")
+
 proc toUrl*(requirement: Requirement): Option[Uri] =
   ## try to determine the distribution url for a requirement
-  var url: Uri
   # if it could be a url, try to parse it as such
   if requirement.isUrl:
     try:
-      url = parseUri(requirement.identity)
+      var url = parseUri(requirement.identity)
       if requirement.release.kind in {Equal, Tag}:
-        url.anchor = $requirement.release
+        url.anchor = requirement.release.asUrlAnchor
         removePrefix(url.anchor, {'#'})
       result = url.some
     except:

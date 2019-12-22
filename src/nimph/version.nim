@@ -303,7 +303,7 @@ proc effectively*(release: Release): Version =
   else:
     raise newException(Defect, "not implemented")
 
-proc contains*(kinds: set[Operator]; spec: Release): bool =
+proc contains*(kinds: set[Operator]; spec: Release): bool {.deprecated.} =
   ## convenience
   result = kinds.contains(spec.kind)
 

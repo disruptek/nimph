@@ -67,10 +67,13 @@ iterator richen*(tags: GitTagTable): tuple[release: Release; thing: GitThing] =
     raise newException(Defect, "are you lost?")
   # we're yielding #someoid, #tag, and whatever we can parse (version, mask)
   for tag, thing in tags.pairs:
+    # someoid
     yield (release: newRelease($thing.oid, operator = Tag), thing: thing)
+    # tag
     yield (release: newRelease(tag, operator = Tag), thing: thing)
     let parsed = parseVersionLoosely(tag)
     if parsed.isSome:
+      # 3.1.4 or 3.1.*
       yield (release: parsed.get, thing: thing)
 
 proc releaseHashes*(release: Release; head = ""): HashSet[Hash] =
@@ -104,6 +107,7 @@ proc releaseHashes*(release: Release; thing: GitThing; head = ""): HashSet[Hash]
   ## the thing is presumed to be an associated tag/commit/etc and we
   ## should include useful hashes for it
   result = release.releaseHashes(head = head)
+  # when we have a commit, we'll add the hash of the commit and its oid string
   result.incl hash(thing)
   result.incl hash($thing.oid)
 
