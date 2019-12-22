@@ -245,6 +245,7 @@ proc asUrlAnchor*(release: Release): string =
     result = $release.version
   else:
     raise newException(Defect, "not yet implemented")
+  removePrefix(result, {'#'})
 
 proc toUrl*(requirement: Requirement): Option[Uri] =
   ## try to determine the distribution url for a requirement
@@ -254,7 +255,6 @@ proc toUrl*(requirement: Requirement): Option[Uri] =
       var url = parseUri(requirement.identity)
       if requirement.release.kind in {Equal, Tag}:
         url.anchor = requirement.release.asUrlAnchor
-        removePrefix(url.anchor, {'#'})
       result = url.some
     except:
       warn &"unable to parse requirement `{requirement.identity}`"

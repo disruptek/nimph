@@ -89,14 +89,7 @@ proc aimAt*(package: Package; req: Requirement): Package =
   var
     aim = package.url
   if aim.anchor == "":
-    case req.release.kind:
-    of Tag:
-      aim.anchor = req.release.reference
-      removePrefix(aim.anchor, {'#'})
-    of Equal:
-      aim.anchor = $req.release.version
-    else:
-      discard
+    aim.anchor = req.release.asUrlAnchor
 
   result = newPackage(name = package.name, dist = package.dist, url = aim)
   result.license = package.license
@@ -176,7 +169,7 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
           group.add node
         except Exception as e:
           notice node
-          warn &"error reading package: {e.msg}"
+          warn &"error parsing package: {e.msg}"
 
       # now add in the aliases we collected
       for name, alias in aliases.items:
@@ -214,12 +207,11 @@ proc toUrl*(requirement: Requirement; group: PackageGroup): Option[Uri] =
   # maybe stuff the reference into the anchor
   if result.isSome:
     url = result.get
-    if requirement.release.kind == Tag:
-      url.anchor = requirement.release.reference
-      removePrefix(url.anchor, {'#'})
+    url.anchor = requirement.release.asUrlAnchor
     result = url.some
 
 proc hasUrl*(group: PackageGroup; url: Uri): bool =
+  ## true if the url seems to match a package in the group
   for value in group.values:
     result = bareUrlsAreEqual(value.url.convertToGit,
                               url.convertToGit)
@@ -249,6 +241,7 @@ proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
           debug "matched the package by name"
 
 iterator urls*(group: PackageGroup): Uri =
+  ## yield (an ideally git) url for each package in the group
   for package in group.values:
     yield if package.dist == Git:
       package.url.convertToGit
