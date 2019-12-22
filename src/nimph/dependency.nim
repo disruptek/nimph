@@ -179,9 +179,11 @@ proc happyProvision(requirement: Requirement; release: Release;
           required = releaseHashes(req.release, head = head)
         block matched:
           for viable, thing in tags.matches(required):
-            # the release may be a viable match for the requirement,
-            # which we've already established is a tag
-            if viable == release:
+            # the requirement is a tag, so we simply compare the
+            # matches for the requirement against the provided release
+            # and a release composed of each match's commit hash
+            let candidate = newRelease($thing.oid, operator = Tag)
+            if release in [viable, candidate]:
               break matched
           break failed
       elif not req.isSatisfiedBy(release):
@@ -199,26 +201,24 @@ proc happyProvision(requirement: Requirement; release: Release;
 iterator matchingReleases(requirement: Requirement; head = "";
                           tags: GitTagTable): Release =
   ## yield releases that satisfy the requirement, using the head and tags
+  # we need to keep track if we've seen the head oid, because
+  # we don't want to issue it twice
+  var
+    sawTheHead = false
 
   if tags != nil:
-    # we need to keep track if we've seen the head oid, because
-    # we don't want to issue it twice
-    var
-      sawTheHead = false
-
-    if tags != nil:
-      for tag, thing in tags.pairs:
-        let
-          release = newRelease($thing.oid, operator = Tag)
-        if requirement.happyProvision(release, head = head, tags = tags):
-          sawTheHead = sawTheHead or $thing.oid == head
-          yield release
-
-    if head != "" and not sawTheHead:
+    for tag, thing in tags.pairs:
       let
-        release = newRelease(head, operator = Tag)
+        release = newRelease($thing.oid, operator = Tag)
       if requirement.happyProvision(release, head = head, tags = tags):
+        sawTheHead = sawTheHead or $thing.oid == head
         yield release
+
+  if head != "" and not sawTheHead:
+    let
+      release = newRelease(head, operator = Tag)
+    if requirement.happyProvision(release, head = head, tags = tags):
+      yield release
 
 iterator symbolicMatch*(project: Project; req: Requirement): Release =
   ## see if a project can match a given requirement symbolically
