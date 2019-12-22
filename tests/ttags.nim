@@ -45,6 +45,6 @@ suite "tags":
       for release, thing in project.tags.richen:
         checkpoint $release
         checkpoint $thing
-        if release == newRelease("0.4.0", operator = Tag):
+        if release == newRelease("0.6.0", operator = Tag):
           break found
       check false
