@@ -324,6 +324,8 @@ iterator packagePaths*(config: ConfigRef; exists = true): string =
     addOne(path)
   when defined(debugPath):
     debug &"package directory count: {paths.len}"
+
+  # finally, emit paths as appropriate
   for path in paths:
     if exists and not path.dirExists:
       continue
@@ -343,6 +345,8 @@ proc suggestNimbleDir*(config: ConfigRef; local = ""; global = ""): string =
       assert local.endsWith(DirSep)
       for search in config.likelySearch(libsToo = false):
         if search.startsWith(local):
+          # we've got a path statement pointing to a local path,
+          # so let's assume that the suggested local path is legit
           result = local
           break either
 
@@ -370,23 +374,25 @@ proc suggestNimbleDir*(config: ConfigRef; local = ""; global = ""): string =
     break either
 
 iterator pathSubsFor(config: ConfigRef; sub: string; conf: string): string =
-  ## a convenience to work around the compiler's broken pathSubs
-  if sub.toLowerAscii in ["nimbledir", "nimblepath"]:
+  ## a convenience to work around the compiler's broken pathSubs; the `conf`
+  ## string represents the path to the "current" configuration file
+  block:
+    if sub.toLowerAscii notin ["nimbledir", "nimblepath"]:
+      yield config.pathSubs(&"${sub}", conf) / ""
+      break
+
     when declaredInScope nimbleSubs:
       for path in config.nimbleSubs(&"${sub}"):
         yield path / ""
     else:
       # we have to pick the first lazy path because that's what Nimble does
-      block found:
-        for search in config.lazyPaths:
-          let search = search.string / ""
-          if search.endsWith(PkgDir & DirSep):
-            yield search.parentDir / ""
-          else:
-            yield search
-          break found
-  else:
-    yield config.pathSubs(&"${sub}", conf) / ""
+      for search in config.lazyPaths:
+        let search = search.string / ""
+        if search.endsWith(PkgDir & DirSep):
+          yield search.parentDir / ""
+        else:
+          yield search
+        break
 
 iterator pathSubstitutions(config: ConfigRef; path: string;
                            conf: string; write: bool): string =
@@ -437,17 +443,17 @@ proc removeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
   let
     fn = $nimcfg
 
-  block success:
+  block complete:
     # well, that was easy
     if not fn.fileExists:
-      break success
+      break complete
 
     # make sure we can parse the configuration with the compiler
     let
       cfg = fn.loadProjectCfg
     if cfg.isNone:
       error &"the compiler couldn't parse {nimcfg}"
-      break success
+      break complete
 
     # make sure we can parse the configuration using our "naive" npeg parser
     let
@@ -455,7 +461,7 @@ proc removeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
     if not parsed.ok:
       error &"could not parse {nimcfg} naïvely:"
       error parsed.why
-      break success
+      break complete
 
     # sanity
     when defined(debug):
@@ -493,22 +499,29 @@ proc removeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
     fn.writeFile(content)
 
 proc addSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
+  ## add the given path to the given config file, using the compiler's
+  ## configuration as input to determine the best path substitution
   let
     best = config.bestPathSubstitution(path, $nimcfg.repo)
   result = appendConfig(nimcfg, &"""--path="{best}"""")
 
 proc excludeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
+  ## add an exclusion for the given path to the given config file, using the
+  ## compiler's configuration as input to determine the best path substitution
   let
     best = config.bestPathSubstitution(path, $nimcfg.repo)
   result = appendConfig(nimcfg, &"""--excludePath="{best}"""")
 
 iterator extantSearchPaths*(config: ConfigRef; least = 0): string =
-  ## yield existing search paths from the configuration as /-terminated strings
+  ## yield existing search paths from the configuration as /-terminated strings;
+  ## this will yield library paths and nimblePaths with at least `least` uses
   if config == nil:
     raise newException(Defect, "attempt to load search paths from nil config")
+  # path statements
   for path in config.likelySearch(libsToo = true):
     if dirExists(path):
       yield path
+  # nimblePath statements
   for path in config.likelyLazy(least = least):
     if dirExists(path):
       yield path

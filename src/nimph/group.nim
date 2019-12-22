@@ -50,22 +50,26 @@ proc delName*(group: Group; key: string) =
     group.imports.del name
 
 proc del*[K: string, V](group: Group[K, V]; name: K) =
+  ## remove from the group the named key and its associated value
   group.table.del name
   group.delName name
 
 proc del*[K: Uri, V](group: Group[K, V]; url: K) =
+  ## remove from the group the url key and its associated value
   group.table.del url
   group.delName $url
 
 {.warning: "nim bug #12818".}
 proc len*[K, V](group: Group[K, V]): int =
+  ## number of elements in the group
   result = group.table.len
 
 proc len*(group: Group): int =
+  ## number of elements in the group
   result = group.table.len
 
 proc get*[K: string, V](group: Group[K, V]; key: K): V =
-  ## fetch a package from the group using style-insensitive lookup
+  ## fetch a value from the group using style-insensitive lookup
   if group.table.hasKey(key):
     result = group.table[key]
   elif group.imports.hasKey(key.importName):
@@ -75,7 +79,7 @@ proc get*[K: string, V](group: Group[K, V]; key: K): V =
     raise newException(KeyError, emsg)
 
 proc mget*[K: string, V](group: var Group[K, V]; key: K): var V =
-  ## fetch a package from the group using style-insensitive lookup
+  ## fetch a value from the group using style-insensitive lookup
   if group.table.hasKey(key):
     result = group.table[key]
   elif group.imports.hasKey(key.importName):
@@ -85,14 +89,15 @@ proc mget*[K: string, V](group: var Group[K, V]; key: K): var V =
     raise newException(KeyError, emsg)
 
 proc `[]`*[K, V](group: var Group[K, V]; key: K): var V =
-  ## fetch a package from the group using style-insensitive lookup
+  ## fetch a value from the group using style-insensitive lookup
   result = group.mget(key)
 
 proc `[]`*[K, V](group: Group[K, V]; key: K): V =
-  ## fetch a package from the group using style-insensitive lookup
+  ## fetch a value from the group using style-insensitive lookup
   result = group.get(key)
 
 proc add*[K: string, V](group: Group[K, V]; key: K; value: V) =
+  ## add a key and value to the group
   group.table.add key, value
   group.addName(key.importName, key)
 
@@ -119,6 +124,7 @@ proc add*[K: Uri, V](group: Group[K, V]; url: Uri; value: V) =
   group.addName url
 
 iterator pairs*[K, V](group: Group[K, V]): tuple[key: K; val: V] =
+  ## standard key/value pairs iterator
   for key, value in group.table.pairs:
     yield (key: key, val: value)
 
@@ -130,21 +136,26 @@ iterator mpairs*[K, V](group: Group[K, V]): tuple[key: K; val: var V] =
     yield (key, value)
 
 iterator values*[K, V](group: Group[K, V]): V =
+  ## standard value iterator
   for value in group.table.values:
     yield value
 
 iterator keys*[K, V](group: Group[K, V]): K =
+  ## standard key iterator
   for key in group.table.keys:
     yield key
 
 iterator mvalues*[K, V](group: var Group[K, V]): var V =
+  ## standard mutable value iterator
   for value in group.table.mvalues:
     yield value
 
 proc hasKey*[K, V](group: Group[K, V]; key: K): bool =
+  ## true if the group contains the given key
   result = group.table.hasKey(key)
 
 proc contains*[K, V](group: Group[K, V]; key: K): bool =
+  ## true if the group contains the given key or its importName
   result = group.table.contains(key) or group.imports.contains(key.importName)
 
 proc contains*[K, V](group: Group[K, V]; url: Uri): bool =
@@ -155,6 +166,7 @@ proc contains*[K, V](group: Group[K, V]; url: Uri): bool =
       break
 
 proc contains*[K, V](group: Group[K, V]; value: V): bool =
+  ## true if the group contains the given value
   for v in group.values:
     if v == value:
       result = true
