@@ -1272,7 +1272,7 @@ find the current release tag of a project
     <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-find the current release tag of a project
+convenience to fetch tags and then find the current release tag
 
 </dd>
 <a id="inventRelease,Project"></a>
@@ -1308,7 +1308,7 @@ determine the source url for a project which may be local
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+if we come up with a new url for the project, write it to a nimblemeta.json
 
 </dd>
 <a id="refresh,Project"></a>
@@ -1329,7 +1329,7 @@ appropriate to run to scan for and set some basic project data
     <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-locate a project starting from <tt class="docutils literal"><span class="pre">dir</span></tt>
+locate a project starting from <tt class="docutils literal"><span class="pre">dir</span></tt> and set its parent if applicable
 
 </dd>
 <a id="newProjectGroup,set[Flag]"></a>
@@ -1426,7 +1426,7 @@ exclude a search path from the project's nim.cfg
     <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-add a search path to the given project's configuration
+add a search path to the given project's configuration; true if we added the search path
 
 </dd>
 <a id="addMissingSearchPathsTo,Project,Project"></a>
@@ -1538,21 +1538,28 @@ true if a project's git repo is ready to be locked
 
 </dd>
 <a id="bestRelease,GitTagTable,RollGoal"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#bestRelease%2CGitTagTable%2CRollGoal"><span class="Identifier">bestRelease</span></a><span class="Other">(</span><span class="Identifier">tags</span><span class="Other">:</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">;</span> <span class="Identifier">goal</span><span class="Other">:</span> <a href="spec.html#RollGoal"><span class="Identifier">RollGoal</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Version</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+<dt><pre><span class="Keyword">proc</span> <a href="#bestRelease%2CGitTagTable%2CRollGoal"><span class="Identifier">bestRelease</span></a><span class="Other">(</span><span class="Identifier">tags</span><span class="Other">:</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">;</span> <span class="Identifier">goal</span><span class="Other">:</span> <a href="spec.html#RollGoal"><span class="Identifier">RollGoal</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Version</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">deprecated</span><span class="Other">,</span>
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
-the most ideal tagged release parsable as a version
+the most ideal tagged release parsable as a version; we should probably use versiontags for this now
 
 </dd>
 <a id="betterReleaseExists,GitTagTable,RollGoal,Version"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#betterReleaseExists%2CGitTagTable%2CRollGoal%2CVersion"><span class="Identifier">betterReleaseExists</span></a><span class="Other">(</span><span class="Identifier">tags</span><span class="Other">:</span> <a href="git.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">;</span> <span class="Identifier">goal</span><span class="Other">:</span> <a href="spec.html#RollGoal"><span class="Identifier">RollGoal</span></a><span class="Other">;</span> <span class="Identifier">version</span><span class="Other">:</span> <span class="Identifier">Version</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">deprecated</span><span class="Other">,</span>
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
-true if there is an ideal version available
+true if there is an ideal version available; we should probably use versiontags for this now
 
 </dd>
 <a id="betterReleaseExists,Project,RollGoal"></a>
@@ -1561,7 +1568,7 @@ true if there is an ideal version available
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-true if there is a (more) ideal version available
+true if there is a (more) ideal version available; we should probably use versiontags for this now
 
 </dd>
 <a id="betterReleaseExists,Project,RollGoal_2"></a>
@@ -1755,7 +1762,7 @@ run some code in the body if you can, and then return the project to where it wa
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-21 19:24:25 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-22 21:09:52 UTC</small>
       </div>
     </div>
   </div>

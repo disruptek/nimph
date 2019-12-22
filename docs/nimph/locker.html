@@ -939,7 +939,7 @@ function main() {
 <dt><pre><span class="Keyword">proc</span> <a href="#hash%2CLockerRoom"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">room</span><span class="Other">:</span> <a href="locker.html#LockerRoom"><span class="Identifier">LockerRoom</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+the hash of a lockerroom is the hash of its root and all lockers
 
 </dd>
 <a id="newLockerRoom,string"></a>
@@ -954,7 +954,7 @@ function main() {
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+a new lockerroom using the project release as the root
 
 </dd>
 <a id="add,LockerRoom,Requirement,string,Project"></a>
@@ -962,28 +962,28 @@ function main() {
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+create a new locker for the requirement from the project and safely add it to the lockerroom
 
 </dd>
 <a id="toJson,Locker"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#toJson%2CLocker"><span class="Identifier">toJson</span></a><span class="Other">(</span><span class="Identifier">locker</span><span class="Other">:</span> <a href="locker.html#Locker"><span class="Identifier">Locker</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">JsonNode</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+convert a Locker to a JObject
 
 </dd>
 <a id="toLocker,JsonNode"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#toLocker%2CJsonNode"><span class="Identifier">toLocker</span></a><span class="Other">(</span><span class="Identifier">js</span><span class="Other">:</span> <span class="Identifier">JsonNode</span><span class="Other">)</span><span class="Other">:</span> <a href="locker.html#Locker"><span class="Identifier">Locker</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+convert a JObject to a Locker
 
 </dd>
 <a id="toJson,LockerRoom"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#toJson%2CLockerRoom"><span class="Identifier">toJson</span></a><span class="Other">(</span><span class="Identifier">room</span><span class="Other">:</span> <a href="locker.html#LockerRoom"><span class="Identifier">LockerRoom</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">JsonNode</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+convert a LockerRoom to a JObject
 
 </dd>
 <a id="toLockerRoom,JsonNode,string"></a>
@@ -991,7 +991,7 @@ function main() {
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+convert a JObject to a LockerRoom
 
 </dd>
 <a id="getLockerRoom,Project,string,LockerRoom"></a>
@@ -1048,7 +1048,7 @@ emit each lockerroom in the project's configuration
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-21 19:24:25 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-22 21:09:52 UTC</small>
       </div>
     </div>
   </div>

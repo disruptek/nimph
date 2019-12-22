@@ -954,63 +954,63 @@ remove a name from the group
 <dt><pre><span class="Keyword">proc</span> <a href="#del%2CGroup%5BK%3A+string%2CV%5D%2CK"><span class="Identifier">del</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span></pre></dt>
 <dd>
 
-
+remove from the group the named key and its associated value
 
 </dd>
 <a id="del,Group[K: Uri,V],K"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#del%2CGroup%5BK%3A+Uri%2CV%5D%2CK"><span class="Identifier">del</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span></pre></dt>
 <dd>
 
-
+remove from the group the url key and its associated value
 
 </dd>
 <a id="len,Group[K,V]"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#len%2CGroup%5BK%2CV%5D"><span class="Identifier">len</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
 <dd>
 
-
+number of elements in the group
 
 </dd>
 <a id="len,Group"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#len%2CGroup"><span class="Identifier">len</span></a><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
 <dd>
 
-
+number of elements in the group
 
 </dd>
 <a id="get,Group[K: string,V],K"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#get%2CGroup%5BK%3A+string%2CV%5D%2CK"><span class="Identifier">get</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">V</span></pre></dt>
 <dd>
 
-fetch a package from the group using style-insensitive lookup
+fetch a value from the group using style-insensitive lookup
 
 </dd>
 <a id="mget,Group[K: string,V],K"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#mget%2CGroup%5BK%3A+string%2CV%5D%2CK"><span class="Identifier">mget</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">V</span></pre></dt>
 <dd>
 
-fetch a package from the group using style-insensitive lookup
+fetch a value from the group using style-insensitive lookup
 
 </dd>
 <a id="[],Group[K,V],K"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%2CGroup%5BK%2CV%5D%2CK"><span class="Identifier">`[]`</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">V</span></pre></dt>
 <dd>
 
-fetch a package from the group using style-insensitive lookup
+fetch a value from the group using style-insensitive lookup
 
 </dd>
 <a id="[],Group[K,V],K_2"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%2CGroup%5BK%2CV%5D%2CK_2"><span class="Identifier">`[]`</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">V</span></pre></dt>
 <dd>
 
-fetch a package from the group using style-insensitive lookup
+fetch a value from the group using style-insensitive lookup
 
 </dd>
 <a id="add,Group[K: string,V],K,V"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#add%2CGroup%5BK%3A+string%2CV%5D%2CK%2CV"><span class="Identifier">add</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">;</span> <span class="Identifier">value</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">)</span></pre></dt>
 <dd>
 
-
+add a key and value to the group
 
 </dd>
 <a id="add,Group[K: string,V],Uri,V"></a>
@@ -1038,14 +1038,14 @@ add a (full) url as a key
 <dt><pre><span class="Keyword">proc</span> <a href="#hasKey%2CGroup%5BK%2CV%5D%2CK"><span class="Identifier">hasKey</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
 <dd>
 
-
+true if the group contains the given key
 
 </dd>
 <a id="contains,Group[K,V],K"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#contains%2CGroup%5BK%2CV%5D%2CK"><span class="Identifier">contains</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
 <dd>
 
-
+true if the group contains the given key or its importName
 
 </dd>
 <a id="contains,Group[K,V],Uri"></a>
@@ -1059,7 +1059,7 @@ true if a member of the group has the same (bare) url
 <dt><pre><span class="Keyword">proc</span> <a href="#contains%2CGroup%5BK%2CV%5D%2CV"><span class="Identifier">contains</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">value</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
 <dd>
 
-
+true if the group contains the given value
 
 </dd>
 <a id="clear,Group[K,V]"></a>
@@ -1078,7 +1078,7 @@ clear the group without any other disruption
 <dt><pre><span class="Keyword">iterator</span> <a href="#pairs.i%2CGroup%5BK%2CV%5D"><span class="Identifier">pairs</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">key</span><span class="Other">:</span> <span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">val</span><span class="Other">:</span> <span class="Identifier">V</span><span class="Other">]</span></pre></dt>
 <dd>
 
-
+standard key/value pairs iterator
 
 </dd>
 <a id="mpairs.i,Group[K,V]"></a>
@@ -1092,21 +1092,21 @@ clear the group without any other disruption
 <dt><pre><span class="Keyword">iterator</span> <a href="#values.i%2CGroup%5BK%2CV%5D"><span class="Identifier">values</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">V</span></pre></dt>
 <dd>
 
-
+standard value iterator
 
 </dd>
 <a id="keys.i,Group[K,V]"></a>
 <dt><pre><span class="Keyword">iterator</span> <a href="#keys.i%2CGroup%5BK%2CV%5D"><span class="Identifier">keys</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">K</span></pre></dt>
 <dd>
 
-
+standard key iterator
 
 </dd>
 <a id="mvalues.i,Group[K,V]"></a>
 <dt><pre><span class="Keyword">iterator</span> <a href="#mvalues.i%2CGroup%5BK%2CV%5D"><span class="Identifier">mvalues</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="group.html#Group"><span class="Identifier">Group</span></a><span class="Other">[</span><span class="Identifier">K</span><span class="Other">,</span> <span class="Identifier">V</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">V</span></pre></dt>
 <dd>
 
-
+standard mutable value iterator
 
 </dd>
 <a id="reversed.i,Group[K,V]"></a>
@@ -1126,7 +1126,7 @@ yield values in reverse order of entry
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-21 19:24:24 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-22 21:09:51 UTC</small>
       </div>
     </div>
   </div>

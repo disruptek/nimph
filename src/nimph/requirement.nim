@@ -244,7 +244,7 @@ proc asUrlAnchor*(release: Release): string =
   of Equal:
     result = $release.version
   else:
-    raise newException(Defect, "not yet implemented")
+    debug &"no url-as-anchor for {release.kind}"
   removePrefix(result, {'#'})
 
 proc toUrl*(requirement: Requirement): Option[Uri] =

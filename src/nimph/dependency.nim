@@ -51,6 +51,7 @@ proc newDependencyGroup*(flags: set[Flag]): DependencyGroup =
   result.init(flags, mode = modeStyleInsensitive)
 
 proc contains*(dependencies: DependencyGroup; package: Package): bool =
+  ## true if the package's url matches that of a package in the group
   for name, dependency in dependencies.pairs:
     result = dependency.packages.hasUrl(package.url)
     if result:
@@ -67,17 +68,20 @@ proc reportMultipleResolutions(project: Project; requirement: Requirement;
   for url in packages.urls:
     urls.incl url.hash
 
+  # if the packages all share the same url, we can simplify the output
   if urls.len == 1:
     warn &"{project.name} has {packages.len} " &
          &"options for {requirement} dependency, all via"
     for url in packages.urls:
       warn &"\t{url}"
       break
+  # otherwise, we'll emit urls for each package as well
   else:
     warn &"{project.name} has {packages.len} " &
          &"options for {requirement} dependency:"
+  # output a line or two for each package
   var count = 1
-  for name, package in packages.pairs:
+  for package in packages.values:
     if package.local:
       warn &"\t{count}\t{package.path}"
     elif package.web.isValid:
@@ -87,7 +91,9 @@ proc reportMultipleResolutions(project: Project; requirement: Requirement;
     count.inc
 
 proc asPackage*(project: Project): Package =
-  ## cast a project to a package
+  ## cast a project to a package; this is used to seed the packages list
+  ## for projects that are already installed so that we can match them
+  ## against other package metadata sources by url, etc.
   result = newPackage(name = project.name, path = project.repo,
                       dist = project.dist, url = project.createUrl())
 
@@ -101,7 +107,8 @@ proc adopt*(parent: Project; child: var Project) =
   child.parent = parent
 
 proc childProjects*(project: Project): ProjectGroup =
-  ## compose a group of possible dependencies of the project
+  ## compose a group of possible dependencies of the project; in fact,
+  ## this will include literally any project in the search paths
   result = project.availableProjects
   for child in result.mvalues:
     if child == project:
@@ -110,7 +117,7 @@ proc childProjects*(project: Project): ProjectGroup =
     discard child.fetchConfig
 
 proc determineDeps*(project: Project): Option[Requires] =
-  ## try to parse requirements of a project
+  ## try to parse requirements of a project using the `nimble dump` output
   block:
     if project.dump == nil:
       error "unable to determine deps without issuing a dump"
@@ -125,7 +132,7 @@ proc determineDeps*(project: Project): Option[Requires] =
       b.notes = project.name
 
 proc determineDeps*(project: var Project): Option[Requires] =
-  ## try to parse requirements of a (mutable) project
+  ## try to parse requirements of a project using the `nimble dump` output
   if not project.fetchDump:
     debug "nimble dump failed, so computing deps is impossible"
   else:
@@ -134,8 +141,11 @@ proc determineDeps*(project: var Project): Option[Requires] =
     result = determineDeps(readonly)
 
 proc peelRelease*(project: Project; release: Release): Release =
+  ## peel a release, if possible, to resolve any tags as commits
   var
     thing: GitThing
+
+  # default to just returning the release we were given
   result = release
 
   block:
@@ -164,6 +174,7 @@ proc peelRelease*(project: Project; release: Release): Release =
       raise newException(ValueError, emsg)
 
 proc peelRelease*(project: Project): Release =
+  ## convenience to peel the project's release
   result = project.peelRelease(project.release)
 
 proc happyProvision(requirement: Requirement; release: Release;
@@ -260,7 +271,7 @@ proc symbolicMatch*(project: Project; req: Requirement; release: Release): bool 
       break
 
 proc symbolicMatch*(project: var Project; req: Requirement; release: Release): bool =
-  ## convenience
+  ## convenience that fetches the tag table if necessary
   if project.tags == nil:
     project.fetchTagTable
   let readonly = project
@@ -275,7 +286,7 @@ proc symbolicMatch*(project: Project; req: Requirement): bool =
     break
 
 proc symbolicMatch*(project: var Project; req: Requirement): bool =
-  ## convenience
+  ## convenience that fetches the tag table if necessary
   if project.tags == nil:
     project.fetchTagTable
   let readonly = project
@@ -705,17 +716,19 @@ proc roll*(project: var Project; requirement: Requirement;
   if head.isNone:
     return
 
+  # get the list of suitable releases as a seq...
   var
     releases = toSeq project.symbolicMatch(requirement)
   case goal:
   of Upgrade:
+    # ...so we can reverse it if needed to invert semantics
     releases.reverse
   of Downgrade:
     discard
   of Specific:
     raise newException(Defect, "not implemented")
 
-  # iterate over all matching tags
+  # iterate over all matching releases in order
   for index, match in releases.pairs:
     # we may one day support arbitrary rolls
     if match.kind != Tag:
@@ -784,4 +797,5 @@ proc rollTowards*(project: var Project; requirement: Requirement): bool =
     # then, maybe rename the directory appropriately
     if project.parent != nil:
       project.parent.relocateDependency(project)
+    # critically, exit the after a successful roll
     break

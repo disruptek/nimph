@@ -301,30 +301,35 @@ proc sortByVersion*(tags: GitTagTable): GitTagTable =
 
 proc fetchTagTable*(project: var Project) =
   ## retrieve the tags for a project from its git repository
-  if project.dist != Git:
-    return
-  var
-    tags: GitTagTable
-  gitTrap tags, tagTable(project.repo, tags):
-    let path {.used.} = project.repo # template reasons
-    warn &"unable to fetch tags from repo in {path}"
-    return
-  project.tags = tags.sortByVersion
+  block:
+    var
+      tags: GitTagTable
+    if project.dist != Git:
+      break
+    gitTrap tags, tagTable(project.repo, tags):
+      let path {.used.} = project.repo # template reasons
+      warn &"unable to fetch tags from repo in {path}"
+      break
+    project.tags = tags.sortByVersion
 
 proc releaseSummary*(project: Project): string =
   ## summarize a project's tree using whatever we can
   if project.dist != Git:
-    return "⚠️(not in git repository)"
-  if not project.release.isValid:
-    return "⚠️(invalid release)"
-  if project.release.kind != Tag:
-    return $project.release
-  var
-    thing: GitThing
-  gitTrap thing, lookupThing(thing, project.repo, project.release.reference):
-    warn &"error reading reference `{project.release.reference}`"
-    return
-  result = thing.summary
+    result = "⚠️(not in git repository)"
+  elif not project.release.isValid:
+    result = "⚠️(invalid release)"
+  elif project.release.kind != Tag:
+    # if it's not a tag, just dump the release
+    result = $project.release
+  else:
+    # else, lookup the summary for the tag or commit
+    block:
+      var
+        thing: GitThing
+      gitTrap thing, lookupThing(thing, project.repo, project.release.reference):
+        warn &"error reading reference `{project.release.reference}`"
+        break
+      result = thing.summary
 
 proc cuteRelease*(project: Project): string =
   ## a very short summary of a release; ie. a git commit or version
@@ -361,15 +366,17 @@ proc findCurrentTag*(project: Project): Release =
     name = $head.get
   else:
     block search:
+      # if there's a tag for our head, use that
       for tag, target in project.tags.pairs:
         if target.oid == head.get:
           name = $tag
           break search
+      # otherwise, just use our head reference
       name = $head.get
   result = newRelease(name, operator = Tag)
 
 proc findCurrentTag*(project: var Project): Release =
-  ## find the current release tag of a project
+  ## convenience to fetch tags and then find the current release tag
   let
     readonly = project
   if project.tags == nil:
@@ -384,8 +391,10 @@ proc inventRelease*(project: var Project): Release {.discardable.} =
       if result.isValid:
         project.release = result
         break
+    # if we have a url for the project, try to use its anchor
     if project.url.anchor.len > 0:
       project.release = newRelease(project.url.anchor, operator = Tag)
+    # else if we have a version for the project, use that
     elif project.version.isValid:
       project.release = newRelease(project.version)
     else:
@@ -394,7 +403,7 @@ proc inventRelease*(project: var Project): Release {.discardable.} =
       # maybe it's package-something
       var prefix = project.name & "-"
       if name.startsWith(prefix):
-        # i'm lazy
+        # i'm lazy; this will parse the release if it's #foo or 1.2.3
         result = newRelease(name.split(prefix)[^1])
         if result.kind in {Tag, Equal}:
           warn &"had to resort to parsing reference from directory `{name}`"
@@ -430,14 +439,17 @@ proc linkedFindTarget(dir: string; target = ""; nimToo = false;
   if nimToo:
     extensions = @["".addFileExt("nim")] & extensions
 
+  # perform the search with our cleverly-constructed extensions
   result = LinkedSearchResult()
   result.search = findTarget(dir, extensions = extensions,
                              target = target, ascend = ascend)
 
+  # if we found nothing, or we found a dotNimble, then we're done
   let found = result.search.found
   if found.isNone or found.get.ext != dotNimbleLink:
     return
 
+  # now we need to parse this dotNimbleLink and recurse on the target
   try:
     let parsed = parseNimbleLink($found.get)
     if fileExists(parsed.nimble):
@@ -446,44 +458,56 @@ proc linkedFindTarget(dir: string; target = ""; nimToo = false;
     var recursed = linkedFindTarget(parsed.nimble.parentDir, nimToo = nimToo,
                                     target = parsed.nimble.extractFilename,
                                     ascend = ascend)
+    # if the recursion was successful, add ourselves to the chain and return
     if recursed.search.found.isSome:
       recursed.via = result
       return recursed
+
+    # a failure mode yielding a useful explanation
     result.search.message = &"{found.get} didn't lead to a {dotNimble}"
   except ValueError as e:
+    # a failure mode yielding a less-useful explanation
     result.search.message = e.msg
+
+  # critically, set the search to none because ultimately, we found nothing
   result.search.found = none(Target)
 
-proc findRepositoryUrl*(project: Project;
-                        name = defaultRemote): Option[Uri] =
+proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
   ## find the (remote?) url to a given local repository
   var
     remote: GitRemote
 
-  block found:
-    let grc: GitResultCode = remoteLookup(remote, project.repo, name)
-    case grc:
-    of grcOk:
-      break found
-    of grcNotFound:
-      discard
-    else:
-      warn &"{grc}: unable to fetch remote `{name}` from {project.repo}"
+  block complete:
+    block found:
+      # grab the result code so we can use it in the warning below
+      let grc = remoteLookup(remote, project.repo, name)
+      case grc:
+      of grcOk:
+        discard
+      of grcNotFound:
+        break found
+      else:
+        warn &"{grc}: unable to fetch remote `{name}` from {project.repo}"
+        break found
+
+      # remote is populated, so be sure to free it
+      defer:
+        remote.free
+
+      try:
+        let url = remote.url
+        if url.isValid:
+          # this is our only success scenario
+          result = remote.url.some
+          break complete
+        else:
+          warn &"bad git url in {project.repo}: {url}"
+      except:
+        warn &"unable to parse url from remote `{name}` from {project.repo}"
+
+    # this is a not-found (or error) condition; return a local url
     result = Uri(scheme: "file", path: project.repo / "").some
-    return
-
-  # remote is populated, so be sure to free it
-  defer:
-    remote.free
-
-  try:
-    let url = remote.url
-    if url.isValid:
-      result = remote.url.some
-    else:
-      warn &"bad git url in {project.repo}: {url}"
-  except:
-    warn &"unable to parse url from remote `{name}` from {project.repo}"
+    break complete
 
 proc createUrl*(project: Project; refresh = false): Uri =
   ## determine the source url for a project which may be local
@@ -516,6 +540,7 @@ proc createUrl*(project: Project; refresh = false): Uri =
     assert result.isValid
 
 proc createUrl*(project: var Project; refresh = false): Uri =
+  ## if we come up with a new url for the project, write it to a nimblemeta.json
   let
     readonly = project
   result = readonly.createUrl(refresh = refresh)
@@ -540,38 +565,51 @@ proc refresh*(project: var Project) =
 
 proc findProject*(project: var Project; dir: string;
                   parent: Project = nil): bool =
-  ## locate a project starting from `dir`
-  let
-    target = linkedFindTarget(dir, ascend = true)
-  if target.search.found.isNone:
-    if target.search.message != "":
-      error target.search.message
-    return
-  elif target.via != nil:
-    var
-      target = target  # shadow linked search result
-    while target.via != nil:
-      debug &"--> via {target.via.search.found.get}"
-      target = target.via
+  ## locate a project starting from `dir` and set its parent if applicable
+  block complete:
+    let
+      target = linkedFindTarget(dir, ascend = true)
+    # a failure lets us out early
+    if target.search.found.isNone:
+      if target.search.message != "":
+        error target.search.message
+      break complete
 
-  # there's really no scenario in which we need to instantiate a
-  # new parent project when looking for children...
-  if parent != nil:
-    if parent.nimble == target.search.found.get:
-      return
+    elif target.via != nil:
+      var
+        target = target  # shadow linked search result
+      # output some debugging data to show how we got from here to there
+      while target.via != nil:
+        debug &"--> via {target.via.search.found.get}"
+        target = target.via
 
-  project = newProject(target.search.found.get)
-  project.parent = parent
-  project.develop = target.via
-  project.meta = fetchNimbleMeta(project.repo)
-  project.dist = project.guessDist
-  project.refresh
-  if project.release.isValid:
+    # there's really no scenario in which we need to instantiate a
+    # new parent project when looking for children...
+    if parent != nil:
+      if parent.nimble == target.search.found.get:
+        break complete
+
+    # create an instance and setup some basic (cheap) data
+    project = newProject(target.search.found.get)
+    # the parent will be set on child dependencies
+    project.parent = parent
+    # this is the nimble-link chain that we might have a use for
+    project.develop = target.via
+    project.meta = fetchNimbleMeta(project.repo)
+    project.dist = project.guessDist
+    # load configs, create urls, set version and release, etc.
+    project.refresh
+
+    # if we cannot determine what release this project is, just bail
+    if not project.release.isValid:
+      # but make sure to zero out the result so as not to confuse the user
+      project = nil
+      error &"unable to determine reference for {project}"
+      break complete
+
+    # otherwise, we're golden
     debug &"{project} version {project.version}"
-  else:
-    error &"unable to determine reference for {project}"
-    return
-  result = true
+    result = true
 
 iterator packageDirectories(project: Project): string =
   ## yield directories according to the project's path configuration
@@ -655,13 +693,15 @@ proc excludeSearchPath*(project: Project; path: string): bool =
   result = project.cfg.excludeSearchPath(project.nimCfg, path)
 
 proc addSearchPath*(project: Project; path: string): bool =
-  ## add a search path to the given project's configuration
-  for exists in project.packageDirectories:
-    if exists == path:
-      return
-  if project.cfg == nil:
-    raise newException(Defect, "load a configuration first")
-  result = project.cfg.addSearchPath(project.nimCfg, path)
+  ## add a search path to the given project's configuration;
+  ## true if we added the search path
+  block complete:
+    for exists in project.packageDirectories:
+      if exists == path:
+        break complete
+    if project.cfg == nil:
+      raise newException(Defect, "load a configuration first")
+    result = project.cfg.addSearchPath(project.nimCfg, path)
 
 proc determineSearchPath(project: Project): string =
   ## produce the search path to add for a given project
@@ -735,10 +775,10 @@ proc relocateDependency*(parent: var Project; project: var Project) =
     splat = repository.splitFile
     future = splat.dir / name
 
-  if current == name:
-    return
-
   block:
+    if current == name:
+      break
+
     if dirExists(future):
       warn &"cannot rename `{current}` to `{name}` -- already exists"
       break
@@ -878,8 +918,10 @@ iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef;
       found = target.search.found
     if found.isNone:
       continue
+    # see if the target project is in our group
     for project in group.mvalues:
       if found.get == project.nimble:
+        # if it is, put it in the dedupe and yield it
         if project.importName notin dedupe:
           dedupe.add project.importName, project
           yield project
@@ -895,13 +937,19 @@ proc countNimblePaths*(project: Project):
   ## try to count the effective number of --nimblePaths
   let
     repository = project.repo
+  # we start with looking for the most-used directories and then resort to the
+  # least-frequently used entries, eventually settling for *any* lazy path at all
   for iteration in countDown(2, 0):
     for path in likelyLazy(project.cfg, repository, least = iteration):
+      # we'll also differentiate between lazy
+      # paths inside/outside the project tree
       if path.startsWith(repository):
         result.local.inc
       else:
         result.global.inc
+      # and record the path for whatever that's worth
       result.paths.add path
+    # as soon as the search catches results, we're done
     if result.local + result.global != 0:
       break
 
@@ -1024,45 +1072,55 @@ proc repoLockReady*(project: Project): bool =
   ## true if a project's git repo is ready to be locked
   if project.dist != Git:
     return
+
+  # it's our game to lose
   result = true
+
+  # this is a high-level state check to ensure the
+  # repo isn't in the middle of a merge, bisect, etc.
   let state = repositoryState(project.repo)
   if state != GitRepoState.grsNone:
     result = false
     notice &"{project} repository in invalid {state} state"
+
+  # at the moment, status only works in libgit's master branch
   if not git.hasWorkingStatus:
     warn "you need a newer libgit2 to safely roll repositories"
     result = false
   else:
+    # an alien file isn't a problem, but virtually anything else is
     for n in status(project.repo, ssIndexAndWorkdir):
       result = false
       notice &"{project} repository has been modified"
       break
 
-proc bestRelease*(tags: GitTagTable; goal: RollGoal): Version =
-  ## the most ideal tagged release parsable as a version
+proc bestRelease*(tags: GitTagTable; goal: RollGoal): Version {.deprecated.} =
+  ## the most ideal tagged release parsable as a version; we should probably use
+  ## versiontags for this now
   var
     names = toSeq tags.keys
   case goal:
+  of Downgrade:
+    discard
   of Upgrade:
     names.reverse
   of Specific:
     raise newException(Defect, "nonsensical")
-  else:
-    discard
 
   for tagged in names.items:
     let parsed = parseVersionLoosely(tagged)
     if parsed.isSome and parsed.get.kind == Equal:
       result = parsed.get.version
 
-proc betterReleaseExists*(tags: GitTagTable; goal: RollGoal; version: Version): bool =
-  ## true if there is an ideal version available
+proc betterReleaseExists*(tags: GitTagTable; goal: RollGoal; version: Version): bool {.deprecated.} =
+  ## true if there is an ideal version available; we should probably use
+  ## versiontags for this now
   var
     names = toSeq tags.keys
   case goal:
   of Upgrade:
     names.reverse
-  else:
+  of Downgrade, Specific:
     discard
 
   for name in names.items:
@@ -1081,7 +1139,8 @@ proc betterReleaseExists*(tags: GitTagTable; goal: RollGoal; version: Version): 
       break
 
 proc betterReleaseExists*(project: Project; goal: RollGoal): bool =
-  ## true if there is a (more) ideal version available
+  ## true if there is a (more) ideal version available; we should probably use
+  ## versiontags for this now
   if project.tags == nil:
     let emsg = &"unable to fetch tags for an immutable project {project.name}"
     raise newException(Defect, emsg)
@@ -1092,7 +1151,10 @@ proc betterReleaseExists*(project: Project; goal: RollGoal): bool =
     return
 
   # make sure this isn't a nonsensical request
-  if goal notin {Upgrade, Downgrade}:
+  case goal:
+  of Upgrade, Downgrade:
+    discard
+  of Specific:
     raise newException(Defect, "not implemented")
 
   result = betterReleaseExists(project.tags, goal, project.version)
@@ -1115,21 +1177,26 @@ proc nextTagFor*(tags: GitTagTable; version: Version): string =
 
 proc setHeadToRelease*(project: var Project; release: Release): bool =
   ## advance the head of a project to a particular release
-  if project.dist != Git:
-    return
-  if not release.isValid or release.kind != Tag:
-    return
-  # we want the code because it'll tell us what went wrong
-  let code = checkoutTree(project.repo, release.reference)
-  case code:
-  of grcOk:
-    debug &"roll {project.name} to {release}"
-    result = true
-    # make sure we invalidate some data
-    project.dump = nil
-    project.version = (0'u, 0'u, 0'u)
-  else:
-    debug &"roll {project.name} to {release}: {code}"
+  block:
+    # we don't yet know how to roll to non-git releases
+    {.warning: "roll to non-git releases".}
+    if project.dist != Git:
+      break
+    # we don't yet know how to roll to arbitrary releases
+    {.warning: "roll to arbitrary releases".}
+    if not release.isValid or release.kind != Tag:
+      break
+    # we want the code because it'll tell us what went wrong
+    let code = checkoutTree(project.repo, release.reference)
+    case code:
+    of grcOk:
+      debug &"roll {project.name} to {release}"
+      result = true
+      # make sure we invalidate some data
+      project.dump = nil
+      project.version = (0'u, 0'u, 0'u)
+    else:
+      debug &"roll {project.name} to {release}: {code}"
 
 template returnToHeadAfter*(project: var Project; body: untyped) =
   ## run some code in the body if you can, and then return the
@@ -1176,6 +1243,7 @@ proc versionChangingCommits*(project: var Project): VersionTags =
     for commit in commitsForSpec(project.repo, @[package]):
       var
         thing = commit.toThing
+      # compose a new release to the commit and then go there
       let release = newRelease($thing.oid, operator = Tag)
       if not project.setHeadToRelease(release):
         continue

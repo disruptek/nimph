@@ -1018,7 +1018,7 @@ function main() {
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+true if the package's url matches that of a package in the group
 
 </dd>
 <a id="hasKey,DependencyGroup,string"></a>
@@ -1033,7 +1033,7 @@ function main() {
     <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-cast a project to a package
+cast a project to a package; this is used to seed the packages list for projects that are already installed so that we can match them against other package metadata sources by url, etc.
 
 </dd>
 <a id="adopt,Project,Project"></a>
@@ -1052,7 +1052,7 @@ associate a child project with the parent project of which the child is a requir
                          <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-compose a group of possible dependencies of the project
+compose a group of possible dependencies of the project; in fact, this will include literally any project in the search paths
 
 </dd>
 <a id="determineDeps,Project"></a>
@@ -1060,7 +1060,7 @@ compose a group of possible dependencies of the project
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">UnpackError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-try to parse requirements of a project
+try to parse requirements of a project using the <tt class="docutils literal"><span class="pre">nimble dump</span></tt> output
 
 </dd>
 <a id="determineDeps,Project_2"></a>
@@ -1071,7 +1071,7 @@ try to parse requirements of a project
                                 <span class="Identifier">WriteDirEffect</span><span class="Other">,</span> <span class="Identifier">ExecIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-try to parse requirements of a (mutable) project
+try to parse requirements of a project using the <tt class="docutils literal"><span class="pre">nimble dump</span></tt> output
 
 </dd>
 <a id="peelRelease,Project,Release"></a>
@@ -1079,7 +1079,7 @@ try to parse requirements of a (mutable) project
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+peel a release, if possible, to resolve any tags as commits
 
 </dd>
 <a id="peelRelease,Project"></a>
@@ -1087,7 +1087,7 @@ try to parse requirements of a (mutable) project
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+convenience to peel the project's release
 
 </dd>
 <a id="symbolicMatch,Project,Requirement,Release"></a>
@@ -1105,7 +1105,7 @@ convenience
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-convenience
+convenience that fetches the tag table if necessary
 
 </dd>
 <a id="symbolicMatch,Project,Requirement"></a>
@@ -1123,7 +1123,7 @@ convenience
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-convenience
+convenience that fetches the tag table if necessary
 
 </dd>
 <a id="isSatisfiedBy,Requirement,Project,Release"></a>
@@ -1350,7 +1350,7 @@ see if a project can match a given requirement symbolically
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-21 19:24:25 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-22 21:09:52 UTC</small>
       </div>
     </div>
   </div>

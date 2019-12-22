@@ -867,6 +867,8 @@ function main() {
     title="isVirtual(requirement: Requirement): bool"><wbr />is<wbr />Virtual<span class="attachedType">Requirement</span></a></li>
   <li><a class="reference" href="#isUrl%2CRequirement"
     title="isUrl(requirement: Requirement): bool"><wbr />is<wbr />Url<span class="attachedType">Requirement</span></a></li>
+  <li><a class="reference" href="#asUrlAnchor%2CRelease"
+    title="asUrlAnchor(release: Release): string"><wbr />as<wbr />Url<wbr />Anchor<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#toUrl%2CRequirement"
     title="toUrl(requirement: Requirement): Option[Uri]"><wbr />to<wbr />Url<span class="attachedType">Requirement</span></a></li>
   <li><a class="reference" href="#importName%2CRequirement"
@@ -977,7 +979,7 @@ create a requirement from a release, eg. that of a project
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-parse a requirement
+parse a requirement from a string
 
 </dd>
 <a id="parseRequires,string"></a>
@@ -985,7 +987,7 @@ parse a requirement
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">NPegException</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-parse a <tt class="docutils literal"><span class="pre">requires</span></tt> string output from <tt class="docutils literal"><span class="pre">nimble dump</span></tt> also supports <tt class="docutils literal"><span class="pre">~</span></tt> and <tt class="docutils literal"><span class="pre">^</span></tt> operators a la cargo
+parse a <tt class="docutils literal"><span class="pre">requires</span></tt> string output from <tt class="docutils literal"><span class="pre">nimble dump</span></tt> also supports <tt class="docutils literal"><span class="pre">~</span></tt> and <tt class="docutils literal"><span class="pre">^</span></tt> and <tt class="docutils literal"><span class="pre">*</span></tt> operators a la cargo
 
 </dd>
 <a id="isVirtual,Requirement"></a>
@@ -1000,6 +1002,14 @@ is the requirement something we should overlook?
 <dd>
 
 a terrible way to determine if the requirement is a url
+
+</dd>
+<a id="asUrlAnchor,Release"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#asUrlAnchor%2CRelease"><span class="Identifier">asUrlAnchor</span></a><span class="Other">(</span><span class="Identifier">release</span><span class="Other">:</span> <a href="version.html#Release"><span class="Identifier">Release</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+produce a suitable url anchor referencing a release
 
 </dd>
 <a id="toUrl,Requirement"></a>
@@ -1056,7 +1066,7 @@ yield each requirement without their kids
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-21 19:24:24 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-22 21:09:51 UTC</small>
       </div>
     </div>
   </div>

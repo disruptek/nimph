@@ -1041,7 +1041,7 @@ try to remove a path from a nim.cfg; true if it was successful and false if any 
     <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+add the given path to the given config file, using the compiler's configuration as input to determine the best path substitution
 
 </dd>
 <a id="excludeSearchPath,ConfigRef,Target,string"></a>
@@ -1051,7 +1051,7 @@ try to remove a path from a nim.cfg; true if it was successful and false if any 
     <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteEnvEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+add an exclusion for the given path to the given config file, using the compiler's configuration as input to determine the best path substitution
 
 </dd>
 <a id="addLockerRoom,NimphConfig,string,JsonNode"></a>
@@ -1125,7 +1125,7 @@ yield package paths from the configuration as /-terminated strings; if the exist
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadDirEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-yield existing search paths from the configuration as /-terminated strings
+yield existing search paths from the configuration as /-terminated strings; this will yield library paths and nimblePaths with at least <tt class="docutils literal"><span class="pre">least</span></tt> uses
 
 </dd>
 
@@ -1157,7 +1157,7 @@ yield existing search paths from the configuration as /-terminated strings
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-21 19:24:20 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-22 21:09:50 UTC</small>
       </div>
     </div>
   </div>

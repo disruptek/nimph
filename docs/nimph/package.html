@@ -1016,7 +1016,8 @@ instantiate a new package group for collecting a list of packages
 
 </dd>
 <a id="aimAt,Package,Requirement"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#aimAt%2CPackage%2CRequirement"><span class="Identifier">aimAt</span></a><span class="Other">(</span><span class="Identifier">package</span><span class="Other">:</span> <a href="package.html#Package"><span class="Identifier">Package</span></a><span class="Other">;</span> <span class="Identifier">req</span><span class="Other">:</span> <a href="requirement.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">)</span><span class="Other">:</span> <a href="package.html#Package"><span class="Identifier">Package</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#aimAt%2CPackage%2CRequirement"><span class="Identifier">aimAt</span></a><span class="Other">(</span><span class="Identifier">package</span><span class="Other">:</span> <a href="package.html#Package"><span class="Identifier">Package</span></a><span class="Other">;</span> <span class="Identifier">req</span><span class="Other">:</span> <a href="requirement.html#Requirement"><span class="Identifier">Requirement</span></a><span class="Other">)</span><span class="Other">:</span> <a href="package.html#Package"><span class="Identifier">Package</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 produce a refined package which might meet the requirement
@@ -1049,7 +1050,7 @@ try to determine the distribution url for a requirement
 <dt><pre><span class="Keyword">proc</span> <a href="#hasUrl%2CPackageGroup%2CUri"><span class="Identifier">hasUrl</span></a><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="package.html#PackageGroup"><span class="Identifier">PackageGroup</span></a><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+true if the url seems to match a package in the group
 
 </dd>
 <a id="matching,PackageGroup,Requirement"></a>
@@ -1069,7 +1070,7 @@ select a subgroup of packages that appear to match the requirement
 <dt><pre><span class="Keyword">iterator</span> <a href="#urls.i%2CPackageGroup"><span class="Identifier">urls</span></a><span class="Other">(</span><span class="Identifier">group</span><span class="Other">:</span> <a href="package.html#PackageGroup"><span class="Identifier">PackageGroup</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Uri</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+yield (an ideally git) url for each package in the group
 
 </dd>
 
@@ -1087,7 +1088,7 @@ select a subgroup of packages that appear to match the requirement
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2019-12-21 19:24:24 UTC</small>
+        <small>Made with Nim. Generated: 2019-12-22 21:09:51 UTC</small>
       </div>
     </div>
   </div>
