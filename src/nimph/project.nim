@@ -857,7 +857,7 @@ proc allImportTargets*(config: ConfigRef; repo: string):
 
   for path in config.extantSearchPaths:
     let
-      target = linkedFindTarget(path, target = path.importName,
+      target = linkedFindTarget(path, target = path.pathToImport.importName,
                                 nimToo = true, ascend = false)
       found = target.search.found
     if found.isNone:
