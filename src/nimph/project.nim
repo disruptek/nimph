@@ -207,7 +207,8 @@ proc knowVersion*(project: var Project): Version =
         if parsed.isNone:
           let emsg = &"unparsable version `{text}` in {project.name}" # noqa
           raise newException(IOError, emsg)
-        result = parsed.get.version
+        # get the effective version instead of a release.version
+        result = parsed.get.effectively
         break
 
     # we don't have a dump to work with, or the dump has no version in it
