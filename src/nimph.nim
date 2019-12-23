@@ -53,7 +53,8 @@ template prepareForTheWorst(body: untyped) =
       body
     except:
       warnException
-      crash("crashing because something bad happened")
+      error "crashing because something bad happened"
+      quit 1
   else:
     body
 
@@ -92,13 +93,12 @@ proc fixer*(log_level = logLevel; dry_run = false): int =
     project: Project
   setupLocalProject(project)
 
-  prepareForTheWorst:
-    if project.doctor(dry = dry_run):
-      fatal &"👌{project.name} version {project.version} lookin' good"
-    elif not dry_run:
-      crash &"the doctor wasn't able to fix everything"
-    else:
-      warn "run `nimph doctor` to fix this stuff"
+  if project.doctor(dry = dry_run):
+    fatal &"👌{project.name} version {project.version} lookin' good"
+  elif not dry_run:
+    crash &"the doctor wasn't able to fix everything"
+  else:
+    warn "run `nimph doctor` to fix this stuff"
 
 proc nimbler*(args: seq[string]; log_level = logLevel; dry_run = false): int =
   ## cli entry to pass-through nimble commands with a sane nimbleDir
@@ -725,7 +725,8 @@ when isMainModule:
       if params[0] == "nimble":
         params = params[1..^1]
       # invoke nimble with the remaining parameters
-      quit runnimble(cmdline = params)
+      prepareForTheWorst:
+        quit runnimble(cmdline = params)
     of scVersion:
       # report the version
       echo clCfg.version
@@ -760,7 +761,8 @@ when isMainModule:
         let newLog = max(0, logLevel.ord - 1).Level
         params = params.concat @["--log-level=" & $newLog]
       # invoke the appropriate dispatcher
-      quit dispatchers[sub](cmdline = params[1..^1])
+      prepareForTheWorst:
+        quit dispatchers[sub](cmdline = params[1..^1])
   except HelpOnly:
     discard
   quit 0
