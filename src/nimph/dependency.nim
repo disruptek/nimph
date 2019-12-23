@@ -262,8 +262,6 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
 
 proc symbolicMatch*(project: Project; req: Requirement; release: Release): bool =
   ## convenience
-  if project.tags == nil:
-    raise newException(Defect, "fetch tags for the project first")
   let release = project.peelRelease(release)
   for match in project.symbolicMatch(req):
     result = match == release
@@ -279,8 +277,6 @@ proc symbolicMatch*(project: var Project; req: Requirement; release: Release): b
 
 proc symbolicMatch*(project: Project; req: Requirement): bool =
   ## convenience
-  if project.tags == nil:
-    raise newException(Defect, "fetch tags for the project first")
   for match in project.symbolicMatch(req):
     result = true
     break
