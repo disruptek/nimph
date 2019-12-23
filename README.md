@@ -453,6 +453,9 @@ head -1 LICENSE
 head didn't like that in /home/adavidoff/git/nimph/deps/pkgs/unittest2-#head
 ```
 
+Finally, you can use the `--git` switch to limit `run` to dependencies with
+Git repositories; see [Git Subcommands](https://github.com/disruptek/nimph#git-subcommands) for examples.
+
 ### Graph
 
 The `graph` subcommand dumps some _very basic_ details about discovered

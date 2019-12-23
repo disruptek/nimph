@@ -153,7 +153,8 @@ proc pather*(names: seq[string]; strict = false;
       echo ""      # a failed find produces empty output
       result = 1   # and sets the return code to nonzero
 
-proc runner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
+proc runner*(args: seq[string]; git = false;
+             log_level = logLevel; dry_run = false): int =
   ## this is another pather, basically, that invokes the arguments in the path
   let
     exe = args[0]
@@ -174,6 +175,8 @@ proc runner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
   # make sure we visit every project that fits the requirements
   for req, dependency in group.pairs:
     for child in dependency.projects.values:
+      if child.dist != Git and git:
+        continue
       withinDirectory(child.repo):
         info &"running {exe} in {child.repo}"
         let
@@ -647,8 +650,8 @@ when isMainModule:
       # the nurse is aka `nimph` without arguments...
       "nurse":       @[$scDoctor, "--dry-run"],
       "fix":         @[$scDoctor],
-      "fetch":       @[$scRun, "--", "git", "fetch"],
-      "pull":        @[$scRun, "--", "git", "pull"],
+      "fetch":       @[$scRun, "--git", "--", "git", "fetch"],
+      "pull":        @[$scRun, "--git", "--", "git", "pull"],
       "roll":        @[$scRoll, "--goal=roll"],
       "downgrade":   @[$scRoll, "--goal=downgrade"],
       "upgrade":     @[$scRoll, "--goal=upgrade"],
@@ -738,8 +741,10 @@ when isMainModule:
         once:
           fun.dumpHelp("all subcommands accept (at least) the following options:\n$options")
         case command:
+        of scRun:
+          fun.dumpHelp("\n$command --git $args\n$doc")
         of scRoll:
-          fun.dumpHelp("\n$command $args --goal=upgrade|downgrade\n$doc")
+          fun.dumpHelp("\n$command --goal=upgrade|downgrade $args\n$doc")
         else:
           fun.dumpHelp("\n$command $args\n$doc")
       echo ""
