@@ -66,7 +66,29 @@ template setupLocalProject(project: var Project) =
   except Exception as e:
     crash "unable to parse nim configuration: " & e.msg
 
-proc searcher*(args: seq[string]; log_level = logLevel; dry_run = false): int =
+template toggle(flags: set[Flag]; flag: Flag; switch: untyped) =
+  when switch is bool:
+    if switch:
+      flags.incl flag
+    else:
+      flags.excl flag
+
+template composeFlags(defaults): set[Flag] =
+  ## setup flags using cli inputs
+  block:
+    var
+      flags: set[Flag] = defaults
+    toggle(flags, Quiet, quiet)
+    toggle(flags, Safe, safe_mode)
+    toggle(flags, Dry, dry_run)
+    toggle(flags, Strict, strict)
+    toggle(flags, Force, force)
+    toggle(flags, Network, network)
+    flags
+
+proc searcher*(args: seq[string]; strict = false;
+               log_level = logLevel; safe_mode = false; quiet = true;
+               network = true; force = false; dry_run = false): int =
   ## cli entry to search github for nim packages
 
   # user's choice, our default
@@ -83,7 +105,9 @@ proc searcher*(args: seq[string]; log_level = logLevel; dry_run = false): int =
   if group.get.len == 0:
     fatal &"😢no results"
 
-proc fixer*(log_level = logLevel; dry_run = false): int =
+proc fixer*(strict = false;
+            log_level = logLevel; safe_mode = false; quiet = false;
+            network = true; force = false; dry_run = false): int =
   ## cli entry to evaluate and/or repair the environment
 
   # user's choice, our default
@@ -100,7 +124,9 @@ proc fixer*(log_level = logLevel; dry_run = false): int =
   else:
     warn "run `nimph doctor` to fix this stuff"
 
-proc nimbler*(args: seq[string]; log_level = logLevel; dry_run = false): int =
+proc nimbler*(args: seq[string]; strict = false;
+              log_level = logLevel; safe_mode = false; quiet = true;
+              network = true; force = false; dry_run = false): int =
   ## cli entry to pass-through nimble commands with a sane nimbleDir
 
   # user's choice, our default
@@ -116,11 +142,15 @@ proc nimbler*(args: seq[string]; log_level = logLevel; dry_run = false): int =
     crash &"nimble didn't like that"
 
 proc pather*(names: seq[string]; strict = false;
-             log_level = logLevel; dry_run = false): int =
+             log_level = logLevel; safe_mode = false; quiet = true;
+             network = true; force = false; dry_run = false): int =
   ## cli entry to echo the path(s) of any dependencies
 
   # user's choice, our default
   setLogFilter(log_level)
+
+  # setup flags for the operation
+  let flags = composeFlags(defaultFlags)
 
   var
     project: Project
@@ -130,7 +160,7 @@ proc pather*(names: seq[string]; strict = false;
     crash &"give me an import name to retrieve its filesystem path"
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  var group = project.newDependencyGroup(flags = flags)
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
@@ -143,7 +173,7 @@ proc pather*(names: seq[string]; strict = false;
     var
       found = group.pathForName(name)
       nature = "dependency"
-    if found.isNone and not strict:
+    if found.isNone and Strict notin flags:
       found = group.projects.pathForName(name)
       nature = "project"
     if found.isSome:
@@ -153,8 +183,9 @@ proc pather*(names: seq[string]; strict = false;
       echo ""      # a failed find produces empty output
       result = 1   # and sets the return code to nonzero
 
-proc runner*(args: seq[string]; git = false;
-             log_level = logLevel; dry_run = false): int =
+proc runner*(args: seq[string]; git = false; strict = false;
+             log_level = logLevel; safe_mode = false; quiet = true;
+             network = true; force = false; dry_run = false): int =
   ## this is another pather, basically, that invokes the arguments in the path
   let
     exe = args[0]
@@ -163,12 +194,15 @@ proc runner*(args: seq[string]; git = false;
   # user's choice, our default
   setLogFilter(log_level)
 
+  # setup flags for the operation
+  let flags = composeFlags(defaultFlags)
+
   var
     project: Project
   setupLocalProject(project)
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  var group = project.newDependencyGroup(flags = flags)
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
@@ -185,8 +219,8 @@ proc runner*(args: seq[string]; git = false;
           error &"{exe} didn't like that in {child.repo}"
           result = 1
 
-proc rollChild(child: var Project; requirement: Requirement;
-               goal: RollGoal; dry_run = false): bool =
+proc rollChild(child: var Project; requirement: Requirement; goal: RollGoal;
+               safe_mode = false; dry_run = false): bool =
   ## try to roll a project to meet the goal inside a given requirement
 
   # early termination means there's nowhere else to go from here
@@ -232,91 +266,115 @@ proc rollChild(child: var Project; requirement: Requirement;
     if not dry_run:
       warn &"unable to {goal} {child.name}"
 
-proc roller*(names: seq[string]; goal: RollGoal;
-             log_level = logLevel; dry_run = false): int =
+proc updowner*(names: seq[string]; goal: RollGoal; strict = false;
+             log_level = logLevel; safe_mode = false; quiet = false;
+             network = true; force = false; dry_run = false): int =
   ## perform upgrades or downgrades of dependencies
   ## within project requirement specifications
 
   # user's choice, our default
   setLogFilter(log_level)
 
+  # setup flags for the operation
+  let flags = composeFlags(defaultFlags)
+
   var
     project: Project
   setupLocalProject(project)
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  var group = project.newDependencyGroup(flags = flags)
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
-  # roll is basically three subcommands in one, two of which are similar
-  case goal:
-
-  # this is the odd-ball; we receive requirements and add them to the group,
-  # then we run fixDependencies to resolve them as best as can
-  of Specific:
-    if names.len == 0:
-      notice &"give me requirements as string arguments; eg. 'foo > 2.*'"
-      result = 1
-      return
-    else:
-      block doctor:
-        # parse the requirements as if we pulled them right outta a .nimble
-        let
-          requires = parseRequires(names.join(", "))
-        if requires.isNone:
-          notice &"unable to parse requirements statement(s)"
-          result = 1
-          break doctor
-
-        # perform our usual dependency fixups using the doctor
-        var
-          state = DrState(kind: DrRetry)
-        while state.kind == DrRetry:
-          # everything seems groovy at the beginning
-          result = 0
-          # add each requirement to the dependency tree
-          for requirement in requires.get.values:
-            var
-              dependency = newDependency(requirement)
-            # we really don't care if requirements are added here
-            discard group.addedRequirements(dependency)
-            # make sure we can resolve the requirement
-            if not project.resolve(group, requirement):
-              notice &"unable to resolve dependencies for `{requirement}`"
-              result = 1
-              state.kind = DrError
-              # this is game over
-              break doctor
-          if not project.fixDependencies(group, state):
-            notice "failed to fix all dependencies"
-            result = 1
-          if state.kind notin {DrRetry}:
-            break
-          # reset the tree
-          group.reset(project)
-
-  # or, we receive import names (or not) and upgrade or downgrade them to
+  # we receive import names (or not) and upgrade or downgrade them to
   # opposite ends of the list of allowable versions, per our requirements
-  of Upgrade, Downgrade:
-    if names.len == 0:
-      for requirement, dependency in group.pairs:
-        for child in dependency.projects.mvalues:
-          if not child.rollChild(requirement, goal = goal, dry_run = dry_run):
-            result = 1
-    else:
-      for name in names.items:
-        let found = group.projectForName(name)
-        if found.isSome:
-          var child = found.get
-          let require = group.reqForProject(child)
-          if require.isNone:
-            let emsg = &"found `{name}` but not its requirement" # noqa
-            raise newException(ValueError, emsg)
-          if not child.rollChild(require.get, goal = goal, dry_run = dry_run):
-            result = 1
-        else:
-          error &"couldn't find `{name}` among our installed dependencies"
+  if names.len == 0:
+    for requirement, dependency in group.pairs:
+      for child in dependency.projects.mvalues:
+        if not child.rollChild(requirement, goal = goal, dry_run = dry_run):
+          result = 1
+  else:
+    for name in names.items:
+      let found = group.projectForName(name)
+      if found.isSome:
+        var child = found.get
+        let require = group.reqForProject(child)
+        if require.isNone:
+          let emsg = &"found `{name}` but not its requirement" # noqa
+          raise newException(ValueError, emsg)
+        if not child.rollChild(require.get, goal = goal, dry_run = dry_run):
+          result = 1
+      else:
+        error &"couldn't find `{name}` among our installed dependencies"
+
+  if result == 0:
+    fatal &"👌{project.name} is lookin' good"
+  else:
+    fatal &"👎{project.name} is not where you want it"
+
+proc roller*(names: seq[string]; strict = false;
+             log_level = logLevel; safe_mode = false; quiet = false;
+             network = true; force = false; dry_run = false): int =
+  ## roll a project's dependencies to specific requirements
+
+  # user's choice, our default
+  setLogFilter(log_level)
+
+  # setup flags for the operation
+  let flags = composeFlags(defaultFlags)
+
+  var
+    project: Project
+  setupLocalProject(project)
+
+  # setup our dependency group
+  var group = project.newDependencyGroup(flags = flags)
+  if not project.resolve(group):
+    notice &"unable to resolve all dependencies for {project}"
+
+  # we receive requirements and add them to the group, then
+  # we run fixDependencies to resolve them as best as can
+  if names.len == 0:
+    notice &"give me requirements as string arguments; eg. 'foo > 2.*'"
+    result = 1
+    return
+
+  block doctor:
+    # parse the requirements as if we pulled them right outta a .nimble
+    let
+      requires = parseRequires(names.join(", "))
+    if requires.isNone:
+      notice &"unable to parse requirements statement(s)"
+      result = 1
+      break doctor
+
+    # perform our usual dependency fixups using the doctor
+    var
+      state = DrState(kind: DrRetry)
+    while state.kind == DrRetry:
+      # everything seems groovy at the beginning
+      result = 0
+      # add each requirement to the dependency tree
+      for requirement in requires.get.values:
+        var
+          dependency = newDependency(requirement)
+        # we really don't care if requirements are added here
+        discard group.addedRequirements(dependency)
+        # make sure we can resolve the requirement
+        if not project.resolve(group, requirement):
+          notice &"unable to resolve dependencies for `{requirement}`"
+          result = 1
+          state.kind = DrError
+          # this is game over
+          break doctor
+      if not project.fixDependencies(group, state):
+        notice "failed to fix all dependencies"
+        result = 1
+      if state.kind notin {DrRetry}:
+        break
+      # reset the tree
+      group.reset(project)
 
   if result == 0:
     fatal &"👌{project.name} is lookin' good"
@@ -351,18 +409,23 @@ proc graphDep(dependency: var Dependency; requirement: Requirement;
             if not project.tags.hasThing(thing):
               info &"    ver: {ver:<20} {thing}"
 
-proc grapher*(names: seq[string]; log_level = logLevel; dry_run = false): int =
+proc grapher*(names: seq[string]; strict = false;
+              log_level = logLevel; safe_mode = false; quiet = false;
+              network = true; force = false; dry_run = false): int =
   ## graph requirements for the project or any of its dependencies
 
   # user's choice, our default
   setLogFilter(log_level)
+
+  # setup flags for the operation
+  let flags = composeFlags(defaultFlags)
 
   var
     project: Project
   setupLocalProject(project)
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  var group = project.newDependencyGroup(flags = flags)
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
@@ -390,7 +453,9 @@ proc dumpLockList(project: Project) =
       fatal &"here's a list of available locks:"
     fatal &"\t{room.name}"
 
-proc lockfiler*(names: seq[string]; log_level = logLevel; dry_run = false): int =
+proc lockfiler*(names: seq[string]; strict = false;
+                log_level = logLevel; safe_mode = false; quiet = false;
+                network = true; force = false; dry_run = false): int =
   ## cli entry to write a lockfile
 
   # user's choice, our default
@@ -412,8 +477,9 @@ proc lockfiler*(names: seq[string]; log_level = logLevel; dry_run = false): int 
       fatal &"👎unable to lock {project} as `{name}`"
       result = 1
 
-proc unlockfiler*(names: seq[string]; log_level = logLevel;
-                  dry_run = false): int =
+proc unlockfiler*(names: seq[string]; strict = false;
+                  log_level = logLevel; safe_mode = false; quiet = false;
+                  network = true; force = false; dry_run = false): int =
   ## cli entry to read a lockfile
 
   # user's choice, our default
@@ -435,7 +501,9 @@ proc unlockfiler*(names: seq[string]; log_level = logLevel;
       fatal &"👎unable to unlock {project} via `{name}`"
     result = 1
 
-proc tagger*(log_level = logLevel; dry_run = false): int =
+proc tagger*(strict = false;
+             log_level = logLevel; safe_mode = false; quiet = false;
+             network = true; force = false; dry_run = false): int =
   ## cli entry to add missing tags
 
   # user's choice, our default
@@ -453,17 +521,22 @@ proc tagger*(log_level = logLevel; dry_run = false): int =
   else:
     fatal &"👌{project.name} tags are lookin' good"
 
-proc forker*(names: seq[string]; log_level = logLevel; dry_run = false): int =
+proc forker*(names: seq[string]; strict = false;
+             log_level = logLevel; safe_mode = false; quiet = false;
+             network = true; force = false; dry_run = false): int =
   ## cli entry to remotely fork installed packages
 
   # user's choice, our default
   setLogFilter(log_level)
 
+  # setup flags for the operation
+  let flags = composeFlags(defaultFlags)
+
   var
     project: Project
   setupLocalProject(project)
 
-  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  var group = project.newDependencyGroup(flags = flags)
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
@@ -495,11 +568,16 @@ proc forker*(names: seq[string]; log_level = logLevel; dry_run = false): int =
     else:
       {.warning: "optionally upgrade a gitless install to clone".}
 
-proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
+proc cloner*(args: seq[string]; strict = false;
+             log_level = logLevel; safe_mode = false; quiet = false;
+             network = true; force = false; dry_run = false): int =
   ## cli entry to clone a package into the environment
 
   # user's choice, our default
   setLogFilter(log_level)
+
+  # setup flags for the operation
+  let flags = composeFlags(defaultFlags)
 
   var
     url: Uri
@@ -553,7 +631,7 @@ proc cloner*(args: seq[string]; log_level = logLevel; dry_run = false): int =
   project.cfg = loadAllCfgs(project.repo)
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = {Flag.Quiet})
+  var group = project.newDependencyGroup(flags = flags)
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
@@ -602,6 +680,7 @@ when isMainModule:
       scTag = "tag"
       scRun = "run"
       scRoll = "roll"
+      scUpDown = "outdated"
       scGraph = "graph"
       scVersion = "--version"
 
@@ -637,6 +716,8 @@ when isMainModule:
               doc="tag versions")
   dispatchGen(roller, cmdName = $scRoll, dispatchName = "run" & $scRoll,
               doc="roll project dependency versions")
+  dispatchGen(updowner, cmdName = $scUpDown, dispatchName = "run" & $scUpDown,
+              doc="upgrade or downgrade project dependencies")
   dispatchGen(grapher, cmdName = $scGraph, dispatchName = "run" & $scGraph,
               doc="graph project dependencies")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
@@ -652,10 +733,10 @@ when isMainModule:
       "fix":         @[$scDoctor],
       "fetch":       @[$scRun, "--git", "--", "git", "fetch"],
       "pull":        @[$scRun, "--git", "--", "git", "pull"],
-      "roll":        @[$scRoll, "--goal=roll"],
-      "downgrade":   @[$scRoll, "--goal=downgrade"],
-      "upgrade":     @[$scRoll, "--goal=upgrade"],
-      "outdated":    @[$scRoll, "--goal=upgrade", "--dry-run"],
+      "roll":        @[$scRoll],
+      "downgrade":   @[$scUpDown, "--goal=downgrade"],
+      "upgrade":     @[$scUpDown, "--goal=upgrade"],
+      "outdated":    @[$scUpDown, "--goal=upgrade", "--dry-run"],
     }.toTable
 
   proc makeAliases(passthrough: openArray[string]): AliasTable {.compileTime.} =
@@ -674,8 +755,8 @@ when isMainModule:
 
   const
     # these are our subcommands that we want to include in help
-    dispatchees = [scDoctor, scSearch, scClone, scPath, scFork,
-                   scLock, scUnlock, scTag, scRoll, scGraph, scRun]
+    dispatchees = [scDoctor, scSearch, scClone, scPath, scFork, scLock, scUnlock,
+                   scTag, scUpDown, scRoll, scGraph, scRun]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
@@ -694,6 +775,7 @@ when isMainModule:
       scRun: runrun,
       scRoll: runroll,
       scGraph: rungraph,
+      scUpDown: runoutdated,
     }.toTable
 
     # setup the mapping between subcommand and expanded parameters
@@ -743,7 +825,7 @@ when isMainModule:
         case command:
         of scRun:
           fun.dumpHelp("\n$command --git $args\n$doc")
-        of scRoll:
+        of scUpDown:
           fun.dumpHelp("\n$command --goal=upgrade|downgrade $args\n$doc")
         else:
           fun.dumpHelp("\n$command $args\n$doc")
@@ -755,8 +837,8 @@ when isMainModule:
 
       echo "\n    Some additional subcommands are implemented as aliases:"
       for alias, arguments in trueAliases.pairs:
-        # don't report aliases that are aliases of themselves 😜
-        if alias == arguments[0]:
+        # don't report aliases that are (trivial) aliases of themselves 😜
+        if alias == arguments[0] and arguments.len == 1:
           continue
         let alias = "nimph " & alias
         echo &"""    {alias:>16} -> nimph {arguments.join(" ")}"""

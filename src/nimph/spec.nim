@@ -17,6 +17,8 @@ type
     Strict
     Force
     Dry
+    Safe
+    Network
 
   RollGoal* = enum
     Upgrade = "upgrade"
@@ -52,6 +54,7 @@ const
   excludeMissingLazyPaths* {.booldefine.} = true
   writeNimbleDirPaths* {.booldefine.} = false
   shortDate* = initTimeFormat "yyyy-MM-dd"
+  # add Safe to defaultFlags to, uh, default to Safe mode
   defaultFlags*: set[Flag] = {Quiet, Strict}
 
   # when true, try to clamp analysis to project-local directories
