@@ -1,6 +1,6 @@
 # nimph [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=master)](https://travis-ci.org/disruptek/nimph)
 
-nim package handler from the future
+nim package hierarchy manager from the future
 
 or: _How I Learned to Stop Worrying and Love the Search Path_
 
@@ -72,6 +72,12 @@ Starting with nothing more than the project's repository, we'll...
 
 ## Installation
 
+Some lucky few may be able to simply `nimble install https://github.com/disruptek/nimph`.
+
+For others, simple bootstrap scripts are provided.
+
+### Unix-like
+
 These are the contents of the included `bootstrap.sh`; you'll see that
 we're setting up a local dependency tree with which to build nimph and its
 dependencies. If successful, the full path to the binary is output.
@@ -93,11 +99,40 @@ nimble install "--passNim:--path:\"`pwd`/src\""
 realpath nimph
 ```
 
+### Windows
+
+To build Nimph, you need to have `cmake`.
+The easiest way to install it on Windows is via [scoop](https://scoop.sh/):
+
+```
+scoop install cmake
+```
+
+Here is the included `bootstrap.ps1`; as above, it simply sets up local
+dependencies before building Nimph.
+
+```powershell
+if ( !(Join-Path 'src' 'nimph.nim' | Test-Path) ) {
+  git clone git://github.com/disruptek/nimph.git
+  Set-Location nimph
+}
+
+$env:NIMBLE_DIR = Join-Path $PWD 'deps'
+New-Item -Type Directory $env:NIMBLE_DIR -Force | Out-Null
+
+nimble --accept refresh
+nimble install "--passNim:--path:$(Resolve-Path 'src') --outDir:$PWD"
+```
+
+### GitHub Integration
+
 You may want to [create a new GitHub personal access token here](https://github.com/settings/tokens) and then add it to your environment as `NIMPH_TOKEN` or `GITHUB_TOKEN`.
 
 If you skip this step, Nimph will try to use a Nimble token for **search**es,
 and it will also try to read any `hub` or `ghi` credentials.  Notably, the
 **fork** subcommand will not work without adequate scope authorization.
+
+## Subcommand Usage
 
 ### Search
 
@@ -223,6 +258,21 @@ $ nimph path coco
 
 $ nimph path --strict coco
 couldn't find a dependency importable as `coco`
+```
+
+It's useful to create a shell function to jump into dependency directories so
+you can quickly hack at them.
+
+```
+#!/bin/bash
+function goto { pushd `nimph path $1`; }
+```
+
+or
+
+```
+#!/bin/fish
+function goto; pushd (nimph path $argv); end
 ```
 
 ### Lock
