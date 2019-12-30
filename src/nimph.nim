@@ -569,7 +569,7 @@ proc forker*(names: seq[string]; strict = false;
       {.warning: "optionally upgrade a gitless install to clone".}
 
 proc cloner*(args: seq[string]; strict = false;
-             log_level = logLevel; safe_mode = false; quiet = false;
+             log_level = logLevel; safe_mode = false; quiet = true;
              network = true; force = false; dry_run = false): int =
   ## cli entry to clone a package into the environment
 
