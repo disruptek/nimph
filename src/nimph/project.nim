@@ -848,7 +848,7 @@ proc clone*(project: var Project; url: Uri; name: string;
     directory = directory / name & "-#head"
 
   if directory.dirExists:
-    error &"i wanted to clone into {directory}, but it already exists"
+    error &"tried to clone into {directory}, but it already exists"
     return
 
   # don't clone the compiler when we're debugging nimph
@@ -860,10 +860,10 @@ proc clone*(project: var Project; url: Uri; name: string;
   info &"... into {directory}"
 
   var
-    got: GitClone
     head: Option[GitOid]
     oid: string
-  gitTrap got, clone(got, bare, directory):
+  repository := clone(bare, directory):
+    dumpError(code)
     return
 
   # make sure the project we find is in the directory we cloned to;
@@ -871,7 +871,7 @@ proc clone*(project: var Project; url: Uri; name: string;
   if findProject(cloned, directory, parent = project) and
                  cloned.repo == directory:
     {.warning: "gratuitous nimblemeta write?".}
-    head = getHeadOid(got.repo)
+    head = getHeadOid(repository)
     if head.isNone:
       oid = ""
     else:
