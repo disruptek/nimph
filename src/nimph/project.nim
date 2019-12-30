@@ -36,11 +36,11 @@ import std/algorithm
 import std/sequtils
 
 import bump
+import gittyup
 
 import nimph/spec
 import nimph/config
 import nimph/nimble
-import nimph/git
 import nimph/package
 import nimph/version
 import nimph/thehub
@@ -1085,7 +1085,7 @@ proc repoLockReady*(project: Project): bool =
     notice &"{project} repository in invalid {state} state"
 
   # at the moment, status only works in libgit's master branch
-  if not git.hasWorkingStatus:
+  if not gittyup.hasWorkingStatus:
     warn "you need a newer libgit2 to safely roll repositories"
     result = false
   else:

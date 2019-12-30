@@ -7,10 +7,10 @@ import std/strtabs
 import std/tables
 
 import bump
+import gittyup
 
 import nimph/spec
 import nimph/version
-import nimph/git
 
 import nimph/group
 export group

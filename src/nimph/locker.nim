@@ -5,6 +5,8 @@ import std/strtabs
 import std/tables
 import std/uri
 
+import gittyup
+
 import nimph/spec
 import nimph/version
 import nimph/group
@@ -13,7 +15,6 @@ import nimph/project
 import nimph/dependency
 import nimph/package
 import nimph/asjson
-import nimph/git
 import nimph/doctor
 import nimph/requirement
 

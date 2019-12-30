@@ -3,13 +3,13 @@ import std/options
 
 import unittest2
 import bump
+import gittyup
 
 import nimph/spec
 import nimph/project
 import nimph/version
 import nimph/dependency
 import nimph/config
-import nimph/git
 import nimph/requirement
 import nimph/versiontags
 

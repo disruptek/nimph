@@ -6,6 +6,7 @@ import std/os
 import std/strformat
 
 import bump
+import gittyup
 
 import nimph/spec
 import nimph/project
@@ -15,7 +16,7 @@ import nimph/thehub
 import nimph/package
 import nimph/dependency
 import nimph/group
-import nimph/git
+
 import nimph/version
 import nimph/requirement
 
@@ -275,10 +276,10 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
 
   # see if git works
   block nimgit:
-    if not git.init():
+    if not gittyup.init():
       error "i'm not able to initialize nimgit2 for git operations"
       result = false
-    elif not git.shutdown():
+    elif not gittyup.shutdown():
       error "i'm not able to shutdown nimgit2 after initialization"
       result = false
     else:

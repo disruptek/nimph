@@ -8,6 +8,7 @@ import std/strformat
 import std/sequtils
 
 import bump
+import gittyup
 
 import nimph/spec
 import nimph/nimble
@@ -21,7 +22,6 @@ import nimph/locker
 import nimph/group
 import nimph/version
 import nimph/requirement
-import nimph/git
 
 template crash(why: string) =
   ## a good way to exit nimph

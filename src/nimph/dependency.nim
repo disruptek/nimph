@@ -11,13 +11,13 @@ import std/sequtils
 import std/algorithm
 
 import bump
+import gittyup
 
 import nimph/spec
 import nimph/package
 import nimph/project
 import nimph/version
 import nimph/versiontags
-import nimph/git
 import nimph/requirement
 import nimph/config
 
