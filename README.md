@@ -1,4 +1,6 @@
-# nimph [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=master)](https://travis-ci.org/disruptek/nimph)
+# nimph
+- `gc:refc` [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=master)](https://travis-ci.org/disruptek/nimph)
+- `gc:arc` [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=arc)](https://travis-ci.org/disruptek/nimph)
 
 nim package hierarchy manager from the future
 
