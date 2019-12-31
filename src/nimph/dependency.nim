@@ -1,4 +1,3 @@
-import std/os
 import std/uri
 import std/strformat
 import std/strutils
@@ -238,8 +237,8 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
       warn &"i wanted to examine tags for {project} but they were empty"
       raise newException(Defect, "seems like a programmer error to me")
     let
-      gotHead = project.getHeadOid
-      head = if gotHead.isSome: $gotHead.get else: ""
+      oid = project.getHeadOid
+      head = if oid.isOk: $oid.get else: ""
     for release in req.matchingReleases(head = head, tags = project.tags):
       debug &"release match {release} for {req}"
       yield release
@@ -290,14 +289,11 @@ proc symbolicMatch*(project: var Project; req: Requirement): bool =
 
 proc isSatisfiedBy*(req: Requirement; project: Project; release: Release): bool =
   ## true if the requirement is satisfied by the project at the given release
-  var
-    oid: string
   block satisfied:
     if project.dist == Git:
       let
         head = project.getHeadOid
-      if head.isSome:
-        oid = $head.get
+        oid = if head.isOk: $head.get else: ""
 
       if project.tags == nil:
         raise newException(Defect, "really expected to have tags here")
@@ -709,7 +705,7 @@ proc roll*(project: var Project; requirement: Requirement;
   result = true
 
   # no head means that we're up-to-date, obviously
-  if head.isNone:
+  if head.isErr:
     return
 
   # get the list of suitable releases as a seq...

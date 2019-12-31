@@ -233,7 +233,7 @@ proc newProject*(nimble: Target): Project =
   result.name = splat.name
   result.config = newNimphConfig(splat.dir / configFile)
 
-proc getHeadOid*(project: Project): Option[GitOid] =
+proc getHeadOid*(project: Project): GitResult[GitOid] =
   ## retrieve the #head oid from the project's repository
   if project.dist != Git:
     let emsg = &"{project} lacks a git repository to load" # noqa
@@ -246,31 +246,30 @@ proc demandHead*(project: Project): GitOid =
     let emsg = &"{project} lacks a git repository to load" # noqa
     raise newException(Defect, emsg)
   let oid = getHeadOid(project.gitDir)
-  if oid.isNone:
+  if oid.isErr:
     let emsg = &"unable to fetch HEAD from {project}" # noqa
     raise newException(ValueError, emsg)
   result = oid.get
 
 proc nameMyRepo(project: Project): string =
   ## name a repository directory in such a way that the compiler can grok it
-  var
-    oid: Option[GitOid]
   block:
     if project.dist == Git:
-      oid = project.getHeadOid
-    # the release is a tag, so we might be able to simplify it
-    if project.release in {Tag} and oid.isSome:
-      let tag = project.tags.shortestTag($oid.get)
-      # use the nimble style of project-#head when appropriate
-      if tag == $oid.get:
-        result = project.name & "-" & "#head"
-      else:
-        let loose = parseVersionLoosely(tag)
-        if loose.isSome:
-          result = project.name & "-" & $loose.get
+      let
+        oid = project.getHeadOid
+      # the release is a tag, so we might be able to simplify it
+      if project.release.kind in {Tag} and oid.isOk:
+        let tag = project.tags.shortestTag($oid.get)
+        # use the nimble style of project-#head when appropriate
+        if tag == $oid.get:
+          result = project.name & "-" & "#head"
         else:
-          result = project.name & "-#" & tag
-      break
+          let loose = parseVersionLoosely(tag)
+          if loose.isSome:
+            result = project.name & "-" & $loose.get
+          else:
+            result = project.name & "-#" & tag
+        break
 
     # fallback to version
     if project.version.isValid:
@@ -337,7 +336,7 @@ proc cuteRelease*(project: Project): string =
   if project.dist == Git and project.release.isValid:
     let
       head = project.getHeadOid
-    if head.isNone:
+    if head.isErr:
       result = ""
     elif project.tags == nil:
       error "unable to determine tags without fetching them from git"
@@ -360,7 +359,7 @@ proc findCurrentTag*(project: Project): Release =
     head = project.getHeadOid
   var
     name: string
-  if head.isNone:
+  if head.isErr:
     name = ""
   elif project.tags == nil:
     error "unable to determine tags without fetching them from git"
@@ -859,10 +858,9 @@ proc clone*(project: var Project; url: Uri; name: string;
   fatal &"👭cloning {bare}..."
   info &"... into {directory}"
 
-  var
-    head: Option[GitOid]
-    oid: string
+  # clone the bare url into the given directory, yielding a repository object
   repository := clone(bare, directory):
+    # or, if there was a problem, dump some error messages and bail out
     dumpError(code)
     return
 
@@ -871,11 +869,9 @@ proc clone*(project: var Project; url: Uri; name: string;
   if findProject(cloned, directory, parent = project) and
                  cloned.repo == directory:
     {.warning: "gratuitous nimblemeta write?".}
-    head = getHeadOid(repository)
-    if head.isNone:
-      oid = ""
-    else:
-      oid = $head.get
+    let
+      head = getHeadOid(repository)
+      oid = if head.isOk: $head.get else: ""
     if not writeNimbleMeta(directory, bare, oid):
       warn &"unable to write {nimbleMeta} in {directory}"
 
@@ -1148,7 +1144,7 @@ proc betterReleaseExists*(project: Project; goal: RollGoal): bool =
 
   # no head means no tags means no upgrades
   let head = project.getHeadOid
-  if head.isNone:
+  if head.isErr:
     return
 
   # make sure this isn't a nonsensical request
@@ -1205,7 +1201,7 @@ template returnToHeadAfter*(project: var Project; body: untyped) =
 
   # we may have no head; if that's the case, we have no tags either
   let previous = project.getHeadOid
-  if previous.isSome:
+  if previous.isOk:
 
     # this could just be a bad idea all the way aroun'
     if not project.repoLockReady:
