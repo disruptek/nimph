@@ -267,7 +267,7 @@ proc rollChild(child: var Project; requirement: Requirement; goal: RollGoal;
       warn &"unable to {goal} {child.name}"
 
 proc updowner*(names: seq[string]; goal: RollGoal; strict = false;
-             log_level = logLevel; safe_mode = false; quiet = false;
+             log_level = logLevel; safe_mode = false; quiet = true;
              network = true; force = false; dry_run = false): int =
   ## perform upgrades or downgrades of dependencies
   ## within project requirement specifications
