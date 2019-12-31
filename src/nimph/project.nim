@@ -927,7 +927,7 @@ iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef;
   # now report on anything we weren't able to discover
   for project in group.values:
     if project.importName notin dedupe:
-      notice &"no path to {project.repo}"
+      notice &"no path to {project.repo} as `{project.importName}`"
 
 proc countNimblePaths*(project: Project):
   tuple[local: int; global: int; paths: seq[string]] =
