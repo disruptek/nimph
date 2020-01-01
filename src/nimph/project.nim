@@ -856,7 +856,7 @@ proc clone*(project: var Project; url: Uri; name: string;
   # clone the bare url into the given directory, yielding a repository object
   repository := clone(bare, directory):
     # or, if there was a problem, dump some error messages and bail out
-    dumpError(code)
+    error code.dumpError
     return
 
   # make sure the project we find is in the directory we cloned to;
