@@ -48,7 +48,8 @@ proc loadProjectCfg*(path: string): Option[ConfigRef] =
   if readConfigFile(filename.AbsoluteFile, cache, config):
     result = config.some
 
-proc overlayConfig*(config: var ConfigRef; directory: string): bool =
+proc overlayConfig*(config: var ConfigRef;
+                    directory: string): bool {.deprecated.} =
   ## true if new config data was added to the env
   withinDirectory(directory):
     var
@@ -58,6 +59,10 @@ proc overlayConfig*(config: var ConfigRef; directory: string): bool =
       filename = nextProjectPath.string / NimCfg
 
     block complete:
+      # do not overlay above the current config
+      if nextProjectPath == priorProjectPath:
+        break complete
+
       # if there's no config file, we're done
       result = filename.fileExists
       if not result:
@@ -90,11 +95,11 @@ proc loadAllCfgs*(directory: string): ConfigRef =
   initDefines(result.symbols)
 
   # maybe we should turn off configuration hints for these reads
-  when not defined(debug) and not defined(debugPath):
-    result.notes.excl hintConf
-  result.notes.excl hintLineTooLong
   when defined(debugPath):
     result.notes.incl hintPath
+  elif not defined(debug):
+    result.notes.excl hintConf
+  result.notes.excl hintLineTooLong
 
   # stuff the prefixDir so we load the compiler's config/nim.cfg
   # just like the compiler would if we were to invoke it directly
@@ -111,6 +116,8 @@ proc loadAllCfgs*(directory: string): ConfigRef =
   when defined(debugPath):
     debug "loaded", result.searchPaths.len, "search paths"
     debug "loaded", result.lazyPaths.len, "lazy paths"
+    for path in result.lazyPaths.items:
+      debug "\t", path
     for path in result.lazyPaths.items:
       if result.lazyPaths.count(path) > 1:
         raise newException(Defect, "duplicate lazy path: " & path.string)

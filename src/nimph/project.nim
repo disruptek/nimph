@@ -133,14 +133,9 @@ proc fetchConfig*(project: var Project; force = false): bool =
     if project.parent == nil:
       debug &"config fetch for parent {project}"
       project.cfg = loadAllCfgs(project.repo)
-      result = true
     else:
       project.cfg = project.parent.cfg
-      debug &"config fetch for child {project}"
-      result = overlayConfig(project.cfg, project.repo)
-      if result:
-        discard project.parent.fetchConfig(force = true)
-      result = true
+    result = true
   else:
     discard
     when defined(debug):
