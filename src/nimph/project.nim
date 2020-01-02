@@ -1231,17 +1231,22 @@ proc versionChangingCommits*(project: var Project): VersionTags =
     package = project.nimble.package.addFileExt(project.nimble.ext)
 
   project.returnToHeadAfter:
-    # iterate over commits to the dotNimble file
-    for commit in commitsForSpec(project.repo, @[package]):
-      var
-        thing = commit.toThing
-      # compose a new release to the commit and then go there
-      let release = newRelease($thing.oid, operator = Tag)
-      if not project.setHeadToRelease(release):
-        continue
-      # freshen project version, release, etc.
-      project.refresh
-      result[project.version] = thing
+    block:
+      repository := openRepository(project.repo):
+        error code.dumpError
+        break
+      # iterate over commits to the dotNimble file
+      for thing in repository.commitsForSpec(@[package]):
+        if thing.isErr:
+          error thing.error.dumpError # error error error!
+          break
+        # compose a new release to the commit and then go there
+        let release = newRelease($thing.get.oid, operator = Tag)
+        if not project.setHeadToRelease(release):
+          continue
+        # freshen project version, release, etc.
+        project.refresh
+        result[project.version] = thing.get
 
 proc pathForName*(group: ProjectGroup; name: string): Option[string] =
   ## try to retrieve the directory for a given import name in the group
