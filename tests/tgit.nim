@@ -43,7 +43,8 @@ suite "git":
           req = newRequirement($project.url, operator = Tag, release)
         if project.rollTowards(req):
           for stat in project.repo.status:
-            check gsfIndexModified notin stat.flags
+            check stat.isOk
+            check gsfIndexModified notin stat.get.flags
 
   test "commits changing project version":
     let
