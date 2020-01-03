@@ -43,7 +43,7 @@ suite "git":
 
   test "roll between versions":
     project.returnToHeadAfter:
-      for ver in ["0.5.7", "0.5.6"]:
+      for ver in ["0.6.6", "0.6.5"]:
         let
           release = newRelease(ver, operator = Tag)
           req = newRequirement($project.url, operator = Tag, release)
@@ -56,5 +56,5 @@ suite "git":
     let
       versioned = project.versionChangingCommits
       required = project.requirementChangingCommits
-    check $versioned[v"0.5.6"].oid == "76e5cc0121cc2f963336abb3f3fc97b01fdc5ed4"
-    check $versioned[v"0.5.7"].oid == "60ab6a2776df4dc0a8814d6741a5e560959a8a5f"
+    check $versioned[v"0.6.5"].oid == "8937c0b998376944fd93d6d8e7b3cf4db91dfb9b"
+    check $versioned[v"0.6.6"].oid == "5a3de5a5fc9b83d5a9bba23f7e950b37a96d10e6"
