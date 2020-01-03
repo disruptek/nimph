@@ -35,6 +35,12 @@ suite "git":
     var
       cute = deps.projectForPath(path.get).get
 
+    var
+      repository = openRepository(project.repo)
+
+  teardown:
+    free repository.get
+
   test "roll between versions":
     project.returnToHeadAfter:
       for ver in ["0.5.7", "0.5.6"]:
@@ -42,7 +48,7 @@ suite "git":
           release = newRelease(ver, operator = Tag)
           req = newRequirement($project.url, operator = Tag, release)
         if project.rollTowards(req):
-          for stat in project.repo.status:
+          for stat in repository.status(ssIndexAndWorkdir):
             check stat.isOk
             check gsfIndexModified notin stat.get.flags
 

@@ -143,18 +143,21 @@ proc peelRelease*(project: Project; release: Release): Release =
   ## peel a release, if possible, to resolve any tags as commits
   var
     thing: GitThing
-
   # default to just returning the release we were given
   result = release
 
   block:
-
     # if there's no way to peel it, just bail
     if project.dist != Git or result.kind != Tag:
       break
 
-    # else, look up the reference
-    gitTrap thing, lookupThing(thing, project.repo, result.reference):
+    # else, open the repo
+    repository := openRepository(project.repo):
+      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+      break
+
+    # and look up the reference
+    thing := repository.lookupThing(result.reference):
       warn &"unable to find release reference `{result.reference}`"
       break
 
@@ -246,11 +249,13 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
     #
     # this currently could duplicate a release emitted above, but that's okay
     if req.release.kind == Tag:
-      var thing: GitThing
-      let grc = lookupThing(thing, project.repo, req.release.reference)
-      gitTrap thing, grc:
-        debug &"could not find {req.release.reference} in {project}"
-      if grc == grcOk:
+      block:
+        repository := openRepository(project.gitDir):
+          error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+          break
+        thing := repository.lookupThing(req.release.reference):
+          debug &"could not find {req.release.reference} in {project}"
+          break
         debug &"found {req.release.reference} in {project}"
         yield newRelease($thing.oid, operator = Tag)
   else:
@@ -308,15 +313,16 @@ proc isSatisfiedBy*(req: Requirement; project: Project; release: Release): bool 
       if req.release.kind == Tag:
         # match against a specific oid or symbol
         if release.kind == Tag:
-          var thing: GitThing
-          let
-            grc = lookupThing(thing, project.repo, name = release.reference)
-          gitTrap thing, grc:
-            notice &"tag/oid `{release.reference}` in {project.name}: {grc}"
-          if grc == grcOk:
+          block:
+            repository := openRepository(project.gitDir):
+              error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+              break
+            thing := repository.lookupThing(name = release.reference):
+              notice &"tag/oid `{release.reference}` in {project.name}: {code}"
+              break
             debug &"release reference {release.reference} is {thing}"
             result = release.reference == req.release.reference
-          break satisfied
+            break satisfied
 
     # basically, this could work if we've pulled a tag from nimblemeta
     if req.release.kind == Tag:

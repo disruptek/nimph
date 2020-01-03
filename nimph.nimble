@@ -8,7 +8,7 @@ requires "cligen >= 0.9.41"
 requires "bump >= 1.8.18"
 requires "npeg >= 0.21.3"
 requires "https://github.com/disruptek/cutelog >= 1.1.0"
-requires "https://github.com/disruptek/gittyup 1.0.6"
+requires "https://github.com/disruptek/gittyup >= 2.0.3"
 requires "https://github.com/stefantalpalaru/nim-unittest2#30c7d332d8ebab28d3240018f48f145ff20af239"
 
 # fixup a dependency: regex 0.10.0 doesn't build with 1.0.4 stdlib

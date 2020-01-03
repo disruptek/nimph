@@ -70,14 +70,12 @@ proc fixTags*(project: var Project; dry_run = true): bool =
           tagsNeeded.inc
         else:
           # try to create a tag for this version and commit
-          var oid: GitOid = nil
           let nextTag = project.tags.nextTagFor(version)
-          gitTrap oid, tagCreateLightweight(oid, commit.owner, nextTag, commit):
+          oid := commit.owner.tagCreateLightweight(nextTag, commit):
             notice &"unable to create new tag for {version}"
-
+            break found
           # if that worked, let them know we did something
-          if not oid.isNil:
-            info &"created new tag {version} for {oid}"
+          info &"created new tag {version} for {oid}"
 
     # save our advice 'til the end
     if tagsNeeded > 0:

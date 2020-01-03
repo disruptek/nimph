@@ -233,14 +233,16 @@ proc getHeadOid*(project: Project): GitResult[GitOid] =
   if project.dist != Git:
     let emsg = &"{project} lacks a git repository to load" # noqa
     raise newException(Defect, emsg)
-  result = getHeadOid(project.gitDir)
+  block:
+    repository := openRepository(project.gitDir):
+      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+      result.err code
+      break
+    result = repository.getHeadOid
 
 proc demandHead*(project: Project): GitOid =
   ## retrieve the #head oid from the project's repository or raise an exception
-  if project.dist != Git:
-    let emsg = &"{project} lacks a git repository to load" # noqa
-    raise newException(Defect, emsg)
-  let oid = getHeadOid(project.gitDir)
+  let oid = project.getHeadOid
   if oid.isErr:
     let emsg = &"unable to fetch HEAD from {project}" # noqa
     raise newException(ValueError, emsg)
@@ -297,15 +299,17 @@ proc sortByVersion*(tags: GitTagTable): GitTagTable =
 proc fetchTagTable*(project: var Project) =
   ## retrieve the tags for a project from its git repository
   block:
-    var
-      tags: GitTagTable
     if project.dist != Git:
       break
-    gitTrap tags, tagTable(project.repo, tags):
-      let path {.used.} = project.repo # template reasons
-      warn &"unable to fetch tags from repo in {path}"
+    repository := openRepository(project.repo):
+      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
-    project.tags = tags.sortByVersion
+    let
+      tags = repository.tagTable
+    if tags.isErr:
+      warn &"unable to read tags at `{project.repo}`: {tags.error.dumpError}"
+      break
+    project.tags = tags.get.sortByVersion
 
 proc releaseSummary*(project: Project): string =
   ## summarize a project's tree using whatever we can
@@ -319,9 +323,10 @@ proc releaseSummary*(project: Project): string =
   else:
     # else, lookup the summary for the tag or commit
     block:
-      var
-        thing: GitThing
-      gitTrap thing, lookupThing(thing, project.repo, project.release.reference):
+      repository := openRepository(project.repo):
+        error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+        break
+      thing := repository.lookupThing(project.release.reference):
         warn &"error reading reference `{project.release.reference}`"
         break
       result = thing.summary
@@ -474,26 +479,30 @@ proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
 
   block complete:
     block found:
-      # grab the result code so we can use it in the warning below
-      let grc = remoteLookup(remote, project.repo, name)
-      case grc:
-      of grcOk:
-        discard
-      of grcNotFound:
+      repository := openRepository(project.repo):
+        error &"unable to open repo at `{project.repo}`: {code.dumpError}"
         break found
-      else:
-        warn &"{grc}: unable to fetch remote `{name}` from {project.repo}"
+      let
+        remote = repository.remoteLookup(name)
+      if remote.isErr:
+        case remote.error:
+        of grcNotFound:
+          # "not found" doesn't seem like something we need to warn of
+          discard
+        else:
+          warn &"{remote.error}: unable to fetch remote `{name}` " &
+               &"in {project.repo}"
+          warn remote.error.dumpError
         break found
-
-      # remote is populated, so be sure to free it
+      # the lookup populated remote, so remember to free it
       defer:
-        remote.free
+        free remote.get
 
       try:
-        let url = remote.url
+        let url = remote.get.url
         if url.isValid:
           # this is our only success scenario
-          result = remote.url.some
+          result = url.some
           break complete
         else:
           warn &"bad git url in {project.repo}: {url}"
@@ -801,23 +810,31 @@ proc addMissingUpstreams*(project: Project) =
   var
     upstream: GitReference
     grc: GitResultCode
-  for branch in project.repo.branches({gbtLocal}):
-    let
-      name = branch.branchName
-    debug &"branch: {name}"
-    grc = branchUpstream(upstream, branch)
-    case grc:
-    of grcOk:
-      discard
-    of grcNotFound:
-      block:
-        grc = branch.setBranchUpstream(name)
-        gitFail grc:
-          notice &"unable to add upstream tracking branch for {name}: {grc}"
-          break
-        info &"added upstream tracking branch for {name}"
-    else:
-      notice "error fetching upstream for {name}: {grc}"
+
+  block:
+    repository := openRepository(project.repo):
+      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+      break
+
+    for branch in repository.branches({gbtLocal}):
+      if branch.isErr:
+        warn &"error fetching branches: {branch.error}"
+        continue
+      let
+        name = branch.get.branchName
+      debug &"branch: {name}"
+      found := branch.get.branchUpstream:
+        case code:
+        of grcNotFound:
+          case branch.get.setBranchUpstream(name):
+          of grcOk:
+            info &"added upstream tracking branch for {name}"
+          else:
+            warn &"unable to add upstream tracking branch for {name}"
+            warn grcOk.dumpError
+        else:
+          warn &"error fetching upstream for {name}: {code}"
+          warn code.dumpError
 
 proc clone*(project: var Project; url: Uri; name: string;
             cloned: var Project): bool =
@@ -982,8 +999,16 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
 
   # we'll add missing upstreams after this block
   block donehere:
-    gitTrap remote, remoteLookup(remote, project.repo, name):
-      warn &"unable to fetch remote `{name}` from repo in {path}"
+    repository := openRepository(path):
+      error &"unable to open repo at `{path}`: {code.dumpError}"
+      break
+
+    remote := repository.remoteLookup(name):
+      case code:
+      of grcNotFound:
+        discard
+      else:
+        warn &"unable to fetch remote `{name}` from repo in {path}"
       break
 
     try:
@@ -996,21 +1021,32 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
         info &"upgrading remote to ssh..."
     except:
       warn &"unparseable remote `{name}` from repo in {path}"
-    gitFail upstream, remoteLookup(upstream, project.repo, upstreamRemote):
+    var
+      upstream = repository.remoteLookup(upstreamRemote)
+    if upstream.isErr:
       # there's no upstream remote; what do we do with origin?
       if remote.url.forkTarget == target:
         # the origin isn't an ssh remote; remove it
-        gitTrap remoteDelete(project.repo, name):
+        gitTrap repository.remoteDelete(name):
           # this should issue warnings of any problems...
           break
       else:
         # there's no upstream remote; rename origin to upstream
-        gitTrap remoteRename(project.repo, name, upstreamRemote):
-          # this should issue warnings of any problems...
+        let
+          warnings = repository.remoteRename(name, upstreamRemote)
+        if warnings.isErr:
+          error &"{warnings.error}: unable to rename " &
+                &"`{name}` to `{upstreamRemote}`:"
+          error warnings.error.dumpError
           break
+        # these are advisory messages of some sort (from git)
+        for message in warnings.get.items:
+          warn message
       # and make a new origin remote using the hubrepo's url
-      gitTrap upstream, remoteCreate(upstream, project.repo, defaultRemote, ssh):
-        # this'll issue some errors for us, too...
+      upstream = repository.remoteCreate(defaultRemote, ssh)
+      if upstream.isErr:
+        warn &"unable to create remote `{defaultRemote}` in {path}"
+        warn upstream.error.dumpError
         break
       # success
       result = true
@@ -1018,7 +1054,7 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
 
     try:
       # upstream exists, so, i dunno, just warn the user?
-      if upstream.url.forkTarget != remote.url.forkTarget:
+      if upstream.get.url.forkTarget != remote.url.forkTarget:
         warn &"remote `{upstreamRemote}` exists for repo in {path}"
       else:
         {.warning: "origin equals upstream; remove upstream and try again?".}
@@ -1065,26 +1101,28 @@ proc repoLockReady*(project: Project): bool =
   if project.dist != Git:
     return
 
-  # it's our game to lose
-  result = true
-
-  # this is a high-level state check to ensure the
-  # repo isn't in the middle of a merge, bisect, etc.
-  let state = repositoryState(project.repo)
-  if state != GitRepoState.grsNone:
-    result = false
-    notice &"{project} repository in invalid {state} state"
-
-  # at the moment, status only works in libgit's master branch
-  if not gittyup.hasWorkingStatus:
-    warn "you need a newer libgit2 to safely roll repositories"
-    result = false
-  else:
-    # an alien file isn't a problem, but virtually anything else is
-    for n in status(project.repo, ssIndexAndWorkdir):
-      result = false
-      notice &"{project} repository has been modified"
+  block:
+    repository := openRepository(project.repo):
+      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
+
+    # this is a high-level state check to ensure the
+    # repo isn't in the middle of a merge, bisect, etc.
+    let state = repository.repositoryState
+    if state != GitRepoState.grsNone:
+      notice &"{project} repository in invalid {state} state"
+    # at the moment, status only works in libgit's master branch
+    elif not gittyup.hasWorkingStatus:
+      warn "you need a newer libgit2 to safely roll repositories"
+    else:
+      # it's our game to lose
+      result = true
+
+      # an alien file isn't a problem, but virtually anything else is
+      for n in repository.status(ssIndexAndWorkdir):
+        result = false
+        notice &"{project} repository has been modified"
+        break
 
 proc bestRelease*(tags: GitTagTable; goal: RollGoal): Version {.deprecated.} =
   ## the most ideal tagged release parsable as a version; we should probably use
@@ -1178,8 +1216,11 @@ proc setHeadToRelease*(project: var Project; release: Release): bool =
     {.warning: "roll to arbitrary releases".}
     if not release.isValid or release.kind != Tag:
       break
+    repository := openRepository(project.gitDir):
+      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+      break
     # we want the code because it'll tell us what went wrong
-    let code = checkoutTree(project.repo, release.reference)
+    let code = repository.checkoutTree(release.reference)
     case code:
     of grcOk:
       debug &"roll {project.name} to {release}"
@@ -1189,38 +1230,45 @@ proc setHeadToRelease*(project: var Project; release: Release): bool =
       project.version = (0'u, 0'u, 0'u)
     else:
       debug &"roll {project.name} to {release}: {code}"
+      debug code.dumpError
 
 template returnToHeadAfter*(project: var Project; body: untyped) =
   ## run some code in the body if you can, and then return the
   ## project to where it was in git before you left
 
-  # we may have no head; if that's the case, we have no tags either
-  let previous = project.getHeadOid
-  if previous.isOk:
+  block:
+    # we may have no head; if that's the case, we have no tags either
+    let previous = project.getHeadOid
+    if previous.isErr:
+      break
 
     # this could just be a bad idea all the way aroun'
     if not project.repoLockReady:
       error "refusing to roll the repo when it's dirty"
-    else:
-      # if we have no way to get back, don't even depart
-      var home: GitReference
-      gitTrap home, referenceDWIM(home, project.repo, "HEAD"):
-        raise newException(IOError, "i'm lost; where am i?")
+      break
 
-      defer:
-        # there's no place like home
-        if not project.setHeadToRelease(newRelease($previous.get,
-                                                   operator = Tag)):
-          raise newException(IOError, "cannot detach head to " & $previous.get)
+    repository := openRepository(project.gitDir):
+      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+      break
 
-        # re-attach the head if we can
-        gitTrap setHead(project.repo, $home.name):
-          raise newException(IOError, "cannot set head to " & home.name)
+    # if we have no way to get back, don't even depart
+    home := repository.referenceDWIM("HEAD"):
+      raise newException(IOError, "i'm lost; where am i?")
 
-        # be sure to reload the project specifics now that we're home
-        project.refresh
+    defer:
+      # there's no place like home
+      if not project.setHeadToRelease(newRelease($previous.get,
+                                                 operator = Tag)):
+        raise newException(IOError, "cannot detach head to " & $previous.get)
 
-      body
+      # re-attach the head if we can
+      if repository.setHead($home.name) != grcOk:
+        raise newException(IOError, "cannot set head to " & home.name)
+
+      # be sure to reload the project specifics now that we're home
+      project.refresh
+
+    body
 
 proc versionChangingCommits*(project: var Project): VersionTags =
   # a table of the commits that changed the Version of a Project's
