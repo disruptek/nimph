@@ -301,7 +301,7 @@ proc fetchTagTable*(project: var Project) =
   block:
     if project.dist != Git:
       break
-    repository := openRepository(project.repo):
+    repository := openRepository(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
     let
@@ -323,7 +323,7 @@ proc releaseSummary*(project: Project): string =
   else:
     # else, lookup the summary for the tag or commit
     block:
-      repository := openRepository(project.repo):
+      repository := openRepository(project.gitDir):
         error &"unable to open repo at `{project.repo}`: {code.dumpError}"
         break
       thing := repository.lookupThing(project.release.reference):
@@ -479,7 +479,7 @@ proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
 
   block complete:
     block found:
-      repository := openRepository(project.repo):
+      repository := openRepository(project.gitDir):
         error &"unable to open repo at `{project.repo}`: {code.dumpError}"
         break found
       let
@@ -812,7 +812,7 @@ proc addMissingUpstreams*(project: Project) =
     grc: GitResultCode
 
   block:
-    repository := openRepository(project.repo):
+    repository := openRepository(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -999,7 +999,7 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
 
   # we'll add missing upstreams after this block
   block donehere:
-    repository := openRepository(path):
+    repository := openRepository(project.gitDir):
       error &"unable to open repo at `{path}`: {code.dumpError}"
       break
 
@@ -1102,7 +1102,7 @@ proc repoLockReady*(project: Project): bool =
     return
 
   block:
-    repository := openRepository(project.repo):
+    repository := openRepository(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -1280,7 +1280,7 @@ proc versionChangingCommits*(project: var Project): VersionTags =
 
   project.returnToHeadAfter:
     block:
-      repository := openRepository(project.repo):
+      repository := openRepository(project.gitDir):
         error code.dumpError
         break
       # iterate over commits to the dotNimble file
@@ -1291,6 +1291,9 @@ proc versionChangingCommits*(project: var Project): VersionTags =
         # compose a new release to the commit and then go there
         let release = newRelease($thing.get.oid, operator = Tag)
         if not project.setHeadToRelease(release):
+          # free this thing because we couldn't travel there,
+          # so we cannot very well determine its version
+          free thing.get
           continue
         # freshen project version, release, etc.
         project.refresh

@@ -152,7 +152,7 @@ proc peelRelease*(project: Project; release: Release): Release =
       break
 
     # else, open the repo
-    repository := openRepository(project.repo):
+    repository := openRepository(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 

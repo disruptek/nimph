@@ -36,7 +36,7 @@ suite "git":
       cute = deps.projectForPath(path.get).get
 
     var
-      repository = openRepository(project.repo)
+      repository = openRepository(project.gitDir)
 
   teardown:
     free repository.get
