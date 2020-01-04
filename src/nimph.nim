@@ -531,7 +531,7 @@ proc tagger*(strict = false;
     project: Project
   setupLocalProject(project)
 
-  if project.fixTags(dry_run = dry_run):
+  if project.fixTags(dry_run = dry_run, force = force):
     if dry_run:
       warn "run without --dry-run to fix these"
     else:

@@ -30,7 +30,7 @@ type
     kind*: StateKind
     why*: string
 
-proc fixTags*(project: var Project; dry_run = true): bool =
+proc fixTags*(project: var Project; dry_run = true; force = false): bool =
   block:
     if project.dist != Git or not project.repoLockReady:
       info "not looking for missing tags because the repository is unready"
@@ -48,6 +48,11 @@ proc fixTags*(project: var Project; dry_run = true): bool =
       break
     if "version" notin project.dump or project.dump["version"].count(".") > 2:
       notice &"refusing to tag {project.name} because its version is bizarre"
+      break
+
+    # open the repo so we can keep it in memory for tagging purposes
+    repository := openRepository(project.gitDir):
+      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
     # match up tags to versions to commits; we should probably
@@ -69,13 +74,27 @@ proc fixTags*(project: var Project; dry_run = true): bool =
           result = true
           tagsNeeded.inc
         else:
+          thing := repository.lookupThing($commit.oid):
+            notice &"unable to lookup {commit}"
+            continue
           # try to create a tag for this version and commit
-          let nextTag = project.tags.nextTagFor(version)
-          oid := commit.owner.tagCreateLightweight(nextTag, commit):
-            notice &"unable to create new tag for {version}"
-            break found
+          var
+            nextTag = project.tags.nextTagFor(version)
+            tagged = thing.tagCreate(nextTag, force = force)
+          # first, try using the committer's signature
+          if tagged.isErr:
+            notice &"unable to create signed tag for {version}"
+            # fallback to a lightweight (unsigned) tag
+            tagged = thing.tagCreateLightweight(nextTag, force = force)
+            if tagged.isErr:
+              notice &"unable to create new tag for {version}"
+              break found
+          let
+            oid = tagged.get
           # if that worked, let them know we did something
-          info &"created new tag {version} for {oid}"
+          info &"created new tag {version} as tag-{oid}"
+          # the oid created for the tag must be freed
+          dealloc oid
 
     # save our advice 'til the end
     if tagsNeeded > 0:
