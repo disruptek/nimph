@@ -141,8 +141,6 @@ proc determineDeps*(project: var Project): Option[Requires] =
 
 proc peelRelease*(project: Project; release: Release): Release =
   ## peel a release, if possible, to resolve any tags as commits
-  var
-    thing: GitThing
   # default to just returning the release we were given
   result = release
 

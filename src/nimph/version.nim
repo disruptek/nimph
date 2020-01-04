@@ -1,5 +1,3 @@
-import std/algorithm
-import std/uri
 import std/strformat
 import std/hashes
 import std/strutils

@@ -986,8 +986,6 @@ proc `==`(x, y: ForkTargetResult): bool =
 
 proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool =
   ## true if we were able to promote a url to be our new ssh origin
-  var
-    remote, upstream: GitRemote
   let
     path = project.repo
     ssh = url.convertToSsh
