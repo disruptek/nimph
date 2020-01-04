@@ -193,3 +193,8 @@ proc forkTarget*(url: Uri): ForkTargetResult =
     result.ok = result.owner.len > 0 and result.repo.len > 0
     if not result.ok:
       result.why = &"unable to parse url {result.url}"
+
+{.warning: "replace this with compiler code".}
+proc destylize*(s: string): string =
+  ## this is how we create a uniformly comparable token
+  result = s.toLowerAscii.replace("_")
