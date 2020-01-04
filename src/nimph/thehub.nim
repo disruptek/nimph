@@ -27,6 +27,7 @@ type
     HubIssue
     HubPull
     HubUser
+    HubCode
 
   HubResult* = ref object
     htmlUrl*: Uri
@@ -35,6 +36,7 @@ type
     title*: string
     body*: string
     state*: string
+    name*: string
     user*: HubResult
     case kind*: HubKind:
     of HubUser:
@@ -44,13 +46,16 @@ type
     of HubPull:
       mergedBy*: HubResult
       merged*: bool
+    of HubCode:
+      path*: string
+      repository*: HubResult
+      sha*: string
     of HubRepo:
       fullname*: string
       description*: string
       watchers*: int
       stars*: int
       forks*: int
-      name*: string
       owner*: string
       size*: int
       created*: DateTime
@@ -129,6 +134,7 @@ proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
         HubIssue
       else:
         kind
+
   case kind:
   of HubIssue:
     result = HubResult(kind: HubIssue)
@@ -141,36 +147,60 @@ proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
     result.merged = js.getOrDefault("merged").getBool
     if "merged_by" in js and js["merged_by"].kind == JObject:
       result.mergedBy = HubUser.newHubResult(js["merged_by"])
+  of HubCode:
+    result = HubResult(kind: HubCode)
+    result.htmlUrl = js["html_url"].getStr.parseUri
+    result.path = js["path"].getStr
+    result.sha = js["sha"].getStr
+    result.name = js["name"].getStr
+    if "repository" in js:
+      result.repository = HubRepo.newHubResult(js["repository"])
   of HubRepo:
+    template thenOrNow(label: string): DateTime =
+      if label in js:
+        js[label].getStr.parse(hubTime, zone = tz)
+      else:
+        now()
     result = HubResult(kind: HubRepo,
-      created: js["created_at"].getStr.parse(hubTime, zone = tz),
-      updated: js["updated_at"].getStr.parse(hubTime, zone = tz),
-      pushed: js["pushed_at"].getStr.parse(hubTime, zone = tz),
+      created: thenOrNow "created_at",
+      updated: thenOrNow "updated_at",
+      pushed: thenOrNow "pushed_at",
     )
     result.htmlUrl = js["html_url"].getStr.parseUri
     result.fullname = js["full_name"].getStr
-    result.owner = js["owner"].getStr
+    if "owner" in js and js["owner"].kind == JString:
+      result.owner = js["owner"].getStr
     result.name = js["name"].getStr
     result.description = js["description"].getStr
-    result.stars = js["stargazers_count"].getInt
-    result.watchers = js.getOrDefault("subscriber_count").getInt
-    result.forks = js["forks_count"].getInt
-    result.issues = js["open_issues_count"].getInt
-    result.clone = js["clone_url"].getStr.parseUri
-    result.git = js["git_url"].getStr.parseUri
-    result.ssh = js["ssh_url"].getStr.parseUri
+    if "stargazers_count" in js:
+      result.stars = js["stargazers_count"].getInt
+    if "subscriber_count" in js:
+      result.watchers = js.getOrDefault("subscriber_count").getInt
+    if "forks_count" in js:
+      result.forks = js["forks_count"].getInt
+    if "open_issues_count" in js:
+      result.issues = js["open_issues_count"].getInt
+    if "clone_url" in js:
+      result.clone = js["clone_url"].getStr.parseUri
+    if "git_url" in js:
+      result.git = js["git_url"].getStr.parseUri
+    if "ssh_url" in js:
+      result.ssh = js["ssh_url"].getStr.parseUri
     if "homepage" in js and $js["homepage"] notin ["null", ""]:
       result.web = js["homepage"].getStr.parseUri
     if not result.web.isValid:
       result.web = result.htmlUrl
-    result.license = js["license"].getOrDefault("name").getStr
-    result.branch = js["default_branch"].getStr
+    if "license" in js:
+      result.license = js["license"].getOrDefault("name").getStr
+    if "default_branch" in js:
+      result.branch = js["default_branch"].getStr
     result.original = not js["fork"].getBool
     result.score = js.getOrDefault("score").getFloat
   of HubUser:
     result = HubResult(kind: HubUser)
     result.login = js["login"].getStr
-  result.id = js["id"].getInt
+  if "id" in js:
+    result.id = js["id"].getInt
   if "title" in js:
     result.body = js["body"].getStr
     result.number = js["number"].getInt
