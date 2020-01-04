@@ -9,6 +9,7 @@ import std/sequtils
 
 import bump
 import gittyup
+import result as results
 
 import nimph/spec
 import nimph/nimble
@@ -85,6 +86,28 @@ template composeFlags(defaults): set[Flag] =
     toggle(flags, Force, force)
     toggle(flags, Network, network)
     flags
+
+proc findChildProjectUsing(group: DependencyGroup; name: string;
+                           flags: set[Flag]): Result[Project, string] =
+  ## search the group for a named project using options specified in flags
+  let
+    name = name.destylize
+    found = group.projectForName(name)
+
+  block complete:
+    var
+      nature = "dependency"
+    if found.isSome:
+      result.ok found.get
+      break complete
+    elif Strict notin flags:
+      for child in group.projects.values:
+        if child.importName.destylize == name:
+          result.ok child
+          break complete
+      nature = "project"
+    let emsg = &"couldn't find a {nature} importable as `{name}`" # noqa
+    result.err emsg
 
 proc searcher*(args: seq[string]; strict = false;
                log_level = logLevel; safe_mode = false; quiet = true;
@@ -171,17 +194,12 @@ proc pather*(names: seq[string]; strict = false;
 
   for name in names.items:
     var
-      found = group.pathForName(name)
-      nature = "dependency"
-    if found.isNone and Strict notin flags:
-      found = group.projects.pathForName(name)
-      nature = "project"
-    if found.isSome:
-      echo found.get
+      child = group.findChildProjectUsing(name, flags = flags)
+    if child.isOk:
+      echo child.get.repo
     else:
-      error &"couldn't find a {nature} importable as `{name}`"
-      echo ""      # a failed find produces empty output
-      result = 1   # and sets the return code to nonzero
+      error child.error
+      result = 1
 
 proc runner*(args: seq[string]; git = false; strict = false;
              log_level = logLevel; safe_mode = false; quiet = true;
@@ -540,30 +558,34 @@ proc forker*(names: seq[string]; strict = false;
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
+  # for convenience, add the project itself if possible
+  if not group.hasKey(project.name):
+    let dependency = newDependency(project)
+    group.add dependency.requirement, dependency
+
   for name in names.items:
-    let found = group.projectForName(name)
-    if found.isNone:
-      error &"couldn't find `{name}` among our installed dependencies"
+    var
+      child = group.findChildProjectUsing(name, flags = flags)
+    if child.isErr:
+      error child.error
       result = 1
       continue
-    var
-      child = found.get
     let
-      fork = child.forkTarget
+      fork = child.get.forkTarget
     if not fork.ok:
       error fork.why
       result = 1
       continue
-    info &"🍴forking {child}"
+    info &"🍴forking {child.get}"
     let forked = waitfor forkHub(fork.owner, fork.repo)
     if forked.isNone:
       result = 1
       continue
     fatal &"🔱{forked.get.web}"
-    case child.dist:
+    case child.get.dist:
     of Git:
       let name = defaultRemote
-      if not child.promoteRemoteLike(forked.get.git, name = name):
+      if not child.get.promoteRemoteLike(forked.get.git, name = name):
         notice &"unable to promote new fork to {name}"
     else:
       {.warning: "optionally upgrade a gitless install to clone".}
