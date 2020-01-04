@@ -329,7 +329,8 @@ proc releaseSummary*(project: Project): string =
       thing := repository.lookupThing(project.release.reference):
         warn &"error reading reference `{project.release.reference}`"
         break
-      result = thing.summary
+      # we really only need the first line, at most
+      result = thing.summary.splitLines[0]
 
 proc cuteRelease*(project: Project): string =
   ## a very short summary of a release; ie. a git commit or version
