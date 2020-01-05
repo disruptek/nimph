@@ -238,9 +238,8 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
       warn &"i wanted to examine tags for {project} but they were empty"
       raise newException(Defect, "seems like a programmer error to me")
     let
-      oid = project.getHeadOid
-      head = if oid.isOk: $oid.get else: ""
-    for release in req.matchingReleases(head = head, tags = project.tags):
+      oid = project.demandHead
+    for release in req.matchingReleases(head = oid, tags = project.tags):
       debug &"release match {release} for {req}"
       yield release
     # here we will try to lookup any random reference requirement, just in case
@@ -294,14 +293,12 @@ proc isSatisfiedBy*(req: Requirement; project: Project; release: Release): bool 
   ## true if the requirement is satisfied by the project at the given release
   block satisfied:
     if project.dist == Git:
-      let
-        head = project.getHeadOid
-        oid = if head.isOk: $head.get else: ""
-
       if project.tags == nil:
         raise newException(Defect, "really expected to have tags here")
 
       # match loosely on tag, version, etc.
+      let
+        oid = project.demandHead
       for match in req.matchingReleases(head = oid, tags = project.tags):
         result = match == release
         if result:
@@ -703,14 +700,13 @@ proc roll*(project: var Project; requirement: Requirement;
     project.fetchTagTable
   let
     current = project.version
-    head = project.getHeadOid
+
+  head := project.getHeadOid:
+    # no head means that we're up-to-date, obviously
+    return
 
   # up-to-date until proven otherwise
   result = true
-
-  # no head means that we're up-to-date, obviously
-  if head.isErr:
-    return
 
   # get the list of suitable releases as a seq...
   var
@@ -732,7 +728,7 @@ proc roll*(project: var Project; requirement: Requirement;
       continue
 
     # if we're at the next best release then we're done
-    if match.kind == Tag and match.reference == $head.get:
+    if match.kind == Tag and match.reference == $head:
       break
 
     # make a friendly name for the future version

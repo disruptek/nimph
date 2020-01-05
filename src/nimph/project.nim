@@ -240,33 +240,42 @@ proc getHeadOid*(project: Project): GitResult[GitOid] =
       break
     result = repository.getHeadOid
 
-proc demandHead*(project: Project): GitOid =
-  ## retrieve the #head oid from the project's repository or raise an exception
-  let oid = project.getHeadOid
-  if oid.isErr:
-    let emsg = &"unable to fetch HEAD from {project}" # noqa
-    raise newException(ValueError, emsg)
-  result = oid.get
+proc demandHead*(repository: GitRepository): string =
+  ## retrieve the repository's #head oid as a string, or ""
+  block:
+    oid := repository.getHeadOid:
+      break
+    result = $oid
+
+proc demandHead*(project: Project): string =
+  ## retrieve the project's #head oid as a string, or ""
+  if project.dist == Git:
+    block:
+      oid := project.getHeadOid:
+        break
+      result = $oid
 
 proc nameMyRepo(project: Project): string =
   ## name a repository directory in such a way that the compiler can grok it
-  block:
+  block complete:
     if project.dist == Git:
-      let
-        oid = project.getHeadOid
-      # the release is a tag, so we might be able to simplify it
-      if project.release.kind in {Tag} and oid.isOk:
-        let tag = project.tags.shortestTag($oid.get)
-        # use the nimble style of project-#head when appropriate
-        if tag == $oid.get:
-          result = project.name & "-" & "#head"
-        else:
-          let loose = parseVersionLoosely(tag)
-          if loose.isSome:
-            result = project.name & "-" & $loose.get
+      block hashead:
+        oid := project.getHeadOid:
+          # no head is not an error
+          break hashead
+        # the release is a tag, so we might be able to simplify it
+        if project.release.kind in {Tag}:
+          let tag = project.tags.shortestTag($oid)
+          # use the nimble style of project-#head when appropriate
+          if tag == $oid:
+            result = project.name & "-" & "#head"
           else:
-            result = project.name & "-#" & tag
-        break
+            let loose = parseVersionLoosely(tag)
+            if loose.isSome:
+              result = project.name & "-" & $loose.get
+            else:
+              result = project.name & "-#" & tag
+          break complete
 
     # fallback to version
     if project.version.isValid:
@@ -337,8 +346,14 @@ proc cuteRelease*(project: Project): string =
   if project.dist == Git and project.release.isValid:
     let
       head = project.getHeadOid
+    # free the oid if necessary
+    if head.isOk:
+      defer:
+        free head.get
+
+    # assign a useful release string using the head
     if head.isErr:
-      result = ""
+      result = "⚠️no head"
     elif project.tags == nil:
       error "unable to determine tags without fetching them from git"
       result = head.get.short(6)
@@ -358,6 +373,10 @@ proc findCurrentTag*(project: Project): Release =
   ## find the current release tag of a project
   let
     head = project.getHeadOid
+  # free the oid if necessary
+  if head.isOk:
+    defer:
+      free head.get
   var
     name: string
   if head.isErr:
@@ -384,14 +403,16 @@ proc findCurrentTag*(project: var Project): Release =
     project.fetchTagTable
   result = readonly.findCurrentTag
 
-proc inventRelease*(project: var Project): Release {.discardable.} =
+proc inventRelease*(project: var Project) =
   ## compute the most accurate release specification for the project
+  var
+    release: Release
   block found:
     if project.dist == Git:
-      result = project.findCurrentTag
-      if result.isValid:
-        project.release = result
-        break
+      release = project.findCurrentTag
+      if release.isValid:
+        project.release = release
+        break found
     # if we have a url for the project, try to use its anchor
     if project.url.anchor.len > 0:
       project.release = newRelease(project.url.anchor, operator = Tag)
@@ -405,13 +426,12 @@ proc inventRelease*(project: var Project): Release {.discardable.} =
       var prefix = project.name & "-"
       if name.startsWith(prefix):
         # i'm lazy; this will parse the release if it's #foo or 1.2.3
-        result = newRelease(name.split(prefix)[^1])
-        if result.kind in {Tag, Equal}:
+        release = newRelease(name.split(prefix)[^1])
+        if release.kind in {Tag, Equal}:
           warn &"had to resort to parsing reference from directory `{name}`"
-          project.release = result
+          project.release = release
         else:
           warn &"unable to parse reference from directory `{name}`"
-    result = project.release
 
 proc guessDist(project: Project): DistMethod =
   ## guess at the distribution method used to deposit the assets
@@ -883,8 +903,7 @@ proc clone*(project: var Project; url: Uri; name: string;
                  cloned.repo == directory:
     {.warning: "gratuitous nimblemeta write?".}
     let
-      head = getHeadOid(repository)
-      oid = if head.isOk: $head.get else: ""
+      oid = repository.demandHead
     if not writeNimbleMeta(directory, bare, oid):
       warn &"unable to write {nimbleMeta} in {directory}"
 
@@ -1174,9 +1193,8 @@ proc betterReleaseExists*(project: Project; goal: RollGoal): bool =
     let emsg = &"unable to fetch tags for an immutable project {project.name}"
     raise newException(Defect, emsg)
 
-  # no head means no tags means no upgrades
-  let head = project.getHeadOid
-  if head.isErr:
+  head := project.getHeadOid:
+    # no head means no tags means no upgrades
     return
 
   # make sure this isn't a nonsensical request
@@ -1237,8 +1255,7 @@ template returnToHeadAfter*(project: var Project; body: untyped) =
 
   block:
     # we may have no head; if that's the case, we have no tags either
-    let previous = project.getHeadOid
-    if previous.isErr:
+    previous := project.getHeadOid:
       break
 
     # this could just be a bad idea all the way aroun'
@@ -1256,9 +1273,9 @@ template returnToHeadAfter*(project: var Project; body: untyped) =
 
     defer:
       # there's no place like home
-      if not project.setHeadToRelease(newRelease($previous.get,
+      if not project.setHeadToRelease(newRelease($previous,
                                                  operator = Tag)):
-        raise newException(IOError, "cannot detach head to " & $previous.get)
+        raise newException(IOError, "cannot detach head to " & $previous)
 
       # re-attach the head if we can
       if repository.setHead($home.name) != grcOk:
