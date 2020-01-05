@@ -353,7 +353,7 @@ proc cuteRelease*(project: Project): string =
 
     # assign a useful release string using the head
     if head.isErr:
-      result = "⚠️no head"
+      result = "⚠️"
     elif project.tags == nil:
       error "unable to determine tags without fetching them from git"
       result = head.get.short(6)
