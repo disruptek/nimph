@@ -265,14 +265,14 @@ couldn't find a dependency importable as `coco`
 It's useful to create a shell function to jump into dependency directories so
 you can quickly hack at them.
 
-```
+```bash
 #!/bin/bash
 function goto { pushd `nimph path $1`; }
 ```
 
 or
 
-```
+```fish
 #!/bin/fish
 function goto; pushd (nimph path $argv); end
 ```
