@@ -495,9 +495,6 @@ proc linkedFindTarget(dir: string; target = ""; nimToo = false;
 
 proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
   ## find the (remote?) url to a given local repository
-  var
-    remote: GitRemote
-
   block complete:
     block found:
       repository := openRepository(project.gitDir):
@@ -828,10 +825,6 @@ proc relocateDependency*(parent: var Project; project: var Project) =
 
 proc addMissingUpstreams*(project: Project) =
   ## review the local branches and add any missing tracking branches
-  var
-    upstream: GitReference
-    grc: GitResultCode
-
   block:
     repository := openRepository(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
