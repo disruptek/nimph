@@ -830,25 +830,31 @@ proc addMissingUpstreams*(project: Project) =
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
-    for branch in repository.branches({gbtLocal}):
-      if branch.isErr:
-        warn &"error fetching branches: {branch.error}"
-        continue
-      let
-        name = branch.get.branchName
-      debug &"branch: {name}"
-      found := branch.get.branchUpstream:
-        case code:
-        of grcNotFound:
-          case branch.get.setBranchUpstream(name):
-          of grcOk:
-            info &"added upstream tracking branch for {name}"
+    for result in repository.branches({gbtLocal}):
+      if result.isErr:
+        warn &"error fetching branches: {result.error}"
+        warn result.error.dumpError
+      else:
+        var
+          branch = result.get
+        # free the reference when we're done with it
+        defer:
+          free branch
+        let
+          name = branch.branchName
+        debug &"branch: {name}"
+        found := branch.branchUpstream:
+          case code:
+          of grcNotFound:
+            case branch.setBranchUpstream(name):
+            of grcOk:
+              info &"added upstream tracking branch for {name}"
+            else:
+              warn &"unable to add upstream tracking branch for {name}"
+              warn grcOk.dumpError
           else:
-            warn &"unable to add upstream tracking branch for {name}"
-            warn grcOk.dumpError
-        else:
-          warn &"error fetching upstream for {name}: {code}"
-          warn code.dumpError
+            warn &"error fetching upstream for {name}: {code}"
+            warn code.dumpError
 
 proc clone*(project: var Project; url: Uri; name: string;
             cloned: var Project): bool =
