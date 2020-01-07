@@ -9,7 +9,7 @@ import std/sequtils
 
 import bump
 import gittyup
-import result as results
+import results
 
 import nimph/spec
 import nimph/nimble
