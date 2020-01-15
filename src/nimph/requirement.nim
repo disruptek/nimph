@@ -28,21 +28,20 @@ proc `$`*(req: Requirement): string =
 proc isValid*(req: Requirement): bool =
   ## true if the requirement seems sensible
   result = req.release.isValid
-  if not result:
-    return
-  case req.operator:
-  # if the operator is Tag, it's essentially a #== test
-  of Tag:
-    result = req.release.kind in {Tag}
-  # if the operator supports a mask, then so might the release
-  of Caret, Tilde, Wild:
-    result = req.release.kind in {Wild, Equal}
-  # if the operator supports only equality, apply it to tags, versions
-  of Equal:
-    result = req.release.kind in {Tag, Equal}
-  # else it can only be a relative comparison to a complete version spec
-  else:
-    result = req.release.kind in {Equal}
+  if result:
+    case req.operator:
+    # if the operator is Tag, it's essentially a #== test
+    of Tag:
+      result = req.release.kind in {Tag}
+    # if the operator supports a mask, then so might the release
+    of Caret, Tilde, Wild:
+      result = req.release.kind in {Wild, Equal}
+    # if the operator supports only equality, apply it to tags, versions
+    of Equal:
+      result = req.release.kind in {Tag, Equal}
+    # else it can only be a relative comparison to a complete version spec
+    else:
+      result = req.release.kind in {Equal}
 
 proc isSatisfiedBy(requirement: Requirement; version: Version): bool =
   ## true if the version satisfies the requirement
