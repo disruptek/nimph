@@ -28,50 +28,6 @@ desire, we should do their work for them.
 - Git is great and GitHub is pretty decent, too; we should exploit these as
 much as possible.
 
-## Usage
-
-You can run `nimph` from anywhere in your project tree; it will simply search
-upwards until it finds a `.nimble` file and act as if you ran it there.
-
-Most operations do require that you be within a project, but `nimph` is
-flexible enough to operate on local dependencies, global packages, and anything
-in-between.  You can run it on any package, anywhere, and it will provide useful
-output (and optional repair) of the environment it finds itself in.
-
-- [Searching for New Nim Packages](https://github.com/disruptek/nimph#search)
-- [Adding Packages to the Environment](https://github.com/disruptek/nimph#clone)
-- [Checking the Environment for Errors](https://github.com/disruptek/nimph#doctor)
-- [Quickly Forking an Installed Package](https://github.com/disruptek/nimph#fork)
-- [Finding a Path via Nim Import Name](https://github.com/disruptek/nimph#path)
-- [Locking the Dependency Tree by Name](https://github.com/disruptek/nimph#lock)
-- [Specifying Arbitrary Package Versions](https://github.com/disruptek/nimph#roll)
-- [Upgrading Dependencies Automatically](https://github.com/disruptek/nimph#upgrade)
-- [Downgrading Dependencies Automatically](https://github.com/disruptek/nimph#downgrade)
-- [Cutting New Release Versions+Tags](https://github.com/disruptek/nimph#bump)
-- [Adding Any Missing Tags Automatically](https://github.com/disruptek/nimph#tag)
-- [Running Commands on All Dependencies](https://github.com/disruptek/nimph#run)
-- [Outputting the Dependency Graph](https://github.com/disruptek/nimph#graph)
-- [Git Subcommand Auto-Integration](https://github.com/disruptek/nimph#git-subcommands)
-- [Nimble Subcommand Auto-Integration](https://github.com/disruptek/nimph#nimble-subcommands)
-- [Tweaking Nimph Behavior Constants](https://github.com/disruptek/nimph#hacking)
-- [Nimph Module Documentation](https://github.com/disruptek/nimph#documentation)
-
-## Demonstration
-
-This is a demo screencast of using Nimph to setup a project for development.
-Starting with nothing more than the project's repository, we'll...
-
-1. show the `bot.nimble` that specifies varied dependencies
-1. show the `nim.cfg` that specifies compilation options
-1. edit the `nim.cfg` to configure a directory to hold local dependencies
-1. create a `deps` directory to hold those packages
-1. run `nimph` to evaluate the state of the environment -- verdict: 😦
-1. run `nimph doctor` to converge the environment to our specifications
-1. run `nimph` to confirm the environment state -- verdict: 😊
-1. show the `nim.cfg` to reveal any changes made by `nimph doctor`
-
-[![asciicast](https://asciinema.org/a/aoDAm39yjoKenepl15L3AyfzN.svg)](https://asciinema.org/a/aoDAm39yjoKenepl15L3AyfzN)
-
 ## Installation
 
 Some lucky few may be able to simply `nimble install https://github.com/disruptek/nimph`.
@@ -133,6 +89,50 @@ You may want to [create a new GitHub personal access token here](https://github.
 If you skip this step, Nimph will try to use a Nimble token for **search**es,
 and it will also try to read any `hub` or `ghi` credentials.  Notably, the
 **fork** subcommand will not work without adequate scope authorization.
+
+## Usage
+
+You can run `nimph` from anywhere in your project tree; it will simply search
+upwards until it finds a `.nimble` file and act as if you ran it there.
+
+Most operations do require that you be within a project, but `nimph` is
+flexible enough to operate on local dependencies, global packages, and anything
+in-between.  You can run it on any package, anywhere, and it will provide useful
+output (and optional repair) of the environment it finds itself in.
+
+- [Searching for New Nim Packages](https://github.com/disruptek/nimph#search)
+- [Adding Packages to the Environment](https://github.com/disruptek/nimph#clone)
+- [Checking the Environment for Errors](https://github.com/disruptek/nimph#doctor)
+- [Quickly Forking an Installed Package](https://github.com/disruptek/nimph#fork)
+- [Finding a Path via Nim Import Name](https://github.com/disruptek/nimph#path)
+- [Locking the Dependency Tree by Name](https://github.com/disruptek/nimph#lock)
+- [Specifying Arbitrary Package Versions](https://github.com/disruptek/nimph#roll)
+- [Upgrading Dependencies Automatically](https://github.com/disruptek/nimph#upgrade)
+- [Downgrading Dependencies Automatically](https://github.com/disruptek/nimph#downgrade)
+- [Cutting New Release Versions+Tags](https://github.com/disruptek/nimph#bump)
+- [Adding Any Missing Tags Automatically](https://github.com/disruptek/nimph#tag)
+- [Running Commands on All Dependencies](https://github.com/disruptek/nimph#run)
+- [Outputting the Dependency Graph](https://github.com/disruptek/nimph#graph)
+- [Git Subcommand Auto-Integration](https://github.com/disruptek/nimph#git-subcommands)
+- [Nimble Subcommand Auto-Integration](https://github.com/disruptek/nimph#nimble-subcommands)
+- [Tweaking Nimph Behavior Constants](https://github.com/disruptek/nimph#hacking)
+- [Nimph Module Documentation](https://github.com/disruptek/nimph#documentation)
+
+## Demonstration
+
+This is a demo screencast of using Nimph to setup a project for development.
+Starting with nothing more than the project's repository, we'll...
+
+1. show the `bot.nimble` that specifies varied dependencies
+1. show the `nim.cfg` that specifies compilation options
+1. edit the `nim.cfg` to configure a directory to hold local dependencies
+1. create a `deps` directory to hold those packages
+1. run `nimph` to evaluate the state of the environment -- verdict: 😦
+1. run `nimph doctor` to converge the environment to our specifications
+1. run `nimph` to confirm the environment state -- verdict: 😊
+1. show the `nim.cfg` to reveal any changes made by `nimph doctor`
+
+[![asciicast](https://asciinema.org/a/aoDAm39yjoKenepl15L3AyfzN.svg)](https://asciinema.org/a/aoDAm39yjoKenepl15L3AyfzN)
 
 ## Subcommand Usage
 
