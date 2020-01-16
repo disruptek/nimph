@@ -893,7 +893,7 @@ proc clone*(project: var Project; url: Uri; name: string;
   # clone the bare url into the given directory, yielding a repository object
   repository := clone(bare, directory):
     # or, if there was a problem, dump some error messages and bail out
-    error code.dumpError
+    error &"unable to clone into `{directory}`: {code.dumpError}"
     return
 
   # make sure the project we find is in the directory we cloned to;
@@ -1239,11 +1239,11 @@ proc setHeadToRelease*(project: var Project; release: Release): bool =
     let code = repository.checkoutTree(release.reference)
     case code:
     of grcOk:
-      debug &"roll {project.name} to {release}"
       result = true
       # make sure we invalidate some data
       project.dump = nil
       project.version = (0'u, 0'u, 0'u)
+      debug &"roll {project.name} to {release}"
     else:
       debug &"roll {project.name} to {release}: {code}"
       debug code.dumpError
@@ -1296,7 +1296,7 @@ proc versionChangingCommits*(project: var Project): VersionTags =
   project.returnToHeadAfter:
     block:
       repository := openRepository(project.gitDir):
-        error code.dumpError
+        error &"unable to open repo at `{project.repo}`: {code.dumpError}"
         break
       # iterate over commits to the dotNimble file
       for thing in repository.commitsForSpec(@[package]):
@@ -1306,9 +1306,8 @@ proc versionChangingCommits*(project: var Project): VersionTags =
         # compose a new release to the commit and then go there
         let release = newRelease($thing.get.oid, operator = Tag)
         if not project.setHeadToRelease(release):
-          # free this thing because we couldn't travel there,
-          # so we cannot very well determine its version
-          free thing.get
+          # we couldn't travel there, so we cannot very well
+          # determine its version
           continue
         # freshen project version, release, etc.
         project.refresh
