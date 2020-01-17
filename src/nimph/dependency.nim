@@ -789,5 +789,5 @@ proc rollTowards*(project: var Project; requirement: Requirement): bool =
     # then, maybe rename the directory appropriately
     if project.parent != nil:
       project.parent.relocateDependency(project)
-    # critically, exit the after a successful roll
+    # critically, end after a successful roll
     break
