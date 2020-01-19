@@ -428,7 +428,7 @@ proc graphDep(dependency: var Dependency; requirement: Requirement;
               info &"    ver: {ver:<20} {thing}"
 
 proc grapher*(names: seq[string]; strict = false;
-              log_level = logLevel; safe_mode = false; quiet = false;
+              log_level = logLevel; safe_mode = false; quiet = true;
               network = true; force = false; dry_run = false): int =
   ## graph requirements for the project or any of its dependencies
 
