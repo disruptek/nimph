@@ -710,9 +710,27 @@ proc removeSearchPath*(project: Project; path: string): bool =
   ## remove a search path from the project's nim.cfg
   result = project.cfg.removeSearchPath(project.nimCfg, path)
 
+proc removeSearchPath*(project: var Project; path: string): bool =
+  ## remove a search path from the project's nim.cfg; reload config
+  let
+    readonly = project
+  result = readonly.removeSearchPath(path)
+  if result:
+    if not project.fetchConfig(force = true):
+      warn &"unable to read config for {project}"
+
 proc excludeSearchPath*(project: Project; path: string): bool =
   ## exclude a search path from the project's nim.cfg
   result = project.cfg.excludeSearchPath(project.nimCfg, path)
+
+proc excludeSearchPath*(project: var Project; path: string): bool =
+  ## exclude a search path from the project's nim.cfg; reload config
+  let
+    readonly = project
+  result = readonly.excludeSearchPath(path)
+  if result:
+    if not project.fetchConfig(force = true):
+      warn &"unable to read config for {project}"
 
 proc addSearchPath*(project: Project; path: string): bool =
   ## add a search path to the given project's configuration;
@@ -724,6 +742,15 @@ proc addSearchPath*(project: Project; path: string): bool =
     if project.cfg == nil:
       raise newException(Defect, "load a configuration first")
     result = project.cfg.addSearchPath(project.nimCfg, path)
+
+proc addSearchPath*(project: var Project; path: string): bool =
+  ## add a search path to the project's nim.cfg; reload config
+  let
+    readonly = project
+  result = readonly.addSearchPath(path)
+  if result:
+    if not project.fetchConfig(force = true):
+      warn &"unable to read config for {project}"
 
 proc determineSearchPath(project: Project): string =
   ## produce the search path to add for a given project
