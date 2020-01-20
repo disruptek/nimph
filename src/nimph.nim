@@ -188,7 +188,7 @@ proc pather*(names: seq[string]; strict = false;
     notice &"unable to resolve all dependencies for {project}"
 
   # for convenience, add the project itself if possible
-  if not group.hasKey(project.name):
+  if not group.hasKey(project.importName):
     let dependency = newDependency(project)
     group.add dependency.requirement, dependency
 
@@ -227,15 +227,14 @@ proc runner*(args: seq[string]; git = false; strict = false;
   # make sure we visit every project that fits the requirements
   for req, dependency in group.pairs:
     for child in dependency.projects.values:
-      if child.dist != Git and git:
-        continue
-      withinDirectory(child.repo):
-        info &"running {exe} in {child.repo}"
-        let
-          got = project.runSomething(exe, args)
-        if not got.ok:
-          error &"{exe} didn't like that in {child.repo}"
-          result = 1
+      if child.dist == Git or not git:
+        withinDirectory(child.repo):
+          info &"running {exe} in {child.repo}"
+          let
+            got = project.runSomething(exe, args)
+          if not got.ok:
+            error &"{exe} didn't like that in {child.repo}"
+            result = 1
 
 proc rollChild(child: var Project; requirement: Requirement; goal: RollGoal;
                safe_mode = false; dry_run = false): bool =
@@ -399,33 +398,39 @@ proc roller*(names: seq[string]; strict = false;
   else:
     fatal &"👎{project.name} is not where you want it"
 
-proc graphDep(dependency: var Dependency; requirement: Requirement;
-              log_level = logLevel) =
+proc graphProject(project: var Project; path: string; log_level = logLevel) =
+  fatal "  directory: " & path
+  fatal "    project: " & $project
+  if project.dist == Git:
+    # show tags for info or less
+    if log_level <= lvlInfo:
+      project.fetchTagTable
+      if project.tags != nil and project.tags.len > 0:
+        info "tagged release commits:"
+        for tag, thing in project.tags.pairs:
+          info &"    tag: {tag:<20} {thing}"
+    # show versions for info or less
+    if log_level <= lvlInfo:
+      let versions = project.versionChangingCommits
+      if versions != nil and versions.len > 0:
+        info "untagged version commits:"
+        for ver, thing in versions.pairs:
+          if not project.tags.hasThing(thing):
+            info &"    ver: {ver:<20} {thing}"
+
+proc graphDep(dependency: var Dependency; log_level = logLevel) =
   ## dump something vaguely useful to describe a dependency
-  fatal ""
-  for req in requirement.orphans:
-    fatal "requirement: " & req.describe
   for pack in dependency.packages.keys:
     fatal "    package: " & $pack
   for directory, project in dependency.projects.mpairs:
-    fatal "  directory: " & directory
-    fatal "    project: " & $project
-    if project.dist == Git:
-      # show tags for info or less
-      if log_level <= lvlInfo:
-        project.fetchTagTable
-        if project.tags != nil and project.tags.len > 0:
-          info "tagged release commits:"
-          for tag, thing in project.tags.pairs:
-            info &"    tag: {tag:<20} {thing}"
-      # show versions for info or less
-      if log_level <= lvlInfo:
-        let versions = project.versionChangingCommits
-        if versions != nil and versions.len > 0:
-          info "untagged version commits:"
-          for ver, thing in versions.pairs:
-            if not project.tags.hasThing(thing):
-              info &"    ver: {ver:<20} {thing}"
+    graphProject(project, directory, log_level = log_level)
+
+proc graphDep(dependency: var Dependency; requirement: Requirement;
+              log_level = logLevel) =
+  ## dump something vaguely useful to describe a dependency
+  for req in requirement.orphans:
+    fatal "requirement: " & req.describe
+  dependency.graphDep(log_level = log_level)
 
 proc grapher*(names: seq[string]; strict = false;
               log_level = logLevel; safe_mode = false; quiet = true;
@@ -447,23 +452,33 @@ proc grapher*(names: seq[string]; strict = false;
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
+  # for convenience, add the project itself if possible
+  if not group.hasKey(project.importName):
+    let dependency = newDependency(project)
+    group.add dependency.requirement, dependency
+
   if names.len == 0:
     for requirement, dependency in group.mpairs:
+      fatal ""
       dependency.graphDep(requirement, log_level = log_level)
   else:
     for name in names.items:
-      let found = group.projectForName(name)
-      if found.isSome:
-        let require = group.reqForProject(found.get)
-        if require.isNone:
-          let emsg = &"found `{name}` but not its requirement" # noqa
-          raise newException(ValueError, emsg)
-        {.warning: "nim bug #12818".}
-        for requirement, dependency in group.mpairs:
-          if requirement == require.get:
-            dependency.graphDep(requirement, log_level = log_level)
+      var
+        child = group.findChildProjectUsing(name, flags = flags)
+      if child.isErr:
+        error child.error
+        result = 1
       else:
-        error &"couldn't find `{name}` among our installed dependencies"
+        fatal ""
+        let require = group.reqForProject(child.get)
+        if require.isNone:
+          notice &"found `{name}` but not its requirement" # noqa
+          child.get.graphProject(child.get.repo, log_level = log_level)
+        else:
+          {.warning: "nim bug #12818".}
+          for requirement, dependency in group.mpairs:
+            if requirement == require.get:
+              dependency.graphDep(requirement, log_level = log_level)
 
 proc dumpLockList(project: Project) =
   for room in project.allLockerRooms:
@@ -554,12 +569,13 @@ proc forker*(names: seq[string]; strict = false;
     project: Project
   setupLocalProject(project)
 
+  # setup our dependency group
   var group = project.newDependencyGroup(flags = flags)
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
   # for convenience, add the project itself if possible
-  if not group.hasKey(project.name):
+  if not group.hasKey(project.importName):
     let dependency = newDependency(project)
     group.add dependency.requirement, dependency
 
