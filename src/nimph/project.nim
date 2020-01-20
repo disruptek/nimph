@@ -1305,13 +1305,10 @@ proc versionChangingCommits*(project: var Project): VersionTags =
           break
         # compose a new release to the commit and then go there
         let release = newRelease($thing.get.oid, operator = Tag)
-        if not project.setHeadToRelease(release):
-          # we couldn't travel there, so we cannot very well
-          # determine its version
-          continue
-        # freshen project version, release, etc.
-        project.refresh
-        result[project.version] = thing.get
+        if project.setHeadToRelease(release):
+          # freshen project version, release, etc.
+          project.refresh
+          result[project.version] = thing.get
 
 proc pathForName*(group: ProjectGroup; name: string): Option[string] =
   ## try to retrieve the directory for a given import name in the group
