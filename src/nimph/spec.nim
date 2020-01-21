@@ -146,7 +146,12 @@ proc packageName*(url: Uri): string =
   ## guess the name of a package from a url
   when defined(debug) or defined(debugPath):
     assert url.isValid
-  result = packageName(url.path.extractFilename.changeFileExt(""))
+  var
+    # ensure the path doesn't end in a slash
+    path = parentDir(url.path / "")
+  if path in ["/", ""]:
+    raise newException(ValueError, &"can't guess package name from {url}")
+  result = packageName(path.extractFilename.changeFileExt(""))
 
 proc importName*(path: string): string =
   ## a uniform name usable in code for imports
