@@ -148,9 +148,8 @@ proc packageName*(url: Uri): string =
     assert url.isValid
   var
     # ensure the path doesn't end in a slash
-    path = parentDir(url.path / "")
-  if path in ["/", ""]:
-    raise newException(ValueError, &"can't guess package name from {url}")
+    path = url.path
+  removeSuffix(path, {'/'})
   result = packageName(path.extractFilename.changeFileExt(""))
 
 proc importName*(path: string): string =
