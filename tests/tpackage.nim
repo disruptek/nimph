@@ -14,7 +14,7 @@ import nimph/requirement
 
 const
   # how we'll render a release requirement like "package"
-  anyRelease = "*"
+  anyRelease = "*.*.*"
 
 suite "package":
   setup:
@@ -37,7 +37,6 @@ suite "package":
       text10 = "pigs 2.*"
       text11 = "dogs ^3.2"
       text12 = "owls ~4"
-      text13 = "owls any version"
       text14 = "owls >=1.0.0 &< 2"
       parsed1 = parseRequires(text1)
       parsed2 = parseRequires(text2)
@@ -51,7 +50,7 @@ suite "package":
       parsed10 = parseRequires(text10)
       parsed11 = parseRequires(text11)
       parsed12 = parseRequires(text12)
-      parsed13 = parseRequires(text13)
+      parsed13 = parseRequires "owls any version"
       parsed14 = parseRequires(text14)
     check parsed1.isSome
     check parsed2.isSome
@@ -65,7 +64,7 @@ suite "package":
       check req.release.reference == "catsAndDogsLivingTogether"
     check parsed7.isSome
     for req in parsed7.get.values:
-      check $req.release == "2"
+      check $req.release == "2.*.*"
     check parsed8.isSome
     for req in parsed8.get.values:
       check req.identity == "git://github.com/disruptek/bump.git"
@@ -86,6 +85,14 @@ suite "package":
     check parsed14.get.len == 2
     for req in parsed14.get.values:
       checkpoint $req
+      once:
+        check req.release.kind == Equal
+        check $req.release.version == "1.0.0"
+        check req.operator == AtLeast
+        continue
+      check req.release.kind == Wild
+      check $req.release.accepts == "2.*.*"
+      check req.operator == Under
 
   test "parse nimph requires statement":
     project.fetchDump()

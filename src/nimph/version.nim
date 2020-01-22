@@ -145,50 +145,83 @@ proc newRelease*(reference: string; operator = Equal): Release =
     result = Release(kind: Wild, accepts: newVersionMask(reference))
   else:
     result = newRelease(parseDottedVersion(reference))
+  when defined(debug):
+    debug &"new release `{reference}` and `{operator}`: {result}"
 
-proc `$`*(field: VersionMaskField): string =
+func `$`*(field: VersionMaskField): string =
   if field.isNone:
     result = "*"
   else:
     result = $field.get
 
-proc `$`*(mask: VersionMask): string =
+func `$`*(mask: VersionMask): string =
   result = $mask.major
   result &= "." & $mask.minor
   result &= "." & $mask.patch
 
-proc omitStars*(mask: VersionMask): string =
+func omitStars*(mask: VersionMask): string =
   result = $mask.major
   if mask.minor.isSome:
     result &= "." & $mask.minor
   if mask.patch.isSome:
     result &= "." & $mask.patch
 
-proc `$`*(spec: Release): string =
-  case spec.kind
+func `$`*(spec: Release): string =
+  case spec.kind:
   of Tag:
+    # thus #v1.0.2
     result = $spec.kind & $spec.reference
-  of Equal, AtLeast, Over, Under, NotMore:
+  of Equal:
+    # thus 1.0.2
     result = $spec.version
-  of Wild, Caret, Tilde:
-    result = spec.accepts.omitStars
+  of AtLeast, Over, Under, NotMore:
+    # thus >=1.0.2
+    result = $spec.kind & $spec.version
+  of Wild:
+    # thus 3.1.*
+    result = $spec.accepts
+  of Caret, Tilde:
+    # thus ~3.1
+    result = $spec.kind & omitStars(spec.accepts)
 
-proc `==`*(a, b: VersionMaskField): bool =
+func `==`*(a, b: VersionMaskField): bool =
   result = a.isNone == b.isNone
   if result and a.isSome:
     result = a.get == b.get
 
-proc `<`*(a, b: VersionMaskField): bool =
-  result = a.isNone == b.isNone
-  if result and a.isSome:
-    result = a.get < b.get
+func at*[T: Version | VersionMask](version: T; index: VersionIndex): auto =
+  ## like [int] but clashless
+  case index:
+  of 0: result = version.major
+  of 1: result = version.minor
+  of 2: result = version.patch
 
-proc `==`*(a, b: VersionMask): bool =
+func `<`*(a, b: VersionMaskField): bool =
+  ## true if ``a`` < ``b`` for any such wildcard value
+  if a.isSome:
+    # b is unbounded or both sides have a value
+    result = b.isNone or a.get < b.get
+
+func `<`*(a, b: VersionMask | Version): bool =
+  ## true if the lhs is less than the rhs
+  for index in VersionIndex.low .. VersionIndex.high:
+    let
+      x = a.at(index)
+      y = b.at(index)
+    if y < x:
+      # conclusively false
+      break
+    result = x < y
+    if result:
+      # conclusively true
+      break
+
+func `==`*(a, b: VersionMask): bool =
   result = a.major == b.major
   result = result and a.minor == b.minor
   result = result and a.patch == a.patch
 
-proc `==`*(a, b: Release): bool =
+func `==`*(a, b: Release): bool =
   if a.kind == b.kind and a.isValid and b.isValid:
     case a.kind:
     of Tag:
@@ -199,19 +232,34 @@ proc `==`*(a, b: Release): bool =
       result = a.version == b.version
 
 proc `<`*(a, b: Release): bool =
-  if a.kind == b.kind and a.isValid and b.isValid:
+  assert a.isValid and b.isValid
+  if a.kind == b.kind:
     case a.kind
     of Tag:
       result = a.reference < b.reference
+    of Wildlings:
+      result = a.accepts < b.accepts
     of Equal:
       result = a.version < b.version
     else:
-      raise newException(ValueError, "inconceivable!")
+      let emsg = &"{a.kind} not implemented"
+      raise newException(ValueError, emsg)
 
 proc `<=`*(a, b: Release): bool =
   result = a == b or a < b
 
-proc `==`*(a: VersionMask; b: Version): bool =
+func `<`*(a: VersionMask; b: Version): bool =
+  for index in VersionIndex.low .. VersionIndex.high:
+    let
+      field = a.at(index)
+      verse = b.at(index)
+    result = field.isSome and field.get < verse
+    if result:
+      break
+    if field.isNone or field.get > verse:
+      break
+
+func `==`*(a: VersionMask; b: Version): bool =
   if a.major.isSome and a.major.get == b.major:
     if a.minor.isSome and a.minor.get == b.minor:
       if a.patch.isSome and a.patch.get == b.patch:
@@ -230,16 +278,9 @@ proc acceptable*(mask: VersionMaskField; op: Operator;
   of Tilde:
     result = mask.isNone or value >= mask.get
   else:
-    raise newException(Defect, "inconceivable!")
+    raise newException(Defect, "not implemented")
 
-proc at*[T: Version | VersionMask](version: T; index: VersionIndex): auto =
-  ## like [int] but clashless
-  case index:
-  of 0: result = version.major
-  of 1: result = version.minor
-  of 2: result = version.patch
-
-proc `[]=`*(mask: var VersionMask;
+func `[]=`*(mask: var VersionMask;
             index: VersionIndex; value: VersionMaskField) =
   case index:
   of 0: mask.major = value
@@ -254,7 +295,7 @@ iterator pairs*[T: Version | VersionMask](version: T): auto =
   for i in VersionIndex.low .. VersionIndex.high:
     yield (index: i, field: version.at(i))
 
-proc isSpecific*(release: Release): bool =
+func isSpecific*(release: Release): bool =
   ## if the version/match specifies a full X.Y.Z version
   if release.kind in {Equal, AtLeast, NotMore} and release.isValid:
     result = true
@@ -292,11 +333,11 @@ proc effectively*(release: Release): Version =
     if parsed.isNone:
       result = (0'u, 0'u, 0'u)
     elif parsed.get.kind == Tag:
-      raise newException(Defect, "inconceivable!")
+      raise newException(Defect, "not implemented")
     result = parsed.get.effectively
   of Wildlings:
     result = release.accepts.effectively
-  of Equal:
+  of Equal, AtLeast, NotMore:
     result = release.version
   else:
     raise newException(Defect, "not implemented")
