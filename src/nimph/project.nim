@@ -255,6 +255,15 @@ proc demandHead*(project: Project): string =
         break
       result = $oid
 
+proc shortOid(oid: GitOid; size = 6): string =
+  ## a shortened version of the oid; measure twice, cut once
+  let
+    short = oid.short(6)
+  if short.isErr:
+    result = "💣" & $short.error
+  else:
+    result = short.get
+
 proc nameMyRepo(project: Project): string =
   ## name a repository directory in such a way that the compiler can grok it
   block complete:
@@ -343,6 +352,8 @@ proc releaseSummary*(project: Project): string =
 
 proc cuteRelease*(project: Project): string =
   ## a very short summary of a release; ie. a git commit or version
+  const
+    shorties = 6 # size of short oids
   if project.dist == Git and project.release.isValid:
     let
       head = project.getHeadOid
@@ -356,14 +367,14 @@ proc cuteRelease*(project: Project): string =
       result = "⚠️"
     elif project.tags == nil:
       error "unable to determine tags without fetching them from git"
-      result = head.get.short(6)
+      result = shortOid(head.get, size = shorties)
     else:
       block search:
         for tag, target in project.tags.pairs:
           if target.oid == head.get:
             result = $tag
             break search
-        result = head.get.short(6)
+        result = shortOid(head.get, size = shorties)
   elif project.version.isValid:
     result = $project.version
   else:
