@@ -22,7 +22,7 @@ type
 
   Requires* = OrderedTableRef[Requirement, Requirement]
 
-func `$`*(req: Requirement): string =
+proc `$`*(req: Requirement): string =
   result = &"{req.identity}{req.operator}{req.release}"
 
 proc isValid*(req: Requirement): bool =
@@ -35,72 +35,16 @@ proc isValid*(req: Requirement): bool =
       result = req.release.kind in {Tag}
     # if the operator supports a mask, then so might the release
     of Caret, Tilde, Wild:
-      #result = req.release.kind in {Wild, Equal}
-      result = req.release.kind in {Wild, Tilde, Caret, Equal}
-    # if the operator supports only equality, apply it to tags, versions, wild
-    of Equal:
-      result = req.release.kind in {Wild, Equal, Tag}
-    # else it can only be a relative comparison to a version or wildcard spec
-    else:
       result = req.release.kind in {Wild, Equal}
-    if not result:
-      warn &"invalid requirement: {req}"
-      warn &"release: {req.release}"
-
-proc crudeComparison(target: Release; op: Operator; verse: Version): bool =
-  ## convert nicely-refined releases into crude version comparisons
-  assert op notin {Tag, Tilde, Caret, Wild}
-  assert verse.isValid
-  assert target.isValid
-  let
-    wants = block:
-      if target.isSpecific:
-        target.specifically
-      else:
-        target.effectively
-  case op:
-  of Equal:
-    block:
-      # this block essentially ensures that we accept any
-      # version supplied against an (empty) wildcard *.*.*
-      if target.kind == Wild:
-        if target.accepts.major.isNone:
-          result = true
-          break
-      # here we are back to using equality against a potential wildcard
-      {.warning: "equality comparison for possible wildcard?".}
-      result = verse == wants
-  of AtLeast:
-    result = verse > wants or verse == wants
-  of NotMore:
-    result = verse < wants or verse == wants
-  of Under:
-    result = verse < wants
-  of Over:
-    result = verse > wants
-  else:
-    raise newException(Defect, "inconceivable!")
-
-proc crudeComparison(target: Release; op: Operator; spec: Release): bool =
-  ## convert nicely-refined releases into crude version comparisons
-  assert spec.isValid
-  var
-    version: Version
-  block:
-    if spec.isSpecific:
-      version = spec.specifically
+    # if the operator supports only equality, apply it to tags, versions
+    of Equal:
+      result = req.release.kind in {Tag, Equal}
+    # else it can only be a relative comparison to a complete version spec
     else:
-      version = spec.effectively
-      if not version.isValid:
-        # *.*.* -- just short-circuit here for now
-        result = true
-        break
-    result = crudeComparison(target, op, version)
+      result = req.release.kind in {Equal}
 
 proc isSatisfiedBy(requirement: Requirement; version: Version): bool =
   ## true if the version satisfies the requirement
-  assert requirement.isValid
-  assert version.isValid
   let
     op = requirement.operator
   case op:
@@ -142,26 +86,32 @@ proc isSatisfiedBy(requirement: Requirement; version: Version): bool =
       if acceptable(accepts.minor, op, version.minor):
         if acceptable(accepts.patch, op, version.patch):
           result = true
-  of Equal, AtLeast, NotMore, Under, Over:
-    result = crudeComparison(requirement.release, op, version)
+  of Equal:
+    result = version == requirement.release.version
+  of AtLeast:
+    result = version >= requirement.release.version
+  of NotMore:
+    result = version <= requirement.release.version
+  of Under:
+    result = version < requirement.release.version
+  of Over:
+    result = version > requirement.release.version
 
 proc isSatisfiedBy*(req: Requirement; spec: Release): bool =
   ## true if the requirement is satisfied by the specification
-  assert req.isValid
-  assert spec.isValid
   case req.operator:
   of Tag:
-    if spec.kind != Tag:
-      warn &"attempt to compare {spec.kind} to Tag; {req}"
-      when not defined(release) and not defined(danger):
-        raise newException(Defect, "i can't get no satisfaction")
-    else:
-      result = spec.reference == req.release.reference
-  of Equal, AtLeast, NotMore, Under, Over:
-    if spec.isSpecific:
-      result = req.isSatisfiedBy(spec.specifically)
-    else:
-      result = crudeComparison(req.release, req.operator, spec)
+    result = spec.reference == req.release.reference
+  of Equal:
+    result = spec == req.release
+  of AtLeast:
+    result = spec >= req.release
+  of NotMore:
+    result = spec <= req.release
+  of Under:
+    result = spec < req.release
+  of Over:
+    result = spec > req.release
   of Tilde, Caret, Wild:
     # check if the wildcard matches everything (only Wild, in theory)
     if req.release.accepts.major.isNone:
@@ -210,18 +160,14 @@ proc newRequirement*(id: string; operator: Operator;
     raise newException(ValueError, "requirements must have length, if not girth")
   result = Requirement(identity: id.strip, release: release, notes: notes)
   # if it parsed as Caret, Tilde, or Wild, then paint the requirement as such
-  if result.operator notin WildLings and result.release.kind in Wildlings:
-    # support >= 2.1.*
-    result.operator = operator
-  elif result.release.kind in {Tag}:
+  if result.release in Wildlings:
+    result.operator = result.release.kind
+  elif result.release in {Tag}:
     # eventually, we'll support tag comparisons...
     {.warning: "tag comparisons unsupported".}
     result.operator = result.release.kind
   else:
     result.operator = operator
-  when defined(debug):
-    if not result.isValid:
-      warn &"new req `{id}` and {operator} -> {result.operator}: {release}"
 
 proc newRequirement*(id: string; operator: Operator; spec: string): Requirement =
   ## parse a requirement from a string
