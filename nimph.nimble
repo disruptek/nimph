@@ -28,6 +28,9 @@ proc execTest(test: string) =
   execCmd "nim c -f -r " & test
   execCmd "nim c -d:release -r " & test
   execCmd "nim c -d:danger -r " & test
+  when NimMajor >= 1 and NimMinor >= 1:
+    execCmd "nim c --gc:arc -r " & test
+    execCmd "nim c --gc:arc -d:danger -r " & test
 
 # cpp is broken
 #  execCmd "nim cpp -r " & test
