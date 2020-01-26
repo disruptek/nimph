@@ -59,13 +59,18 @@ template prepareForTheWorst(body: untyped) =
   else:
     body
 
-template setupLocalProject(project: var Project) =
+template setupLocalProject(project: var Project; body: untyped) =
   if not findProject(project, getCurrentDir()):
+    body
+  else:
+    try:
+      project.cfg = loadAllCfgs(project.repo)
+    except Exception as e:
+      crash "unable to parse nim configuration: " & e.msg
+
+template setupLocalProject(project: var Project) =
+  setupLocalProject(project):
     crash &"unable to find a project; try `nimble init`?"
-  try:
-    project.cfg = loadAllCfgs(project.repo)
-  except Exception as e:
-    crash "unable to parse nim configuration: " & e.msg
 
 template toggle(flags: set[Flag]; flag: Flag; switch: untyped) =
   when switch is bool:
