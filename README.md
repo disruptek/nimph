@@ -5,6 +5,8 @@ nim package hierarchy manager from the future
 
 or: _How I Learned to Stop Worrying and Love the Search Path_
 
+## PSA: NIMPH IS CURRENTLY UNSAFE ON --gc:arc
+
 ## Features
 
 - truly path-agnostic dependencies
