@@ -103,7 +103,7 @@ proc loadAllCfgs*(directory: string): ConfigRef =
 
   # stuff the prefixDir so we load the compiler's config/nim.cfg
   # just like the compiler would if we were to invoke it directly
-  let compiler = getCurrentCompilerExe()
+  let compiler = findExe("nim")
   result.prefixDir = AbsoluteDir splitPath(compiler.parentDir).head
 
   withinDirectory(directory):
