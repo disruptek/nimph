@@ -121,7 +121,8 @@ proc fetchNimbleDump*(path: string; nimbleDir = ""): DumpResult =
                               @["dump", path], {poDaemon}, nimbleDir = nimbleDir)
       if not nimble.ok:
         result.why = "nimble execution failed"
-        error nimble.output
+        if nimble.output.len > 0:
+          error nimble.output
         break fetched
 
     let
