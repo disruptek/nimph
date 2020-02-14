@@ -8,15 +8,16 @@ requires "cligen >= 0.9.41"
 requires "bump >= 1.8.18"
 requires "npeg >= 0.21.3"
 requires "https://github.com/disruptek/results"
-requires "https://github.com/disruptek/cutelog >= 1.1.0"
-requires "https://github.com/disruptek/gittyup >= 2.1.13"
-requires "https://github.com/stefantalpalaru/nim-unittest2 >= 0.0.1"
+requires "https://github.com/disruptek/cutelog >= 1.1.0 & < 2.0.0"
+requires "https://github.com/disruptek/gittyup >= 2.1.13 & < 3.0.0"
+requires "https://github.com/stefantalpalaru/nim-unittest2 >= 0.0.1 & < 1.0.0"
 
 # fixup a dependency: regex 0.10.0 doesn't build with 1.0.4 stdlib
 requires "regex >= 0.11.0"
 
 bin = @["nimph"]
 srcDir = "src"
+installDirs = @["docs", "tests", "src"]
 
 backend = "c"
 
