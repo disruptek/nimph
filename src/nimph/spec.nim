@@ -109,9 +109,10 @@ proc normalizeUrl*(uri: Uri): Uri =
 
 proc convertToGit*(uri: Uri): Uri =
   result = uri.normalizeUrl
-  if not result.path.endsWith(".git"):
+  if result.scheme == "":
+    result.scheme = "git"
+  if result.scheme == "git" and not result.path.endsWith(".git"):
     result.path &= ".git"
-  result.scheme = "git"
   result.username = ""
 
 proc convertToSsh*(uri: Uri): Uri =
