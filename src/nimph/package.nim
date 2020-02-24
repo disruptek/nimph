@@ -178,6 +178,14 @@ proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
         else:
           warn &"alias `{name}` refers to a missing package `{alias}`"
 
+      # add a style-insensitive alias for the opposite case package-name
+      let
+        keys = toSeq group.keys
+      for key in keys.items:
+        # key -> "Goats_And_Pigs"
+        group[key.toLowerAscii] = group[key]
+        group[key.toUpperAscii] = group[key]
+
       result.ok = true
     except Exception as e:
       result.why = e.msg
