@@ -1,4 +1,4 @@
-version = "0.7.0"
+version = "0.7.1"
 author = "disruptek"
 description = "nim package handler from the future"
 license = "MIT"
@@ -7,17 +7,18 @@ requires "github >= 1.0.2 & < 2.0.0"
 requires "cligen >= 0.9.41 & < 0.10.0"
 requires "bump >= 1.8.18 & < 2.0.0"
 requires "npeg >= 0.21.3 & < 0.23.0"
-requires "https://github.com/disruptek/results < 2.0.0"
+requires "https://github.com/disruptek/badresults < 2.0.0"
 requires "https://github.com/disruptek/cutelog >= 1.1.0 & < 2.0.0"
 requires "https://github.com/disruptek/gittyup >= 2.4.0 & < 3.0.0"
-requires "https://github.com/stefantalpalaru/nim-unittest2 >= 0.0.1 & < 1.0.0"
 
 # fixup a dependency: regex 0.10.0 doesn't build with 1.0.4 stdlib
 requires "regex >= 0.11.0"
 
 bin = @["nimph"]
 srcDir = "src"
-installDirs = @["docs", "tests", "src"]
+
+# this breaks tests
+#installDirs = @["docs", "tests", "src"]
 
 backend = "c"
 

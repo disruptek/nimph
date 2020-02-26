@@ -2,8 +2,7 @@ import std/os
 import std/strutils
 import std/options
 import std/tables
-
-import unittest2
+import std/unittest
 
 import bump
 

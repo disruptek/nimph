@@ -1,6 +1,5 @@
+import std/unittest
 import std/uri
-
-import unittest2
 
 import nimph/spec
 

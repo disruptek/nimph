@@ -1,7 +1,6 @@
+import std/unittest
 import std/options
 import std/strtabs
-
-import unittest2
 
 import bump
 

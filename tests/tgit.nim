@@ -1,7 +1,7 @@
 import std/tables
 import std/options
+import std/unittest
 
-import unittest2
 import bump
 import gittyup
 
