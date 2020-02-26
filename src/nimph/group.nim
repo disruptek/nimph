@@ -128,7 +128,7 @@ iterator pairs*[K, V](group: Group[K, V]): tuple[key: K; val: V] =
   for key, value in group.table.pairs:
     yield (key: key, val: value)
 
-{.warning: "nim bug #12945".}
+{.warning: "nim bug #13510".}
 #iterator mpairs*[K, V](group: var Group[K, V]): tuple[key: K; val: var V] =
 iterator mpairs*[K, V](group: Group[K, V]): tuple[key: K; val: var V] =
   for key, value in group.table.mpairs:
