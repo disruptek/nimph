@@ -261,7 +261,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
 
     # $NIMBLE_DIR could screw with our head
     if envDir != "":
-      if absolutePath(envDir).normalizedPath != depsDir:
+      if absolutePath(envDir) != depsDir:
         notice "i'm not sure what to do with an alternate $NIMBLE_DIR set"
         result = false
       else:
