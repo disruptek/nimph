@@ -5,8 +5,6 @@ import std/strtabs
 import std/tables
 import std/uri
 
-import gittyup
-
 import nimph/spec
 import nimph/version
 import nimph/group

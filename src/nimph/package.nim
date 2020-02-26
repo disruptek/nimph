@@ -11,10 +11,8 @@ import std/json
 import std/options
 
 import npeg
-import bump
 
 import nimph/spec
-import nimph/version
 import nimph/requirement
 
 import nimph/group

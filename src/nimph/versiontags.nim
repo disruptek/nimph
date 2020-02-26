@@ -1,4 +1,3 @@
-import std/strformat
 import std/strutils
 import std/sets
 import std/options

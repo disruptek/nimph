@@ -21,7 +21,6 @@ import nimph/package
 import nimph/dependency
 import nimph/locker
 import nimph/group
-import nimph/version
 import nimph/requirement
 
 template crash(why: string) =

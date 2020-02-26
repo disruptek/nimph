@@ -17,7 +17,6 @@ import nimph/package
 import nimph/dependency
 import nimph/group
 
-import nimph/version
 import nimph/requirement
 
 type
