@@ -1,4 +1,4 @@
-version = "0.6.24"
+version = "0.7.0"
 author = "disruptek"
 description = "nim package handler from the future"
 license = "MIT"
@@ -9,7 +9,7 @@ requires "bump >= 1.8.18 & < 2.0.0"
 requires "npeg >= 0.21.3 & < 0.23.0"
 requires "https://github.com/disruptek/results < 2.0.0"
 requires "https://github.com/disruptek/cutelog >= 1.1.0 & < 2.0.0"
-requires "https://github.com/disruptek/gittyup >= 2.1.13 & < 3.0.0"
+requires "https://github.com/disruptek/gittyup >= 2.4.0 & < 3.0.0"
 requires "https://github.com/stefantalpalaru/nim-unittest2 >= 0.0.1 & < 1.0.0"
 
 # fixup a dependency: regex 0.10.0 doesn't build with 1.0.4 stdlib

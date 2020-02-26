@@ -247,9 +247,14 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
     # this currently could duplicate a release emitted above, but that's okay
     if req.release.kind == Tag:
       block:
+        # try to find a matching oid in the current branch
+        for branch in project.matchingBranches(req.release.reference):
+          debug &"found {req.release.reference} in {project}"
+          yield newRelease($branch.oid, operator = Tag)
         repository := openRepository(project.gitDir):
           error &"unable to open repo at `{project.repo}`: {code.dumpError}"
           break
+        # else, it's a random oid, maybe?  look it up!
         thing := repository.lookupThing(req.release.reference):
           debug &"could not find {req.release.reference} in {project}"
           break
@@ -300,7 +305,7 @@ proc isSatisfiedBy*(req: Requirement; project: Project; release: Release): bool 
       let
         oid = project.demandHead
       for match in req.matchingReleases(head = oid, tags = project.tags):
-        result = match == release
+        result = release == match
         if result:
           break satisfied
 
@@ -308,6 +313,11 @@ proc isSatisfiedBy*(req: Requirement; project: Project; release: Release): bool 
       if req.release.kind == Tag:
         # match against a specific oid or symbol
         if release.kind == Tag:
+          # try to find a matching branch name
+          for branch in project.matchingBranches(req.release.reference):
+            result = true
+            break satisfied
+
           block:
             repository := openRepository(project.gitDir):
               error &"unable to open repo at `{project.repo}`: {code.dumpError}"

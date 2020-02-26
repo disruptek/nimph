@@ -264,6 +264,32 @@ proc shortOid(oid: GitOid; size = 6): string =
   else:
     result = short.get
 
+template matchingBranches(project: Project; body: untyped): untyped =
+  block:
+    repository := openRepository(project.gitDir):
+      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+      break
+    for bref in repository.branches:
+      if bref.isOk:
+        try:
+          var
+            branch {.inject.}: GitReference = bref.get
+          body
+        finally:
+          free bref.get
+      else:
+        warn &"unable to fetch branch in {repository}"
+
+iterator matchingBranches*(project: Project; oid: GitOid): GitReference =
+  project.matchingBranches:
+    if oid == branch.oid:
+      yield branch
+
+iterator matchingBranches*(project: Project; name: string): GitReference =
+  project.matchingBranches:
+    if name == branch.branchName.split("/")[^1]:
+      yield branch
+
 proc nameMyRepo(project: Project): string =
   ## name a repository directory in such a way that the compiler can grok it
   block complete:
@@ -277,6 +303,10 @@ proc nameMyRepo(project: Project): string =
           let tag = project.tags.shortestTag($oid)
           # use the nimble style of project-#head when appropriate
           if tag == $oid:
+            # try to find a matching oid in the current branch
+            for branch in project.matchingBranches(oid):
+              result = project.name & "-" & "#" & branch.name.split("/")[^1]
+              break complete
             result = project.name & "-" & "#head"
           else:
             let loose = parseVersionLoosely(tag)
