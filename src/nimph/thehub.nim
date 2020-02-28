@@ -262,7 +262,7 @@ proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
     raise newException(Defect, "nonsensical input: " & js.pretty)
 
   template thenOrNow(label: string): DateTime =
-    if label in js:
+    if js != nil and label in js and js[label].kind == JString:
       js[label].getStr.parse(hubTime, zone = tz)
     else:
       now()
