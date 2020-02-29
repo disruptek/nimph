@@ -85,6 +85,8 @@ proc releaseHashes*(release: Release; head = ""): HashSet[Hash] =
     # perform the #head->oid substitution here
     if release.reference.toLowerAscii == "head" and head != "":
       result.incl head.hash
+      result.incl "head".hash
+      result.incl "HEAD".hash
   of Wildlings:
     # 3, 3.1, 3.1.4 ... as available
     let effective = release.accepts.effectively
@@ -110,7 +112,8 @@ proc releaseHashes*(release: Release; thing: GitThing; head = ""): HashSet[Hash]
   result.incl hash(thing)
   result.incl hash($thing.oid)
 
-iterator matches*(tags: GitTagTable; against: HashSet[Hash]):
+iterator matches*(tags: GitTagTable; against: HashSet[Hash];
+                  head: string = ""):
   tuple[release: Release; thing: GitThing] =
   ## see if any of the releases in the tag table will match `against`
   ## if so, yield the release and thing
@@ -118,7 +121,7 @@ iterator matches*(tags: GitTagTable; against: HashSet[Hash]):
     raise newException(Defect, "are you lost?")
   for release, thing in tags.richen:
     # compute hashes to match against
-    var symbols = release.releaseHashes(thing)
+    var symbols = release.releaseHashes(thing, head = head)
     # see if we scored any matches
     if against.intersection(symbols).len != 0:
       yield (release: release, thing: thing)

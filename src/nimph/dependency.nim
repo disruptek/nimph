@@ -189,7 +189,7 @@ proc happyProvision(requirement: Requirement; release: Release;
         let
           required = releaseHashes(req.release, head = head)
         block matched:
-          for viable, thing in tags.matches(required):
+          for viable, thing in tags.matches(required, head = head):
             # the requirement is a tag, so we simply compare the
             # matches for the requirement against the provided release
             # and a release composed of each match's commit hash
@@ -202,7 +202,7 @@ proc happyProvision(requirement: Requirement; release: Release;
         let
           provided = releaseHashes(release, head = head)
         block matched:
-          for viable, thing in tags.matches(provided):
+          for viable, thing in tags.matches(provided, head = head):
             if req.isSatisfiedBy(viable):
               break matched
           break failed
