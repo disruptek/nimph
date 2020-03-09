@@ -6,10 +6,28 @@ import std/uri
 import std/os
 import std/times
 
+import compiler/pathutils
+
 import cutelog
 export cutelog
 
 import nimph/sanitize
+
+# slash attack ///////////////////////////////////////////////////
+when NimMajor >= 1 and NimMinor >= 1:
+  template `///`*(a: string): string =
+    joinPath(a, $DirSep, "")
+  template `///`*(a: AbsoluteFile | AbsoluteDir): string =
+    `///`(a.string)
+  template `//////`*(a: string | AbsoluteFile | AbsoluteDir): string =
+      joinPath($DirSep, "", `///`(a), $DirSep, "")
+else:
+  template `///`*(a: string): string =
+    joinPath(a, "")
+  template `///`*(a: AbsoluteFile | AbsoluteDir): string =
+    `///`(a.string)
+  template `//////`*(a: string | AbsoluteFile | AbsoluteDir): string =
+    "" / "" / `///`(a) / ""
 
 type
   Flag* {.pure.} = enum
@@ -37,8 +55,8 @@ const
   dotNimbleLink* {.strdefine.} = "".addFileExt("nimble-link")
   dotGit* {.strdefine.} = "".addFileExt("git")
   dotHg* {.strdefine.} = "".addFileExt("hg")
-  DepDir* {.strdefine.} = $DirSep / "deps" / $DirSep
-  PkgDir* {.strdefine.} = $DirSep / "pkgs" / $DirSep
+  DepDir* {.strdefine.} = //////"deps"
+  PkgDir* {.strdefine.} = //////"pkgs"
   NimCfg* {.strdefine.} = "nim".addFileExt("cfg")
   ghTokenFn* {.strdefine.} = "github_api_token"
   ghTokenEnv* {.strdefine.} = "NIMPH_TOKEN"

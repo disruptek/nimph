@@ -1,3 +1,4 @@
+import std/os
 import std/unittest
 import std/uri
 
@@ -27,3 +28,12 @@ suite "spec":
       checkpoint fork.repr
       check fork.ok
       check fork.owner == "disruptek" and fork.repo == "nimph"
+
+  test "path joins":
+    let
+      p = "goats"
+      o = "pigs/"
+    check ///p == "goats/"
+    check ///o == "pigs/"
+    check //////p == "/goats/"
+    check //////o == "/pigs/"

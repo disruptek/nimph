@@ -87,8 +87,8 @@ template hgDir*(project: Project): string = project.repo / dotHg
 template hasHg*(project: Project): bool = dirExists(project.hgDir)
 template nimphConfig*(project: Project): string = project.repo / configFile
 template hasNimph*(project: Project): bool = fileExists(project.nimphConfig)
-template localDeps*(project: Project): string = project.repo / DepDir / $DirSep
-template packageDirectory*(project: Project): string {.deprecated.}=
+template localDeps*(project: Project): string = `///`(project.repo / DepDir)
+template packageDirectory*(project: Project): string {.deprecated.} =
   project.nimbleDir / PkgDir
 
 template hasReleaseTag*(project: Project): bool =
@@ -103,7 +103,7 @@ template hasLocalDeps*(project: Project): bool =
 proc nimbleDir*(project: Project): string =
   ## the path to the project's dependencies
   var
-    globaldeps = getHomeDir() / dotNimble / $DirSep
+    globaldeps = getHomeDir() / ///dotNimble
 
   # if we instantiated this project from another, the implication is that we
   # want to point at whatever that parent project is using as its nimbleDir.
@@ -569,7 +569,7 @@ proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
         warn &"unable to parse url from remote `{name}` from {project.repo}"
 
     # this is a not-found (or error) condition; return a local url
-    result = Uri(scheme: "file", path: project.repo / $DirSep).some
+    result = Uri(scheme: "file", path: ///project.repo).some
     break complete
 
 proc createUrl*(project: Project; refresh = false): Uri =
@@ -807,13 +807,13 @@ proc determineSearchPath(project: Project): string =
         if result.dirExists:
           break
     result = project.repo
-  result = result / $DirSep
+  result = ///result
 
 iterator missingSearchPaths*(project: Project; target: Project): string =
   ## one (or more?) paths to the target package which are
   ## apparently missing from the project's search paths
   let
-    path = target.determineSearchPath / $DirSep
+    path = ///determineSearchPath(target)
   block found:
     if not path.dirExists:
       warn &"search path for {project.name} doesn't exist"

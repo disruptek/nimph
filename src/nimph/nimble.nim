@@ -27,13 +27,13 @@ type
     js: JsonNode
     link: seq[string]
 
-proc stripPkgs*(nimbledir: string): string =
+proc stripPkgs*(nimbleDir: string): string =
   ## omit and trailing /PkgDir from a path
-  result = nimbleDir / $DirSep
+  result = ///nimbleDir
   # the only way this is a problem is if the user stores deps in pkgs/pkgs,
   # but we can remove this hack once we have nimblePaths in nim-1.0 ...
-  if result.endsWith($DirSep / PkgDir / $DirSep):
-    result = result.parentDir / $DirSep
+  if result.endsWith(//////PkgDir):
+    result = ///parentDir(result)
 
 proc runSomething*(exe: string; args: seq[string]; options: set[ProcessOption];
                    nimbleDir = ""): NimbleOutput =
