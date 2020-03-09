@@ -377,6 +377,7 @@ proc suggestNimbleDir*(config: ConfigRef; local = ""; global = ""): string =
     # otherwise, try to make one up using the suggestion
     if global == "":
       raise newException(IOError, "can't guess global {dotNimble} directory")
+    global = global / $DirSep
     assert global.endsWith(DirSep)
     result = global
     break either
