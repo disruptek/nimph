@@ -29,11 +29,11 @@ type
 
 proc stripPkgs*(nimbledir: string): string =
   ## omit and trailing /PkgDir from a path
-  result = nimbleDir / ""
+  result = nimbleDir / $DirSep
   # the only way this is a problem is if the user stores deps in pkgs/pkgs,
   # but we can remove this hack once we have nimblePaths in nim-1.0 ...
-  if result.endsWith("" / PkgDir / ""):
-    result = result.parentDir / ""
+  if result.endsWith($DirSep / PkgDir / $DirSep):
+    result = result.parentDir / $DirSep
 
 proc runSomething*(exe: string; args: seq[string]; options: set[ProcessOption];
                    nimbleDir = ""): NimbleOutput =

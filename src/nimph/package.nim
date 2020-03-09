@@ -127,8 +127,8 @@ proc add(group: PackageGroup; js: JsonNode) =
 proc getOfficialPackages*(nimbledir: string): PackagesResult {.raises: [].} =
   ## parse the official packages list from nimbledir
   var
-    filename = nimbledir / ""
-  if filename.endsWith("" / PkgDir / ""):
+    filename = nimbledir / $DirSep
+  if filename.endsWith($DirSep / PkgDir / $DirSep):
     filename = nimbledir.parentDir / officialPackages
   else:
     filename = nimbledir / officialPackages

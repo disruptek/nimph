@@ -117,8 +117,9 @@ proc parseVersionLoosely*(content: string): Option[Release] =
         if not release.isValid:
           release = newRelease($1, operator = Equal)
       document <- +(record | 1) * !1
-    parsed = peggy.match(content)
   try:
+    let
+      parsed = peggy.match(content)
     if parsed.ok and release.isValid:
       result = release.some
   except Exception as e:

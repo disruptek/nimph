@@ -37,8 +37,8 @@ const
   dotNimbleLink* {.strdefine.} = "".addFileExt("nimble-link")
   dotGit* {.strdefine.} = "".addFileExt("git")
   dotHg* {.strdefine.} = "".addFileExt("hg")
-  DepDir* {.strdefine.} = "" / "deps" / ""
-  PkgDir* {.strdefine.} = "" / "pkgs" / ""
+  DepDir* {.strdefine.} = $DirSep / "deps" / $DirSep
+  PkgDir* {.strdefine.} = $DirSep / "pkgs" / $DirSep
   NimCfg* {.strdefine.} = "nim".addFileExt("cfg")
   ghTokenFn* {.strdefine.} = "github_api_token"
   ghTokenEnv* {.strdefine.} = "NIMPH_TOKEN"
