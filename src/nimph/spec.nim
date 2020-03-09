@@ -16,17 +16,23 @@ import nimph/sanitize
 # slash attack ///////////////////////////////////////////////////
 when NimMajor >= 1 and NimMinor >= 1:
   template `///`*(a: string): string =
+    # ensure a trailing DirSep
     joinPath(a, $DirSep, "")
   template `///`*(a: AbsoluteFile | AbsoluteDir): string =
+    # ensure a trailing DirSep
     `///`(a.string)
   template `//////`*(a: string | AbsoluteFile | AbsoluteDir): string =
-      joinPath($DirSep, "", `///`(a), $DirSep, "")
+    # ensure a trailing DirSep and a leading DirSep
+    joinPath($DirSep, "", `///`(a), $DirSep, "")
 else:
   template `///`*(a: string): string =
+    # ensure a trailing DirSep
     joinPath(a, "")
   template `///`*(a: AbsoluteFile | AbsoluteDir): string =
+    # ensure a trailing DirSep
     `///`(a.string)
   template `//////`*(a: string | AbsoluteFile | AbsoluteDir): string =
+    # ensure a trailing DirSep and a leading DirSep
     "" / "" / `///`(a) / ""
 
 type
