@@ -558,7 +558,7 @@ proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
         free remote.get
 
       try:
-        let url = remote.get.url
+        let url = remote.get.url.normalizeUrl
         if url.isValid:
           # this is our only success scenario
           result = url.some

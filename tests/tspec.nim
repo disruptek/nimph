@@ -29,6 +29,25 @@ suite "spec":
       check fork.ok
       check fork.owner == "disruptek" and fork.repo == "nimph"
 
+  test "url normalization":
+    let
+      sshUser = "git"
+      sshUrl1 = "git@git.sr.ht:~kungtotte/dtt"
+      sshHost1 = "git.sr.ht"
+      sshPath1 = "~kungtotte/dtt"
+      sshUrl2 = "git@github.com:disruptek/nimph.git"
+      sshHost2 = "github.com"
+      sshPath2 = "disruptek/nimph.git"
+      normUrl1 = normalizeUrl(parseUri(sshUrl1))
+      normUrl2 = normalizeUrl(parseUri(sshUrl2))
+
+    check normUrl1.username == sshUser
+    check normUrl1.hostname == sshHost1
+    check normUrl1.path == sshPath1
+    check normUrl2.username == sshUser
+    check normUrl2.hostname == sshHost2
+    check normUrl2.path == sshPath2
+
   test "path joins":
     let
       p = "goats"
