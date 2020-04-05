@@ -1,3 +1,4 @@
+import std/osproc
 import std/json
 import std/nre
 import std/strtabs
@@ -22,6 +23,7 @@ import npeg
 import bump
 
 import nimph/spec
+import nimph/runner
 
 when defined(debugPath):
   from std/sequtils import count
@@ -90,8 +92,22 @@ var
 proc findPrefixDir(): string =
   ## determine the prefix directory for the current compiler
   if compilerPrefixDir == "":
-    let compiler = findExe("nim")
-    compilerPrefixDir = splitPath(compiler.parentDir).head
+    let
+      compiler = runSomething("nim",
+                   @["--dump.format:json", "dump", "dummy"], {poDaemon})
+    if not compiler.ok:
+      warn "couldn't run the compiler to determine its location"
+      raise newException(OSError, "cannot find a nim compiler")
+    try:
+      let
+        js = parseJson(compiler.output)
+      compilerPrefixDir = js["prefixdir"].getStr
+    except JsonParsingError as e:
+      warn "`nim dump` json parse error: " & e.msg
+      raise
+    except KeyError:
+      warn "couldn't parse the prefix directory from `nim dump` output"
+      raise
   result = compilerPrefixDir
 
 proc loadAllCfgs*(directory: string): ConfigRef =

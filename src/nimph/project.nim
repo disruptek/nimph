@@ -40,6 +40,7 @@ import gittyup
 
 import nimph/spec
 import nimph/config
+import nimph/runner
 import nimph/nimble
 import nimph/package
 import nimph/version
@@ -142,15 +143,15 @@ proc fetchConfig*(project: var Project; force = false): bool =
       notice &"unnecessary config fetch for {project}"
 
 proc runSomething*(project: Project; exe: string; args: seq[string];
-                   opts = {poParentStreams}): NimbleOutput =
-  ## run nimble against a particular project
+                   opts = {poParentStreams}): RunOutput =
+  ## run something against a particular project
   let
     nimbleDir = project.nimbleDir
   result = runSomething(exe, args, opts, nimbleDir = nimbleDir)
 
 proc runSomething*(project: var Project; exe: string; args: seq[string];
-                   opts = {poParentStreams}): NimbleOutput =
-  ## run nimble against a particular project, fetching its config first
+                   opts = {poParentStreams}): RunOutput =
+  ## run something against a particular project, fetching its config first
   let
     readonly = project
   # ensure we have a config for the project before running nimble;
