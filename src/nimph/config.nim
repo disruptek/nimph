@@ -84,6 +84,16 @@ proc overlayConfig*(config: var ConfigRef;
         let emsg = &"unable to read config in {nextProjectPath}" # noqa
         warn emsg
 
+var
+  compilerPrefixDir = ""
+
+proc findPrefixDir(): string =
+  ## determine the prefix directory for the current compiler
+  if compilerPrefixDir == "":
+    let compiler = findExe("nim")
+    compilerPrefixDir = splitPath(compiler.parentDir).head
+  result = compilerPrefixDir
+
 proc loadAllCfgs*(directory: string): ConfigRef =
   ## use the compiler to parse all the usual nim.cfgs;
   ## optionally change to the given (project?) directory first
@@ -103,8 +113,7 @@ proc loadAllCfgs*(directory: string): ConfigRef =
 
   # stuff the prefixDir so we load the compiler's config/nim.cfg
   # just like the compiler would if we were to invoke it directly
-  let compiler = findExe("nim")
-  result.prefixDir = AbsoluteDir splitPath(compiler.parentDir).head
+  result.prefixDir = AbsoluteDir findPrefixDir()
 
   withinDirectory(directory):
     # stuff the current directory as the project path
