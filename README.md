@@ -118,7 +118,7 @@ output (and optional repair) of the environment it finds itself in.
 - [Git Subcommand Auto-Integration](https://github.com/disruptek/nimph#git-subcommands)
 - [Nimble Subcommand Auto-Integration](https://github.com/disruptek/nimph#nimble-subcommands)
 - [Tweaking Nimph Behavior Constants](https://github.com/disruptek/nimph#hacking)
-- [Using `choosenim` to Select Nim Toolchains](https://github.com/disruptek/nimph#choosenim)
+- [Using `choosenim` to Select Nim Toolchains](https://github.com/disruptek/nimph#choose-nimph-choose-nim)
 - [Nimph Module Documentation](https://github.com/disruptek/nimph#documentation)
 
 ## Demonstration
