@@ -629,7 +629,7 @@ The `choosenim` tool included in Nimph allows you to easily switch a symbolic
 link between adjacent Nim distributions, wherever you may have installed them.
 
 ### Installing `choosenim`
-1. Install [jq](from https://stedolan.github.io/jq/) from GitHub or wherever.
+1. Install [jq](https://stedolan.github.io/jq/) from GitHub or wherever.
 1. Add the `chosen` toolchain to your `$PATH`.
 1. Run `choosenim` against any of your toolchains.
 ```
