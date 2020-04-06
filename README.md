@@ -645,7 +645,7 @@ active boot switches: -d:release
 ```
 
 ### Using `choosenim`
-- To list available toolchains, run `choosenim`.
+To list available toolchains, run `choosenim`.
 ```
 $ choosenim
 .
@@ -655,7 +655,7 @@ $ choosenim
 ├── devel
 └── stable -> 1.0
 ```
-- Switch toolchains by supplying a name or alias.
+Switch toolchains by supplying a name or alias.
 ```
 $ choosenim 1.2
 Nim Compiler Version 1.2.0 [Linux: amd64]
