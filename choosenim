@@ -1,0 +1,20 @@
+#!/bin/bash
+CHOOSE=`realpath $0`                   # make note of our origin
+NIM=`nim --hint[Conf]:off --dump.format:json dump config | jq -r .prefixdir`/..
+if [ "$NIM" = "null/.." ]; then        # true when the prefixdir is missing
+	NIM=`dirname \`which nim\``/../..    # fallback for 1.0 support; see #127
+fi
+cd "$NIM"
+if [ -n "$*" ]; then                   # a toolchain was requested
+  if [ -d "$*" ]; then                 # the toolchain is available
+    rm -f chosen                       # ffs my ln -sf should remove it
+    ln -sf "$*" chosen                 # select the chosen toolchain
+    if ! [ -f "chosen/bin/$CHOOSE" ]; then
+      cp -p "$CHOOSE" chosen/bin       # install choosenim if necessary
+    fi
+    nim --version                      # emit current toolchain version
+    exit 0                             # successful selection of toolchain
+  fi
+fi
+tree -v -d -L 1 --noreport             # report on available toolchains
+exit 1                                 # signify failure to switch

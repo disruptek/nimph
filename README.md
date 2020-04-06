@@ -17,6 +17,7 @@ or: _How I Learned to Stop Worrying and Love the Search Path_
 - wildcard, tilde, and caret semver
 - absolutely zero configuration
 - total interoperability with Nimble
+- full-featured choosenim replacement
 
 ## Opinions
 
@@ -117,6 +118,7 @@ output (and optional repair) of the environment it finds itself in.
 - [Git Subcommand Auto-Integration](https://github.com/disruptek/nimph#git-subcommands)
 - [Nimble Subcommand Auto-Integration](https://github.com/disruptek/nimph#nimble-subcommands)
 - [Tweaking Nimph Behavior Constants](https://github.com/disruptek/nimph#hacking)
+- [Using `choosenim` to Select Nim Toolchains](https://github.com/disruptek/nimph#choosenim)
 - [Nimph Module Documentation](https://github.com/disruptek/nimph#documentation)
 
 ## Demonstration
@@ -620,6 +622,69 @@ projects.
 
 Compilation flags to adjust output colors/styling/emojis are found in the
 project's `nimph.nim.cfg`.
+
+## Choose Nimph, Choose Nim!
+
+The `choosenim` tool included in Nimph allows you to easily switch a symbolic
+link between adjacent Nim distributions, wherever you may have installed them.
+
+### Installing `choosenim`
+1. Install [jq](from https://stedolan.github.io/jq/) from GitHub or wherever.
+1. Add the `chosen` toolchain to your `$PATH`.
+1. Run `choosenim` against any of your toolchains.
+```
+# after installing jq however you please...
+$ set --export PATH=/directory/for/all-my-nim-installations/chosen:$PATH
+$ ./choosenim 1.0
+Nim Compiler Version 1.0.7 [Linux: amd64]
+Compiled at 2020-04-05
+Copyright (c) 2006-2019 by Andreas Rumpf
+
+git hash: b6924383df63c91f0ad6baf63d0b1aa84f9329b7
+active boot switches: -d:release
+```
+
+### Using `choosenim`
+- To list available toolchains, run `choosenim`.
+```
+$ choosenim
+.
+├── 1.0
+├── 1.2
+├── chosen -> 1.2
+├── devel
+└── stable -> 1.0
+```
+- Switch toolchains by supplying a name or alias.
+```
+$ choosenim 1.2
+Nim Compiler Version 1.2.0 [Linux: amd64]
+Compiled at 2020-04-05
+Copyright (c) 2006-2020 by Andreas Rumpf
+
+git hash: 7e83adff84be5d0c401a213eccb61e321a3fb1ff
+active boot switches: -d:release
+```
+```
+$ choosenim devel
+Nim Compiler Version 1.3.1 [Linux: amd64]
+Compiled at 2020-04-05
+Copyright (c) 2006-2020 by Andreas Rumpf
+
+git hash: b6814be65349d22fd12944c7c3d19fd8eb44683d
+active boot switches: -d:release
+```
+```
+$ choosenim stable
+Nim Compiler Version 1.0.7 [Linux: amd64]
+Compiled at 2020-04-05
+Copyright (c) 2006-2019 by Andreas Rumpf
+
+git hash: b6924383df63c91f0ad6baf63d0b1aa84f9329b7
+```
+
+### Hacking `choosenim`
+It's a 20-line shell script, buddy; go nuts.
 
 ## Documentation
 
