@@ -186,6 +186,8 @@ proc packageName*(url: Uri): string =
 proc importName*(path: string): string =
   ## a uniform name usable in code for imports
   assert path.len > 0
+  # strip any leading directories and extensions
+  result = splitFile(path).name
   const capsOkay =
     when FilesystemCaseSensitive:
       true
@@ -193,10 +195,13 @@ proc importName*(path: string): string =
       false
   let
     sane = path.sanitizeIdentifier(capsOkay = capsOkay)
+  # if it's a sane identifier, use it
   if sane.isSome:
     result = sane.get
-  else:
-    raise newException(ValueError, "unable to sanitize `" & path & "`")
+  elif not capsOkay:
+    # emit a lowercase name on case-insensitive filesystems
+    result = path.toLowerAscii
+  # else, we're just emitting the existing file's basename
 
 proc importName*(url: Uri): string =
   let url = url.normalizeUrl
@@ -205,7 +210,7 @@ proc importName*(url: Uri): string =
   elif url.scheme == "file":
     result = url.path.importName
   else:
-    result = url.packageName.importName.toLowerAscii
+    result = url.packageName.importName
 
 proc forkTarget*(url: Uri): ForkTargetResult =
   result.url = url.normalizeUrl

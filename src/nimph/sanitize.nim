@@ -64,7 +64,8 @@ proc sanitizeIdentifier*(name: string; capsOkay=false): Option[string] =
       when nimvm:
         warning "identifiers cannot start with `" & id[0] & "`"
       else:
-        warn "identifiers cannot start with `" & id[0] & "`"
+        discard
+      #  warn "identifiers cannot start with `" & id[0] & "`"
       break sanitized
     when elideUnderscoresInIdentifiers:
       if id.len > 1:
@@ -74,6 +75,7 @@ proc sanitizeIdentifier*(name: string; capsOkay=false): Option[string] =
       when nimvm:
         warning "bad identifier: " & id
       else:
-        warn "bad identifier: " & id
+        discard
+      #  warn "bad identifier: " & id
       break sanitized
     result = id.some
