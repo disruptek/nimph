@@ -41,17 +41,26 @@ type
     path: string
     js: JsonNode
 
-proc loadProjectCfg*(path: string): Option[ConfigRef] =
-  ## use the compiler to parse a nim.cfg
+proc parseConfigFile*(path: string): Option[ConfigRef] =
+  ## use the compiler to parse a nim.cfg without changing to its directory
   var
     cache = newIdentCache()
     filename = path.absolutePath
     config = newConfigRef()
-  if readConfigFile(filename.AbsoluteFile, cache, config):
-    result = config.some
 
-proc overlayConfig*(config: var ConfigRef;
-                    directory: string): bool {.deprecated.} =
+  # define symbols such as, say, nimbabel;
+  # this allows us to correctly parse conditions in nim.cfg(s)
+  initDefines(config.symbols)
+
+  # omit some warnings
+  config.notes.excl hintConf
+  config.notes.excl hintLineTooLong
+
+  if readConfigFile(filename.AbsoluteFile, cache, config):
+    result = some(config)
+
+proc overlayConfig(config: var ConfigRef;
+                   directory: string): bool {.deprecated.} =
   ## true if new config data was added to the env
   withinDirectory(directory):
     var
@@ -70,38 +79,40 @@ proc overlayConfig*(config: var ConfigRef;
       if not result:
         break complete
 
-      # remember to reset the config's project path
-      defer:
+      try:
+        # set the new project path for substitution purposes
+        config.projectPath = nextProjectPath
+
+        var cache = newIdentCache()
+        result = readConfigFile(filename.AbsoluteFile, cache, config)
+
+        if result:
+          # this config is now authoritative, so force the project path
+          priorProjectPath = nextProjectPath
+        else:
+          let emsg = &"unable to read config in {nextProjectPath}" # noqa
+          warn emsg
+      finally:
+        # remember to reset the config's project path
         config.projectPath = priorProjectPath
-      # set the new project path for substitution purposes
-      config.projectPath = nextProjectPath
-
-      var cache = newIdentCache()
-      result = readConfigFile(filename.AbsoluteFile, cache, config)
-
-      if result:
-        # this config is now authoritative, so force the project path
-        priorProjectPath = nextProjectPath
-      else:
-        let emsg = &"unable to read config in {nextProjectPath}" # noqa
-        warn emsg
 
 var
-  compilerPrefixDir = ""
+  compilerPrefixDir: AbsoluteDir
 
-proc findPrefixDir(): string =
+proc findPrefixDir(): AbsoluteDir =
   ## determine the prefix directory for the current compiler
-  if compilerPrefixDir == "":
+  if compilerPrefixDir.isEmpty:
     let
       compiler = runSomething("nim",
-                   @["--dump.format:json", "dump", "dummy"], {poDaemon})
+                   @["--hints:off",
+                     "--dump.format:json", "dump", "dummy"], {poDaemon})
     if not compiler.ok:
       warn "couldn't run the compiler to determine its location"
       raise newException(OSError, "cannot find a nim compiler")
     try:
       let
         js = parseJson(compiler.output)
-      compilerPrefixDir = js["prefixdir"].getStr
+      compilerPrefixDir = AbsoluteDir js["prefixdir"].getStr
     except JsonParsingError as e:
       warn "`nim dump` json parse error: " & e.msg
       raise
@@ -129,7 +140,7 @@ proc loadAllCfgs*(directory: string): ConfigRef =
 
   # stuff the prefixDir so we load the compiler's config/nim.cfg
   # just like the compiler would if we were to invoke it directly
-  result.prefixDir = AbsoluteDir findPrefixDir()
+  result.prefixDir = findPrefixDir()
 
   withinDirectory(directory):
     # stuff the current directory as the project path
@@ -180,9 +191,7 @@ proc appendConfig*(path: Target; config: string): bool =
       writer.writeLine config
 
     # make sure the compiler can parse our new config
-    let
-      parsed = loadProjectCfg(temp)
-    if parsed.isNone:
+    if parseConfigFile(temp).isNone:
       break complete
 
     # copy the temp file over the original config
@@ -486,9 +495,7 @@ proc removeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
       break complete
 
     # make sure we can parse the configuration with the compiler
-    let
-      cfg = fn.loadProjectCfg
-    if cfg.isNone:
+    if parseConfigFile(fn).isNone:
       error &"the compiler couldn't parse {nimcfg}"
       break complete
 

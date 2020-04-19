@@ -64,7 +64,9 @@ template setupLocalProject(project: var Project; body: untyped) =
     body
   else:
     try:
+      debug "load all configs"
       project.cfg = loadAllCfgs(project.repo)
+      debug "done loading configs"
     except Exception as e:
       crash "unable to parse nim configuration: " & e.msg
 

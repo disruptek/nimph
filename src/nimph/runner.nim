@@ -76,3 +76,5 @@ proc runSomething*(exe: string; args: seq[string]; options: set[ProcessOption];
     # a failure is worth noticing
     if not result.ok:
       notice exe & " " & arguments.join(" ")
+    when defined(debug):
+      debug "done running"

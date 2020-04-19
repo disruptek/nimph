@@ -619,7 +619,7 @@ proc createUrl*(project: var Project; refresh = false): Uri =
 proc refresh*(project: var Project) =
   ## appropriate to run to scan for and set some basic project data
   let
-    mycfg = loadProjectCfg($project.nimCfg)
+    mycfg = parseConfigFile($project.nimCfg)
   if mycfg.isSome:
     project.mycfg = mycfg.get
   project.url = project.createUrl(refresh = true)

@@ -201,6 +201,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
   flags.toggle Strict, strict
 
   block configuration:
+    debug "checking compiler configuration"
     let
       nimcfg = project.nimCfg
     # try a compiler parse of nim.cfg
@@ -215,7 +216,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
           error "and i wasn't able to make a new one"
     else:
       let
-        parsed = loadProjectCfg($nimcfg)
+        parsed = parseConfigFile($nimcfg)
       if parsed.isNone:
         error &"i had some issues trying to parse {nimcfg}"
         result = false
@@ -241,6 +242,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         ## this space intentionally left blank
 
   block whoami:
+    debug "checking project version"
     # check our project version
     let
       version = project.knowVersion
@@ -250,6 +252,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
       debug &"{project.name} version {version}"
 
   block dependencies:
+    debug "checking dependencies"
     # check our deps dir
     let
       depsDir = project.nimbleDir
@@ -267,11 +270,13 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         info "your $NIMBLE_DIR is set, but it's set correctly"
 
   block checknimble:
+    debug "checking nimble"
     # make sure nimble is a thing
     if findExe("nimble") == "":
       error "i can't find nimble in the path"
       result = false
 
+    debug "checking nimble dump of our project"
     # make sure we can dump our project
     let
       damp = fetchNimbleDump(project.nimble.repo)
@@ -283,6 +288,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
 
   # see if we can find a github token
   block github:
+    debug "checking for github token"
     let
       token = findGithubToken()
     if token.isNone:
