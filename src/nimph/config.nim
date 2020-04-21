@@ -41,6 +41,14 @@ type
     path: string
     js: JsonNode
 
+template setDefaultsForConfig(result: ConfigRef) =
+  # maybe we should turn off configuration hints for these reads
+  when defined(debugPath):
+    result.notes.incl hintPath
+  elif not defined(debug):
+    result.notes.excl hintConf
+  result.notes.excl hintLineTooLong
+
 proc parseConfigFile*(path: string): Option[ConfigRef] =
   ## use the compiler to parse a nim.cfg without changing to its directory
   var
@@ -52,9 +60,7 @@ proc parseConfigFile*(path: string): Option[ConfigRef] =
   # this allows us to correctly parse conditions in nim.cfg(s)
   initDefines(config.symbols)
 
-  # omit some warnings
-  config.notes.excl hintConf
-  config.notes.excl hintLineTooLong
+  setDefaultsForConfig(config)
 
   if readConfigFile(filename.AbsoluteFile, cache, config):
     result = some(config)
@@ -96,6 +102,7 @@ proc overlayConfig(config: var ConfigRef;
         # remember to reset the config's project path
         config.projectPath = priorProjectPath
 
+# a global that we set just once per invocation
 var
   compilerPrefixDir: AbsoluteDir
 
@@ -118,7 +125,7 @@ proc findPrefixDir(): AbsoluteDir =
       raise
     except KeyError:
       warn "couldn't parse the prefix directory from `nim dump` output"
-      raise
+      compilerPrefixDir = AbsoluteDir parentDir(findExe"nim")
   result = compilerPrefixDir
 
 proc loadAllCfgs*(directory: string): ConfigRef =
@@ -131,12 +138,7 @@ proc loadAllCfgs*(directory: string): ConfigRef =
   # this allows us to correctly parse conditions in nim.cfg(s)
   initDefines(result.symbols)
 
-  # maybe we should turn off configuration hints for these reads
-  when defined(debugPath):
-    result.notes.incl hintPath
-  elif not defined(debug):
-    result.notes.excl hintConf
-  result.notes.excl hintLineTooLong
+  setDefaultsForConfig(result)
 
   # stuff the prefixDir so we load the compiler's config/nim.cfg
   # just like the compiler would if we were to invoke it directly
@@ -149,6 +151,7 @@ proc loadAllCfgs*(directory: string): ConfigRef =
     # now follow the compiler process of loading the configs
     var cache = newIdentCache()
     loadConfigs(NimCfg.RelativeFile, cache, result)
+
   when defined(debugPath):
     debug "loaded", result.searchPaths.len, "search paths"
     debug "loaded", result.lazyPaths.len, "lazy paths"
