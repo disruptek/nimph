@@ -27,7 +27,7 @@ proc execCmd(cmd: string) =
   exec cmd
 
 proc execTest(test: string) =
-  execCmd "nim c -f -r " & test
+  execCmd "nim c -r " & test
   execCmd "nim c -d:release -r " & test
   execCmd "nim c -d:danger -r " & test
   when NimMajor >= 1 and NimMinor >= 1:
