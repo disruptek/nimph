@@ -1197,9 +1197,6 @@ proc repoLockReady*(project: Project): bool =
     let state = repository.repositoryState
     if state != GitRepoState.grsNone:
       notice &"{project} repository in invalid {state} state"
-    # at the moment, status only works in libgit's master branch
-    elif not gittyup.hasWorkingStatus:
-      warn "you need a newer libgit2 to safely roll repositories"
     else:
       # it's our game to lose
       result = true
@@ -1215,7 +1212,7 @@ proc bestRelease*(tags: GitTagTable; goal: RollGoal): Version {.deprecated.} =
   ## versiontags for this now
   var
     names = toSeq tags.keys
-  case goal:
+  case goal
   of Downgrade:
     discard
   of Upgrade:
@@ -1224,16 +1221,17 @@ proc bestRelease*(tags: GitTagTable; goal: RollGoal): Version {.deprecated.} =
     raise newException(Defect, "nonsensical")
 
   for tagged in names.items:
-    let parsed = parseVersionLoosely(tagged)
+    let
+      parsed = parseVersionLoosely(tagged)
     if parsed.isSome and parsed.get.kind == Equal:
       result = parsed.get.version
 
-proc betterReleaseExists*(tags: GitTagTable; goal: RollGoal; version: Version): bool {.deprecated.} =
+proc betterReleaseExists(tags: GitTagTable; goal: RollGoal; version: Version): bool =
   ## true if there is an ideal version available; we should probably use
   ## versiontags for this now
   var
     names = toSeq tags.keys
-  case goal:
+  case goal
   of Upgrade:
     names.reverse
   of Downgrade, Specific:
@@ -1241,20 +1239,20 @@ proc betterReleaseExists*(tags: GitTagTable; goal: RollGoal; version: Version): 
 
   for name in names.items:
     # skip cases where a commit hash is tagged as itself, ie. head
-    let parsed = parseVersionLoosely(name)
-    if parsed.isNone:
-      continue
-    case goal:
-    of Upgrade:
-      result = parsed.get.effectively > version
-    of Downgrade:
-      result = parsed.get.effectively < version
-    of Specific:
-      result = parsed.get.effectively == version
-    if result:
-      break
+    let
+      parsed = parseVersionLoosely(name)
+    if parsed.isSome:
+      case goal
+      of Upgrade:
+        result = parsed.get.effectively > version
+      of Downgrade:
+        result = parsed.get.effectively < version
+      of Specific:
+        result = parsed.get.effectively == version
+      if result:
+        break
 
-proc betterReleaseExists*(project: Project; goal: RollGoal): bool =
+proc betterReleaseExists(project: Project; goal: RollGoal): bool =
   ## true if there is a (more) ideal version available; we should probably use
   ## versiontags for this now
   if project.tags == nil:
@@ -1266,7 +1264,7 @@ proc betterReleaseExists*(project: Project; goal: RollGoal): bool =
     return
 
   # make sure this isn't a nonsensical request
-  case goal:
+  case goal
   of Upgrade, Downgrade:
     discard
   of Specific:
@@ -1274,7 +1272,7 @@ proc betterReleaseExists*(project: Project; goal: RollGoal): bool =
 
   result = betterReleaseExists(project.tags, goal, project.version)
 
-proc betterReleaseExists*(project: var Project; goal: RollGoal): bool =
+proc betterReleaseExists*(project: var Project; goal: RollGoal): bool {.deprecated.} =
   ## true if there is a (more) ideal version available
   if project.tags == nil:
     project.fetchTagTable

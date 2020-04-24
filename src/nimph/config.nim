@@ -65,42 +65,43 @@ proc parseConfigFile*(path: string): Option[ConfigRef] =
   if readConfigFile(filename.AbsoluteFile, cache, config):
     result = some(config)
 
-proc overlayConfig(config: var ConfigRef;
-                   directory: string): bool {.deprecated.} =
-  ## true if new config data was added to the env
-  withinDirectory(directory):
-    var
-      priorProjectPath = config.projectPath
-    let
-      nextProjectPath = AbsoluteDir getCurrentDir()
-      filename = nextProjectPath.string / NimCfg
+when false:
+  proc overlayConfig(config: var ConfigRef;
+                     directory: string): bool {.deprecated.} =
+    ## true if new config data was added to the env
+    withinDirectory(directory):
+      var
+        priorProjectPath = config.projectPath
+      let
+        nextProjectPath = AbsoluteDir getCurrentDir()
+        filename = nextProjectPath.string / NimCfg
 
-    block complete:
-      # do not overlay above the current config
-      if nextProjectPath == priorProjectPath:
-        break complete
+      block complete:
+        # do not overlay above the current config
+        if nextProjectPath == priorProjectPath:
+          break complete
 
-      # if there's no config file, we're done
-      result = filename.fileExists
-      if not result:
-        break complete
+        # if there's no config file, we're done
+        result = filename.fileExists
+        if not result:
+          break complete
 
-      try:
-        # set the new project path for substitution purposes
-        config.projectPath = nextProjectPath
+        try:
+          # set the new project path for substitution purposes
+          config.projectPath = nextProjectPath
 
-        var cache = newIdentCache()
-        result = readConfigFile(filename.AbsoluteFile, cache, config)
+          var cache = newIdentCache()
+          result = readConfigFile(filename.AbsoluteFile, cache, config)
 
-        if result:
-          # this config is now authoritative, so force the project path
-          priorProjectPath = nextProjectPath
-        else:
-          let emsg = &"unable to read config in {nextProjectPath}" # noqa
-          warn emsg
-      finally:
-        # remember to reset the config's project path
-        config.projectPath = priorProjectPath
+          if result:
+            # this config is now authoritative, so force the project path
+            priorProjectPath = nextProjectPath
+          else:
+            let emsg = &"unable to read config in {nextProjectPath}" # noqa
+            warn emsg
+        finally:
+          # remember to reset the config's project path
+          config.projectPath = priorProjectPath
 
 # a global that we set just once per invocation
 var

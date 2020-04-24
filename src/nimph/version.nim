@@ -302,10 +302,6 @@ proc effectively*(release: Release): Version =
   else:
     raise newException(Defect, "not implemented")
 
-proc contains*(kinds: set[Operator]; spec: Release): bool {.deprecated.} =
-  ## convenience
-  result = kinds.contains(spec.kind)
-
 proc hash*(field: VersionMaskField): Hash =
   ## help hash version masks
   var h: Hash = 0

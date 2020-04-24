@@ -13,7 +13,6 @@ import badresults
 
 import nimph/spec
 import nimph/runner
-import nimph/nimble
 import nimph/project
 import nimph/doctor
 import nimph/thehub

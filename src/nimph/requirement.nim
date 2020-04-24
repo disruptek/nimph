@@ -160,9 +160,9 @@ proc newRequirement*(id: string; operator: Operator;
     raise newException(ValueError, "requirements must have length, if not girth")
   result = Requirement(identity: id.strip, release: release, notes: notes)
   # if it parsed as Caret, Tilde, or Wild, then paint the requirement as such
-  if result.release in Wildlings:
+  if result.release.kind in Wildlings:
     result.operator = result.release.kind
-  elif result.release in {Tag}:
+  elif result.release.kind in {Tag}:
     # eventually, we'll support tag comparisons...
     {.warning: "tag comparisons unsupported".}
     result.operator = result.release.kind
