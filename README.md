@@ -1,11 +1,10 @@
 # nimph
-- `gc:refc` and `gc:arc` [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=master)](https://travis-ci.org/disruptek/nimph)
+- `gc:refc` [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=master)](https://travis-ci.org/disruptek/nimph)
+- `gc:arc` _proceed at your own risk!_ [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=arc)](https://travis-ci.org/disruptek/nimph)
 
 nim package hierarchy manager from the future
 
 or: _How I Learned to Stop Worrying and Love the Search Path_
-
-## PSA: NIMPH IS CURRENTLY UNSAFE ON --gc:arc
 
 ## Features
 
