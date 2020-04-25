@@ -21,7 +21,7 @@ suite "nimcfg":
 
   test "load a nim.cfg":
     let
-      loaded = loadProjectCfg(fn)
+      loaded = parseConfigFile(fn)
     check loaded.isSome
 
   test "naive parse":
