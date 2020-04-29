@@ -33,9 +33,10 @@ suite "git":
       path = deps.pathForName("cutelog")
     check path.isSome
     var
-      cute = deps.projectForPath(path.get).get
-
+      proj = deps.projectForPath(path.get)
+    check proj.isSome
     var
+      cute = proj.get
       repository = openRepository(project.gitDir)
 
   teardown:
