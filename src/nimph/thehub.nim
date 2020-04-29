@@ -290,7 +290,7 @@ proc getGitHubUser*(): Future[Option[HubResult]] {.async.} =
 proc forkHub*(owner: string; repo: string): Future[Option[HubResult]] {.async.} =
   ## attempt to fork an existing repository
   var
-    req = postReposOwnerRepoForks.call(repo, owner, body = newJObject())
+    req = postReposOwnerRepoForks.call(repo = repo, owner = owner, body = newJObject())
   debug &"forking owner `{owner}` repo `{repo}`"
   result = await req.queryOne(HubRepo)
 
