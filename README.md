@@ -1,10 +1,12 @@
 # nimph
-- `gc:refc` [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=master)](https://travis-ci.org/disruptek/nimph)
-- `gc:arc` _proceed at your own risk!_ [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=arc)](https://travis-ci.org/disruptek/nimph)
-
 nim package hierarchy manager from the future
 
+
 or: _How I Learned to Stop Worrying and Love the Search Path_
+
+
+- `cpp +/ nim-1.0` [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=master)](https://travis-ci.org/disruptek/nimph)
+- `arc +/ cpp +/ nim-1.3` [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=devel)](https://travis-ci.org/disruptek/nimph)
 
 ## Features
 
