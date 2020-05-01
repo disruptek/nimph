@@ -283,7 +283,7 @@ proc queryMany(recallable: Recallable; kind: HubKind): Future[Option[HubGroup]]
 proc getGitHubUser*(): Future[Option[HubResult]] {.async.} =
   ## attempt to retrieve the authorized user
   var
-    req = getUser.call()
+    req = getUser.call(_ = "")
   debug &"fetching github user"
   result = await req.queryOne(HubUser)
 
