@@ -110,6 +110,7 @@ var
 proc findPrefixDir(): AbsoluteDir =
   ## determine the prefix directory for the current compiler
   if compilerPrefixDir.isEmpty:
+    debug "find prefix"
     let
       compiler = runSomething("nim",
                    @["--hints:off",
@@ -127,6 +128,7 @@ proc findPrefixDir(): AbsoluteDir =
     except KeyError:
       warn "couldn't parse the prefix directory from `nim dump` output"
       compilerPrefixDir = AbsoluteDir parentDir(findExe"nim")
+    debug "found prefix"
   result = compilerPrefixDir
 
 proc loadAllCfgs*(directory: string): ConfigRef =
