@@ -842,7 +842,16 @@ iterator missingSearchPaths*(project: Project; target: var Project): string =
 
 proc addMissingSearchPathsTo*(project: var Project; cloned: var Project) =
   ## point the project at a fresh clone if necessary
-  # reload the project's config to see if we capture a new search path
+
+  #[
+
+   reload the project's config to see if we capture a new search path.
+   we have to reload it here because the new path might be caught by the
+   compiler's --nimblePath settings; we cannot simply add it via compiler
+   code because the order of manual --path entries from the config will
+   then vary.
+
+  ]#
   project.cfg = loadAllCfgs(project.repo)
   # a future relocation will break this, of course
   for path in project.missingSearchPaths(cloned):
