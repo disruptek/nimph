@@ -4,6 +4,9 @@ NIM=`nim --hint[Conf]:off --dump.format:json dump config | jq -r .prefixdir`/..
 if [ "$NIM" = "null/.." ]; then        # true when the prefixdir is missing
 	NIM=`dirname \`which nim\``/../..    # fallback for 1.0 support; see #127
 fi
+if [ $! -eq 0 ]; then                  # if nim threw an error due to a bad arg,
+  exit 1                               # fail so the user can deal with it
+fi
 cd "$NIM"
 if [ -n "$*" ]; then                   # a toolchain was requested
   if [ -d "$*" ]; then                 # the toolchain is available
