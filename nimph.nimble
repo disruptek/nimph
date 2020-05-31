@@ -1,4 +1,4 @@
-version = "0.8.4"
+version = "0.8.5"
 author = "disruptek"
 description = "nim package handler from the future"
 license = "MIT"
@@ -10,10 +10,7 @@ requires "npeg >= 0.21.3 & < 0.23.0"
 requires "https://github.com/disruptek/jsonconvert < 2.0.0"
 requires "https://github.com/disruptek/badresults < 2.0.0"
 requires "https://github.com/disruptek/cutelog >= 1.1.0 & < 2.0.0"
-requires "https://github.com/disruptek/gittyup >= 2.4.0 & < 3.0.0"
-
-# fixup a dependency: regex 0.10.0 doesn't build with 1.0.4 stdlib
-requires "regex >= 0.11.0"
+requires "https://github.com/disruptek/gittyup >= 2.4.4 & < 3.0.0"
 
 bin = @["nimph"]
 srcDir = "src"
