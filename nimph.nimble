@@ -1,4 +1,4 @@
-version = "0.8.5"
+version = "0.8.6"
 author = "disruptek"
 description = "nim package handler from the future"
 license = "MIT"
@@ -10,7 +10,7 @@ requires "npeg >= 0.21.3 & < 0.23.0"
 requires "https://github.com/disruptek/jsonconvert < 2.0.0"
 requires "https://github.com/disruptek/badresults < 2.0.0"
 requires "https://github.com/disruptek/cutelog >= 1.1.0 & < 2.0.0"
-requires "https://github.com/disruptek/gittyup >= 2.4.4 & < 3.0.0"
+requires "https://github.com/disruptek/gittyup >= 2.5.0 & < 3.0.0"
 
 bin = @["nimph"]
 srcDir = "src"
