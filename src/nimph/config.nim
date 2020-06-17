@@ -41,13 +41,20 @@ type
     path: string
     js: JsonNode
 
+template excludeAllNotes(config: ConfigRef; n: typed) =
+  config.notes.excl n
+  when compiles(config.mainPackageNotes):
+    config.mainPackageNotes.excl n
+  when compiles(config.foreignPackageNotes):
+    config.foreignPackageNotes.excl n
+
 template setDefaultsForConfig(result: ConfigRef) =
   # maybe we should turn off configuration hints for these reads
   when defined(debugPath):
     result.notes.incl hintPath
   elif not defined(debug):
-    result.notes.excl hintConf
-  result.notes.excl hintLineTooLong
+    excludeAllNotes(result, hintConf)
+  excludeAllNotes(result, hintLineTooLong)
 
 proc parseConfigFile*(path: string): Option[ConfigRef] =
   ## use the compiler to parse a nim.cfg without changing to its directory
