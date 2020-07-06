@@ -229,8 +229,11 @@ proc parseProjectCfg*(input: Target): ProjectCfgParsed =
       result.why = &"config file {input} doesn't exist"
       break success
 
-    let
+    var
       content = readFile($input)
+    if not content.endsWith("\n"):
+      content &= "\n"
+    let
       peggy = peg "document":
         nl <- ?'\r' * '\n'
         white <- {'\t', ' '}
