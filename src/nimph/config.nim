@@ -196,12 +196,12 @@ proc appendConfig*(path: Target; config: string): bool =
       # open our temp file for writing
       var
         writer = temp.open(fmAppend)
-      # but remember to close the temp file in any event
-      defer:
+      try:
+        # add our new content with a trailing newline
+        writer.writeLine "# added by nimph:\n" & config
+      finally:
+        # remember to close the temp file in any event
         writer.close
-
-      # add our new content with a trailing newline
-      writer.writeLine config
 
     # make sure the compiler can parse our new config
     if parseConfigFile(temp).isNone:
