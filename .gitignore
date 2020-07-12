@@ -6,3 +6,11 @@ tests/tgit
 tests/ttags
 nim.cfg
 nimph.exe
+libcurl.so*
+libgit2.so*
+libmbedcrypto.so*
+libmbedtls.so*
+libmbedx509.so*
+libnghttp2.so*
+libssh2.so*
+libz.so*
