@@ -1,26 +1,3 @@
-#[
-
-this is the workflow we want...
-
-git clone --depth 1 --branch 1.8.0 someurl somedir
-
-  ... later ...
-
-git fetch origin tag 1.8.1
-git checkout 1.8.1
-
-some outstanding issues:
-
-✅clone a repo from a url;
-❌shallow clone with only the most recent reference?
-✅rename package directory to match nimble semantics;
-✅determine a url for the original repo -- use origin;
-✅determine the appropriate reference to add to the anchor;
-✅does the current commit match an existing tag?
-
-
-]#
-
 import std/math
 import std/hashes
 import std/strutils
