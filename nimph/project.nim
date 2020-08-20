@@ -61,18 +61,43 @@ type
   Requirements* = OrderedTableRef[Requirement, Requirement]
   RequirementsTags* = Group[Requirements, GitThing]
 
+proc `$`*(project: Project): string =
+  if project.isNil:
+    result = &"(nil project)"
+  else:
+    result = &"{project.name}-{project.release}"
+
 when AndNimble:
+  proc findDotNimble(project: Project): SearchResult =
+    result = (message: "", found: some(project.nimble))
+
+  template gitDir*(project: Project): string = project.repo / dotGit
   template repo*(project: Project): string = project.nimble.repo
   template nimCfg*(project: Project): Target =
     newTarget(project.nimble.repo / NimCfg)
 else:
-  template repo*(project: Project): string = project.repository.string
-  template nimble*(project: Project): Target =
-    newTarget(project.repo / project.name.addFileExt "nimble")
+  template gitDir*(project: Project): string = project.repository.string
+  template repo*(project: Project): string = parentDir(project.gitDir)
   template nimCfg*(project: Project): Target =
     newTarget(project.repo / NimCfg)
-template gitDir*(project: Project): string = project.repo / dotGit
+
+  proc findDotNimble(project: Project): SearchResult =
+    debug &"find .nimble for {project}"
+    result = findTarget(project.repo, ascend = false,
+                        extensions = @[dotNimble])
+
+  proc nimble*(project: Project): Target =
+    let
+      search = findDotNimble(project)
+    if search.found.isNone:
+      error search.message
+      quit 1
+    else:
+      result = get(search.found)
+
+template isSubmodule*(project: Project): bool = fileExists(project.gitDir)
 template hasGit*(project: Project): bool =
+  ## true if the project is a git repo or submodule
   dirExists(project.gitDir) or fileExists(project.gitDir)
 template hgDir*(project: Project): string = project.repo / dotHg
 template hasHg*(project: Project): bool = dirExists(project.hgDir)
@@ -112,9 +137,6 @@ proc nimbleDir*(project: Project): string =
       result = globaldeps
     result = absolutePath(result).normalizedPath
 
-proc `$`*(project: Project): string =
-  result = &"{project.name}-{project.release}"
-
 proc fetchConfig*(project: var Project; force = false): bool =
   ## ensure we've got a valid configuration to work with
   if project.cfg == nil or force:
@@ -127,7 +149,8 @@ proc fetchConfig*(project: var Project; force = false): bool =
   else:
     discard
     when defined(debug):
-      notice &"unnecessary config fetch for {project}"
+      if not force:
+        notice &"unnecessary config fetch for {project}"
 
 proc runSomething*(project: Project; exe: string; args: seq[string];
                    opts = {poParentStreams}): RunOutput =
@@ -161,8 +184,11 @@ proc guessVersion*(project: Project): Version =
 
 proc fetchDump*(project: var Project; package: string; refresh = false): bool =
   ## make sure the nimble dump is available
-  when not AndNimble: return false
-  if project.dump == nil or refresh:
+  when not AndNimble:
+    return false
+  if project.dump != nil and not refresh:
+    result = true
+  else:
     discard project.fetchConfig
     let
       dumped = fetchNimbleDump(package, nimbleDir = project.nimbleDir)
@@ -172,8 +198,6 @@ proc fetchDump*(project: var Project; package: string; refresh = false): bool =
       raise newException(IOError, dumped.why)
     # try to prevent a bug when the above changes
     project.dump = dumped.table
-  else:
-    result = true
 
 proc fetchDump*(project: var Project; refresh = false): bool {.discardable.} =
   ## make sure the nimble dump is available
@@ -203,7 +227,9 @@ proc knowVersion*(project: var Project): Version =
         result = project.knowVersion
 
   if not result.isValid:
-    raise newException(IOError, "unable to determine {project.package} version")
+    let msg = &"unable to determine {project.name} version"
+    error msg
+    raise newException(ValueError, msg)
 
 proc newProject*(repo: GitRepository): Project =
   ## instantiate a new project from the given repo
@@ -222,7 +248,7 @@ proc newProject*(repo: GitRepository): Project =
     result.nimble = splat
   else:
     # this is the only reasonable way forward
-    result.repository = path.AbsoluteDir
+    result.repository = path.toAbsoluteDir
   # truncate any extension from the directory name (weirdos)
   result.name = splat.name    # this is our nominal project name
   result.config = newNimphConfig(path / configFile)
@@ -238,7 +264,7 @@ proc newProject*(nimble: Target): Project {.deprecated.} =
   when AndNimble:
     result.nimble = (repo: splat.dir, package: splat.name, ext: splat.ext)
   else:
-    result.repository = splat.dir.AbsoluteDir
+    result.repository = splat.dir.toAbsoluteDir
   result.name = splat.name
   result.config = newNimphConfig(splat.dir / configFile)
 
@@ -490,7 +516,7 @@ proc inventRelease*(project: var Project) =
 
 proc guessDist(project: Project): DistMethod =
   ## guess at the distribution method used to deposit the assets
-  if project.hasGit:
+  if project.hasGit or project.isSubmodule:
     result = Git
   elif project.hasHg:
     result = Merc
@@ -600,6 +626,7 @@ proc createUrl*(project: Project; refresh = false): Uri =
           # sometimes...
           result = project.meta.url
       else:
+        # we don't handle "Local" projects anymore
         error &"unable to determine source url for {project.name}"
         raise newException(Defect, "define AndNimble to support Nimble")
     of Git:
@@ -641,7 +668,8 @@ proc refresh*(project: var Project) =
     project.mycfg = mycfg.get
   project.url = project.createUrl(refresh = true)
   project.dump = nil
-  project.version = project.knowVersion
+  when AndNimble:
+    project.version = project.knowVersion
   project.inventRelease
 
 proc findProject*(project: var Project; dir: string;
@@ -700,15 +728,13 @@ proc findProject*(project: var Project; dir: string;
     # load configs, create urls, set version and release, etc.
     project.refresh
 
-    # if we cannot determine what release this project is, just bail
     if not project.release.isValid:
-      # but make sure to zero out the result so as not to confuse the user
-      project = nil
-      error &"unable to determine reference for {project}"
-      break complete
-
-    # otherwise, we're golden
-    debug &"{project} version {project.version}"
+      # we cannot determine what release this project is
+      notice &"unable to determine reference for {project.name}"
+      info "maybe add a commit?"
+    else:
+      # otherwise, we're golden
+      debug &"{project} version {project.version}"
     result = true
 
 iterator packageDirectories(project: Project): string =
@@ -938,7 +964,7 @@ proc relocateDependency*(parent: var Project; project: var Project) =
     when AndNimble:
       project.nimble = newTarget(nimble)
     else:
-      project.repository = future.AbsoluteDir
+      project.repository = future.toAbsoluteDir
     # the path changed, so remove the old path (if you can)
     discard parent.removeSearchPath(previous)
     # and point the parent to the new one
