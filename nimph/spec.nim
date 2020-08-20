@@ -92,9 +92,10 @@ template withinDirectory*(path: string; body: untyped): untyped =
     raise newException(ValueError, path & " is not a directory")
   let cwd = getCurrentDir()
   setCurrentDir(path)
-  defer:
+  try:
+    body
+  finally:
     setCurrentDir(cwd)
-  body
 
 template isValid*(url: Uri): bool = url.scheme.len != 0
 
