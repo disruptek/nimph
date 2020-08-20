@@ -232,14 +232,11 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         result = false
 
     # try to parse all nim configuration files
-    block globalconfig:
-      when defined(debugPath):
-        for path in project.cfg.likelySearch(libsToo = true):
-          debug &"\tsearch: {path}"
-        for path in project.cfg.likelyLazy:
-          debug &"\t  lazy: {path}"
-      else:
-        ## this space intentionally left blank
+    when defined(debugPath):
+      for path in project.cfg.likelySearch(libsToo = true):
+        debug &"\tsearch: {path}"
+      for path in project.cfg.likelyLazy:
+        debug &"\t  lazy: {path}"
 
   block whoami:
     debug "checking project version"
