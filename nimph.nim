@@ -71,7 +71,7 @@ template setupLocalProject(project: var Project; body: untyped) =
 
 template setupLocalProject(project: var Project) =
   setupLocalProject(project):
-    crash &"unable to find a project; try `nimble init`?"
+    crash &"unable to find a project; try `git init .`?"
 
 template toggle(flags: set[Flag]; flag: Flag; switch: untyped) =
   when switch is bool:
