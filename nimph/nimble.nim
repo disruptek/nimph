@@ -98,10 +98,11 @@ proc writeNimbleMeta*(path: string; url: Uri; revision: string): bool =
         "isLink": false,
       }
       writer = open(path / nimbleMeta, fmWrite)
-    defer:
+    try:
+      writer.write($js)
+      result = true
+    finally:
       writer.close
-    writer.write($js)
-    result = true
 
 proc isLink*(meta: NimbleMeta): bool =
   ## true if the metadata says it's a link
