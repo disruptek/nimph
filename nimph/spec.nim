@@ -7,6 +7,7 @@ import std/os
 import std/times
 
 import compiler/pathutils
+export pathutils
 
 import cutelog
 export cutelog
@@ -14,25 +15,25 @@ export cutelog
 import nimph/sanitize
 
 # slash attack ///////////////////////////////////////////////////
-when NimMajor >= 1 and NimMinor >= 1:
+when (NimMajor, NimMinor) >= (1, 1):
   template `///`*(a: string): string =
-    # ensure a trailing DirSep
+    ## ensure a trailing DirSep
     joinPath(a, $DirSep, "")
   template `///`*(a: AbsoluteFile | AbsoluteDir): string =
-    # ensure a trailing DirSep
+    ## ensure a trailing DirSep
     `///`(a.string)
   template `//////`*(a: string | AbsoluteFile | AbsoluteDir): string =
-    # ensure a trailing DirSep and a leading DirSep
+    ## ensure a trailing DirSep and a leading DirSep
     joinPath($DirSep, "", `///`(a), $DirSep, "")
 else:
   template `///`*(a: string): string =
-    # ensure a trailing DirSep
+    ## ensure a trailing DirSep
     joinPath(a, "")
   template `///`*(a: AbsoluteFile | AbsoluteDir): string =
-    # ensure a trailing DirSep
+    ## ensure a trailing DirSep
     `///`(a.string)
   template `//////`*(a: string | AbsoluteFile | AbsoluteDir): string =
-    # ensure a trailing DirSep and a leading DirSep
+    ## ensure a trailing DirSep and a leading DirSep
     "" / "" / `///`(a) / ""
 
 type
@@ -83,6 +84,8 @@ const
 
   # when true, try to clamp analysis to project-local directories
   WhatHappensInVegas* = false
+  # when true, try to support nimble
+  AndNimble* = false
 
 template withinDirectory*(path: string; body: untyped): untyped =
   if not path.dirExists:
