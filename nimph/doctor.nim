@@ -382,9 +382,10 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
           let name = linked.importName
           warn &"no `{name}` requirement for {target.repo}"
 
-  # identify packages that aren't named according to their versions; rename
-  # local dependencies and merely warn about others
-  {.warning: "mislabeled project directories unimplemented".}
+  when AndNimble:
+    # identify packages that aren't named according to their versions;
+    # rename local dependencies and merely warn about others
+    {.warning: "mislabeled project directories unimplemented".}
 
   # remove missing paths from nim.cfg if possible
   block missingpaths:
@@ -435,16 +436,17 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
   block shadoweddeps:
     {.warning: "shadowed deps needs implementing".}
 
-  # if a package exists and is local to the project and picked up by the
-  # config (search paths or lazy paths) and it isn't listed in the
-  # requirements, then we should warn about it
-  block unspecifiedrequirement:
-    {.warning: "unspecified requirements needs implementing".}
+  when AndNimble:
+    # if a package exists and is local to the project and picked up by the
+    # config (search paths or lazy paths) and it isn't listed in the
+    # requirements, then we should warn about it
+    block unspecifiedrequirement:
+      {.warning: "unspecified requirements needs implementing".}
 
-  # if a required packaged has a srcDir defined in the .nimble, then it needs to
-  # be specified in the search paths
-  block unspecifiedsearchpath:
-    {.warning: "unspecified search path needs implementing".}
+    # if a required package has a srcDir defined in the .nimble, then it
+    # needs to be specified in the search paths
+    block unspecifiedsearchpath:
+      {.warning: "unspecified search path needs implementing".}
 
   # warn of tags missing for a particular version/commit pair
   block identifymissingtags:
