@@ -31,7 +31,6 @@ export group
 type
   Project* = ref object
     name*: string
-    nimble*: Target
     version*: Version
     dist*: DistMethod
     release*: Release
@@ -40,10 +39,14 @@ type
     cfg*: ConfigRef
     mycfg*: ConfigRef
     tags*: GitTagTable
-    meta*: NimbleMeta
     url*: Uri
     parent*: Project
     develop*: LinkedSearchResult
+    when AndNimble:
+      nimble* {.deprecated.}: Target
+      meta*: NimbleMeta
+    else:
+      repository*: AbsoluteDir
 
   ProjectGroup* = Group[string, Project]
 
@@ -58,7 +61,16 @@ type
   Requirements* = OrderedTableRef[Requirement, Requirement]
   RequirementsTags* = Group[Requirements, GitThing]
 
-template repo*(project: Project): string = project.nimble.repo
+when AndNimble:
+  template repo*(project: Project): string = project.nimble.repo
+  template nimCfg*(project: Project): Target =
+    newTarget(project.nimble.repo / NimCfg)
+else:
+  template repo*(project: Project): string = project.repository.string
+  template nimble*(project: Project): Target =
+    newTarget(project.repo / project.name.addFileExt "nimble")
+  template nimCfg*(project: Project): Target =
+    newTarget(project.repo / NimCfg)
 template gitDir*(project: Project): string = project.repo / dotGit
 template hasGit*(project: Project): bool =
   dirExists(project.gitDir) or fileExists(project.gitDir)
@@ -72,9 +84,6 @@ template packageDirectory*(project: Project): string {.deprecated.} =
 
 template hasReleaseTag*(project: Project): bool =
   project.release.kind == Tag
-
-template nimCfg*(project: Project): Target =
-  newTarget(project.nimble.repo / NimCfg)
 
 template hasLocalDeps*(project: Project): bool =
   dirExists(project.localDeps)
@@ -152,6 +161,7 @@ proc guessVersion*(project: Project): Version =
 
 proc fetchDump*(project: var Project; package: string; refresh = false): bool =
   ## make sure the nimble dump is available
+  when not AndNimble: return false
   if project.dump == nil or refresh:
     discard project.fetchConfig
     let
@@ -195,7 +205,29 @@ proc knowVersion*(project: var Project): Version =
   if not result.isValid:
     raise newException(IOError, "unable to determine {project.package} version")
 
-proc newProject*(nimble: Target): Project =
+proc newProject*(repo: GitRepository): Project =
+  ## instantiate a new project from the given repo
+  new result
+  var
+    path = repositoryPath(repo)
+  # if it's a bare repository, it won't end in `.git/`
+  if path.endsWith(///dotGit):
+    path = parentDir(path)
+  # do whatever we can to normalize the path
+  path = absolutePath(path).normalizedPath
+  var
+    splat = path.splitFile
+  when AndNimble:
+    # this will doubtless break some folks
+    result.nimble = splat
+  else:
+    # this is the only reasonable way forward
+    result.repository = path.AbsoluteDir
+  # truncate any extension from the directory name (weirdos)
+  result.name = splat.name    # this is our nominal project name
+  result.config = newNimphConfig(path / configFile)
+
+proc newProject*(nimble: Target): Project {.deprecated.} =
   ## instantiate a new project from the given .nimble
   new result
   if not fileExists($nimble):
@@ -203,7 +235,10 @@ proc newProject*(nimble: Target): Project =
                        "unable to instantiate a project w/o a " & dotNimble)
   let
     splat = absolutePath($nimble).normalizedPath.splitFile
-  result.nimble = (repo: splat.dir, package: splat.name, ext: splat.ext)
+  when AndNimble:
+    result.nimble = (repo: splat.dir, package: splat.name, ext: splat.ext)
+  else:
+    result.repository = splat.dir.AbsoluteDir
   result.name = splat.name
   result.config = newNimphConfig(splat.dir / configFile)
 
@@ -559,10 +594,14 @@ proc createUrl*(project: Project; refresh = false): Uri =
     # make something up
     case project.dist:
     of Local:
-      # sometimes nimble provides a url during installation
-      if project.meta.hasUrl:
-        # sometimes...
-        result = project.meta.url
+      when AndNimble:
+        # sometimes nimble provides a url during installation
+        if project.meta.hasUrl:
+          # sometimes...
+          result = project.meta.url
+      else:
+        error &"unable to determine source url for {project.name}"
+        raise newException(Defect, "define AndNimble to support Nimble")
     of Git:
       # try looking at remotes
       let url = findRepositoryUrl(project, defaultRemote)
@@ -609,35 +648,54 @@ proc findProject*(project: var Project; dir: string;
                   parent: Project = nil): bool =
   ## locate a project starting from `dir` and set its parent if applicable
   block complete:
-    let
-      target = linkedFindTarget(dir, ascend = true)
-    # a failure lets us out early
-    if target.search.found.isNone:
-      if target.search.message != "":
-        error target.search.message
-      break complete
+    when AndNimble:
+      let
+        target = linkedFindTarget(dir, ascend = true)
+      # a failure lets us out early
+      if target.search.found.isNone:
+        if target.search.message != "":
+          error target.search.message
+        break complete
+      elif target.via != nil:
+        var
+          target = target  # shadow linked search result
+        # output some debugging data to show how we got from here to there
+        while target.via != nil:
+          debug &"--> via {target.via.search.found.get}"
+          target = target.via
 
-    elif target.via != nil:
-      var
-        target = target  # shadow linked search result
-      # output some debugging data to show how we got from here to there
-      while target.via != nil:
-        debug &"--> via {target.via.search.found.get}"
-        target = target.via
+      # there's really no scenario in which we need to instantiate a
+      # new parent project when looking for children...
+      if parent != nil:
+        if parent.nimble == target.search.found.get:
+          break complete
 
-    # there's really no scenario in which we need to instantiate a
-    # new parent project when looking for children...
-    if parent != nil:
-      if parent.nimble == target.search.found.get:
+      # create an instance and setup some basic (cheap) data
+      project = newProject(target.search.found.get)
+
+      # the parent will be set on child dependencies
+      project.parent = parent
+
+      # this is the nimble-link chain that we might have a use for
+      project.develop = target.via
+      project.meta = fetchNimbleMeta(project.repo)
+    else:
+      # get the buffer holding the path, if possible
+      path := repositoryDiscover(dir):
+        error &"no git repository found in any parent of `{dir}`"
         break complete
 
-    # create an instance and setup some basic (cheap) data
-    project = newProject(target.search.found.get)
-    # the parent will be set on child dependencies
-    project.parent = parent
-    # this is the nimble-link chain that we might have a use for
-    project.develop = target.via
-    project.meta = fetchNimbleMeta(project.repo)
+      # we have a path, so try to open the repo
+      repo := repositoryOpen(path):
+        error &"unable to open repo at `{path}`: {code.dumpError}"
+        break complete
+
+      # create an instance and setup some basic (cheap) data
+      project = newProject(repo)
+
+      # the parent will be set on child dependencies
+      project.parent = parent
+
     project.dist = project.guessDist
     # load configs, create urls, set version and release, etc.
     project.refresh
@@ -877,7 +935,10 @@ proc relocateDependency*(parent: var Project; project: var Project) =
     # now we can actually move the repo...
     moveDir(repository, future)
     # reset the package configuration target
-    project.nimble = newTarget(nimble)
+    when AndNimble:
+      project.nimble = newTarget(nimble)
+    else:
+      project.repository = future.AbsoluteDir
     # the path changed, so remove the old path (if you can)
     discard parent.removeSearchPath(previous)
     # and point the parent to the new one
@@ -963,8 +1024,9 @@ proc clone*(project: var Project; url: Uri; name: string;
     {.warning: "gratuitous nimblemeta write?".}
     let
       oid = repository.demandHead
-    if not writeNimbleMeta(directory, bare, oid):
-      warn &"unable to write {nimbleMeta} in {directory}"
+    when AndNimble:
+      if not writeNimbleMeta(directory, bare, oid):
+        warn &"unable to write {nimbleMeta} in {directory}"
 
     # review the local branches and add any missing tracking branches
     cloned.addMissingUpstreams
