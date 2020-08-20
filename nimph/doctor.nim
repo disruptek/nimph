@@ -343,6 +343,10 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
       group = project.newDependencyGroup(flags)
       state = DrState(kind: DrRetry)
 
+      # we'll cache the old result so we can reset it if we are able to
+      # fix all the dependencies
+      prior = result
+
     while state.kind == DrRetry:
       # we need to reload the config each repeat through this loop so that we
       # can correctly identify new search paths after adding new packages
@@ -352,6 +356,9 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         state.kind = DrError
       elif not project.fixDependencies(group, state):
         result = false
+      else:
+        # reset the state in the event that dependencies are fixed
+        result = prior
       # maybe we're done here
       if state.kind notin {DrRetry}:
         break
