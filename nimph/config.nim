@@ -183,47 +183,47 @@ proc appendConfig*(path: Target; config: string): bool =
   let
     temp = createTemporaryFile(path.package, dotNimble)
   debug &"writing {temp}"
-  # but remember to remove the temp file later
-  defer:
+
+  try:
+    block complete:
+      try:
+        # if there's already a config, we'll start there
+        if fileExists($path):
+          debug &"copying {path} to {temp}"
+          copyFile($path, temp)
+      except Exception as e:
+        warn &"unable make a copy of {path} to to {temp}: {e.msg}"
+        break complete
+
+      block writing:
+        # open our temp file for writing
+        var
+          writer = temp.open(fmAppend)
+        try:
+          # add our new content with a trailing newline
+          writer.writeLine "# added by nimph:\n" & config
+        finally:
+          # remember to close the temp file in any event
+          writer.close
+
+      # make sure the compiler can parse our new config
+      if parseConfigFile(temp).isNone:
+        break complete
+
+      # copy the temp file over the original config
+      try:
+        debug &"copying {temp} over {path}"
+        copyFile(temp, $path)
+      except Exception as e:
+        warn &"unable make a copy of {temp} to to {path}: {e.msg}"
+        break complete
+
+      # it worked, thank $deity
+      result = true
+  finally:
     debug &"removing {temp}"
     if not tryRemoveFile(temp):
       warn &"unable to remove temporary file `{temp}`"
-
-  block complete:
-    try:
-      # if there's already a config, we'll start there
-      if fileExists($path):
-        debug &"copying {path} to {temp}"
-        copyFile($path, temp)
-    except Exception as e:
-      warn &"unable make a copy of {path} to to {temp}: {e.msg}"
-      break complete
-
-    block writing:
-      # open our temp file for writing
-      var
-        writer = temp.open(fmAppend)
-      try:
-        # add our new content with a trailing newline
-        writer.writeLine "# added by nimph:\n" & config
-      finally:
-        # remember to close the temp file in any event
-        writer.close
-
-    # make sure the compiler can parse our new config
-    if parseConfigFile(temp).isNone:
-      break complete
-
-    # copy the temp file over the original config
-    try:
-      debug &"copying {temp} over {path}"
-      copyFile(temp, $path)
-    except Exception as e:
-      warn &"unable make a copy of {temp} to to {path}: {e.msg}"
-      break complete
-
-    # it worked, thank $deity
-    result = true
 
 proc parseProjectCfg*(input: Target): ProjectCfgParsed =
   ## parse a .cfg for any lines we are entitled to mess with
