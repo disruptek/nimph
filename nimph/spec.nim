@@ -87,15 +87,19 @@ const
   # when true, try to support nimble
   AndNimble* = false
 
-template withinDirectory*(path: string; body: untyped): untyped =
-  if not path.dirExists:
-    raise newException(ValueError, path & " is not a directory")
+template withinDirectory*(path: AbsoluteDir; body: untyped): untyped =
+  if not dirExists(path):
+    raise newException(ValueError, $path & " is not a directory")
   let cwd = getCurrentDir()
-  setCurrentDir(path)
+  setCurrentDir($path)
   try:
     body
   finally:
     setCurrentDir(cwd)
+
+template withinDirectory*(path: string; body: untyped): untyped =
+  withinDirectory(path.toAbsoluteDir):
+    body
 
 template isValid*(url: Uri): bool = url.scheme.len != 0
 
@@ -204,7 +208,7 @@ proc importName*(path: string): string =
     result = sane.get
   elif not capsOkay:
     # emit a lowercase name on case-insensitive filesystems
-    result = path.toLowerAscii
+    result = result.toLowerAscii
   # else, we're just emitting the existing file's basename
 
 proc importName*(url: Uri): string =
@@ -242,3 +246,9 @@ proc forkTarget*(url: Uri): ForkTargetResult =
 proc destylize*(s: string): string =
   ## this is how we create a uniformly comparable token
   result = s.toLowerAscii.replace("_")
+
+proc parentDir*(dir: AbsoluteDir): AbsoluteDir =
+  ## convenience
+  result = dir / RelativeDir".."
+
+proc hash*(p: AnyPath): Hash = hash(p.string)
