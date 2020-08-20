@@ -45,24 +45,24 @@ proc parseNimbleDump*(input: string): Option[StringTableRef] =
 proc fetchNimbleDump*(path: string; nimbleDir = ""): DumpResult =
   ## parse nimble dump output into a string table
   result = DumpResult(ok: false)
-  block fetched:
-    withinDirectory(path):
-      let
-        nimble = runSomething("nimble",
-                              @["dump", path], {poDaemon}, nimbleDir = nimbleDir)
-      if not nimble.ok:
-        result.why = "nimble execution failed"
-        if nimble.output.len > 0:
-          error nimble.output
-        break fetched
-
+  withinDirectory(path):
     let
-      parsed = parseNimbleDump(nimble.output)
-    if parsed.isNone:
-      result.why = &"unable to parse `nimble dump` output"
-      break fetched
-    result.table = parsed.get
-    result.ok = true
+      nimble = runSomething("nimble", @["dump", path], {poDaemon},
+                            nimbleDir = nimbleDir)
+
+    result.ok = nimble.ok
+    if result.ok:
+      let
+        parsed = parseNimbleDump(nimble.output)
+      result.ok = parsed.isSome
+      if result.ok:
+        result.table = get(parsed)
+      else:
+        result.why = &"unable to parse `nimble dump` output"
+    else:
+      result.why = "nimble execution failed"
+      if nimble.output.len > 0:
+        error nimble.output
 
 proc hasUrl*(meta: NimbleMeta): bool =
   ## true if the metadata includes a url
