@@ -462,4 +462,4 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
       fatal "❔it looks like you have multiple --nimblePaths defined:"
       for index, path in found.paths.pairs:
         fatal &"❔\t{index + 1}\t{path}"
-      fatal "❔nim and nimph support this, but some humans find it confusing 😏"
+      fatal "❔nim and nimph support this, but humans can find it confusing 😏"
