@@ -238,15 +238,16 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
       for path in project.cfg.likelyLazy:
         debug &"\t  lazy: {path}"
 
-  block whoami:
-    debug "checking project version"
-    # check our project version
-    let
-      version = project.knowVersion
-    # contextual errors are output by knowVersion
-    result = version.isValid
-    if result:
-      debug &"{project.name} version {version}"
+  when AndNimble:
+    block whoami:
+      debug "checking project version"
+      # check our project version
+      let
+        version = project.knowVersion
+      # contextual errors are output by knowVersion
+      result = version.isValid
+      if result:
+        debug &"{project.name} version {version}"
 
   block dependencies:
     debug "checking dependencies"
@@ -266,22 +267,23 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
       else:
         info "your $NIMBLE_DIR is set, but it's set correctly"
 
-  block checknimble:
-    debug "checking nimble"
-    # make sure nimble is a thing
-    if findExe("nimble") == "":
-      error "i can't find nimble in the path"
-      result = false
+  when AndNimble:
+    block checknimble:
+      debug "checking nimble"
+      # make sure nimble is a thing
+      if findExe("nimble") == "":
+        error "i can't find nimble in the path"
+        result = false
 
-    debug "checking nimble dump of our project"
-    # make sure we can dump our project
-    let
-      damp = fetchNimbleDump(project.nimble.repo)
-    if not damp.ok:
-      error damp.why
-      result = false
-    else:
-      project.dump = damp.table
+      debug "checking nimble dump of our project"
+      # make sure we can dump our project
+      let
+        damp = fetchNimbleDump(project.nimble.repo)
+      if not damp.ok:
+        error damp.why
+        result = false
+      else:
+        project.dump = damp.table
 
   # see if we can find a github token
   block github:
@@ -304,35 +306,36 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
     else:
       debug "git init/shut seems to be working"
 
-  # see if we can get the packages list; try to refresh it if necessary
-  block packages:
-    while true:
-      let
-        packs = getOfficialPackages(project.nimbleDir)
-      once:
-        block skiprefresh:
-          if not packs.ok:
-            if packs.why != "":
-              error packs.why
-            notice &"couldn't get nimble's package list from {project.nimbleDir}"
-          elif packs.ageInDays > stalePackages:
-            notice &"the nimble package list in {project.nimbleDir} is stale"
-          elif packs.ageInDays > 1:
-            info "the nimble package list is " &
-                 &"{packs.ageInDays} days old"
-            break skiprefresh
-          else:
-            break skiprefresh
-          if not dry:
-            let refresh = project.runSomething("nimble", @["refresh", "--accept"])
-            if refresh.ok:
-              info "nimble refreshed the package list"
-              continue
-          result = false
-      if packs.ok:
-        let packages {.used.} = packs.packages
-        debug &"loaded {packages.len} packages from nimble"
-      break
+  when AndNimble:
+    # see if we can get the packages list; try to refresh it if necessary
+    block packages:
+      while true:
+        let
+          packs = getOfficialPackages(project.nimbleDir)
+        once:
+          block skiprefresh:
+            if not packs.ok:
+              if packs.why != "":
+                error packs.why
+              notice &"couldn't get nimble's package list from {project.nimbleDir}"
+            elif packs.ageInDays > stalePackages:
+              notice &"the nimble package list in {project.nimbleDir} is stale"
+            elif packs.ageInDays > 1:
+              info "the nimble package list is " &
+                   &"{packs.ageInDays} days old"
+              break skiprefresh
+            else:
+              break skiprefresh
+            if not dry:
+              let refresh = project.runSomething("nimble", @["refresh", "--accept"])
+              if refresh.ok:
+                info "nimble refreshed the package list"
+                continue
+            result = false
+        if packs.ok:
+          let packages {.used.} = packs.packages
+          debug &"loaded {packages.len} packages from nimble"
+        break
 
   # check dependencies and maybe install some
   block dependencies:
