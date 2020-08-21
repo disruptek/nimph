@@ -57,19 +57,17 @@ proc runSomething*(exe: string; args: seq[string]; options: set[ProcessOption];
       opts.incl poInteractive
       opts.incl poParentStreams
       # the user wants interactivity
-      when defined(debug):
-        debug command, arguments.join(" ")
-      let
-        process = startProcess(command, args = arguments, options = opts)
-      result = RunOutput(ok: process.waitForExit == 0)
+      timer command & arguments.join(" "):
+        let
+          process = startProcess(command, args = arguments, options = opts)
+        result = RunOutput(ok: process.waitForExit == 0)
     else:
       # the user wants to capture output
       command &= " " & quoteShellCommand(arguments)
-      when defined(debug):
-        debug command
-      let
-        (output, code) = execCmdEx(command, opts)
-      result = RunOutput(output: output, ok: code == 0)
+      timer command:
+        let
+          (output, code) = execCmdEx(command, opts)
+        result = RunOutput(output: output, ok: code == 0)
 
     # for utility, also return the arguments we used
     result.arguments = arguments
@@ -77,5 +75,3 @@ proc runSomething*(exe: string; args: seq[string]; options: set[ProcessOption];
     # a failure is worth noticing
     if not result.ok:
       notice exe & " " & arguments.join(" ")
-    when defined(debug):
-      debug "done running"
