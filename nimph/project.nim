@@ -240,7 +240,7 @@ proc guessVersion*(project: Project): Version =
     if not result.isValid:
       error &"the version in {project.nimble} seems to be invalid"
 
-proc fetchDump*(project: var Project; package: string; refresh = false): bool =
+proc fetchDump*(project: var Project; refresh = false): bool {.discardable.} =
   ## make sure the nimble dump is available
   if project.hasNimble:
     if project.dump != nil and not refresh:
@@ -248,17 +248,13 @@ proc fetchDump*(project: var Project; package: string; refresh = false): bool =
     else:
       discard project.fetchConfig
       let
-        dumped = fetchNimbleDump(package, nimbleDir = project.nimbleDir)
+        dumped = fetchNimbleDump(project.root, nimbleDir = project.nimbleDir)
       result = dumped.ok
       if not result:
         # puke on this for now...
         raise newException(IOError, dumped.why)
       # try to prevent a bug when the above changes
       project.dump = dumped.table
-
-proc fetchDump*(project: var Project; refresh = false): bool {.discardable.} =
-  ## make sure the nimble dump is available
-  result = project.fetchDump(project.nimble.repo, refresh = refresh)
 
 proc knowVersion*(project: var Project): Version =
   ## pull out all the stops to determine the version of a project
@@ -701,7 +697,7 @@ proc createUrl*(project: var Project; refresh = false): Uri =
   result = readonly.createUrl(refresh = refresh)
   if result != project.url:
     # update the nimble metadata with this new url
-    if not writeNimbleMeta(project.repo, result, result.anchor):
+    if not writeNimbleMeta(project.root, result, result.anchor):
       warn &"unable to update {project.name}'s {nimbleMeta}"
 
   # cache the result if the project is mutable
@@ -849,8 +845,8 @@ proc `==`*(a, b: Project): bool =
     result = a.isNil == b.isNil
   else:
     let
-      apath = $a.nimble
-      bpath = $b.nimble
+      apath = $a.root
+      bpath = $b.root
     if apath == bpath:
       result = true
     else:
@@ -1104,7 +1100,7 @@ proc clone*(project: var Project; url: Uri; name: string): Project =
     let
       oid = repository.demandHead
     if result.dist == Nimble:
-      if not writeNimbleMeta($directory, bare, oid):
+      if not writeNimbleMeta(directory, bare, oid):
         warn &"unable to write {nimbleMeta} in {directory}"
 
     # review the local branches and add any missing tracking branches

@@ -43,12 +43,13 @@ proc parseNimbleDump*(input: string): Option[StringTableRef] =
   if parsed.ok:
     result = table.some
 
-proc fetchNimbleDump*(path: string; nimbleDir = AbsoluteDir""): DumpResult =
+proc fetchNimbleDump*(path: AbsoluteDir;
+                      nimbleDir = AbsoluteDir""): DumpResult =
   ## parse nimble dump output into a string table
   result = DumpResult(ok: false)
   withinDirectory(path):
     let
-      nimble = runSomething("nimble", @["dump", path], {poDaemon},
+      nimble = runSomething("nimble", @["dump", $path], {poDaemon},
                             nimbleDir = nimbleDir)
 
     result.ok = nimble.ok
@@ -81,7 +82,7 @@ proc url*(meta: NimbleMeta): Uri =
       result.anchor = meta.js["vcsRevision"].getStr
       removePrefix(result.anchor, {'#'})
 
-proc writeNimbleMeta*(path: string; url: Uri; revision: string): bool =
+proc writeNimbleMeta*(path: AbsoluteDir; url: Uri; revision: string): bool =
   ## try to write a new nimblemeta.json
   block complete:
     if not dirExists(path):
@@ -91,6 +92,7 @@ proc writeNimbleMeta*(path: string; url: Uri; revision: string): bool =
       revision = revision
     removePrefix(revision, {'#'})
     var
+      metafn = path / RelativeFile(nimbleMeta)
       js = %* {
         "url": $url,
         "vcsRevision": revision,
@@ -98,7 +100,7 @@ proc writeNimbleMeta*(path: string; url: Uri; revision: string): bool =
         "binaries": @[],
         "isLink": false,
       }
-      writer = open(path / nimbleMeta, fmWrite)
+      writer = open($metafn, fmWrite)
     try:
       writer.write($js)
       result = true
@@ -114,15 +116,15 @@ proc isValid*(meta: NimbleMeta): bool =
   ## true if the metadata appears to hold some data
   result = meta.js != nil and meta.js.len > 0
 
-proc fetchNimbleMeta*(path: string): NimbleMeta =
+proc fetchNimbleMeta*(path: AbsoluteDir): NimbleMeta =
   ## parse the nimblemeta.json file if it exists
   result = NimbleMeta(js: newJObject())
   let
-    metafn = path / nimbleMeta
+    metafn = path / RelativeFile(nimbleMeta)
   try:
-    if metafn.fileExists:
+    if fileExists(metafn):
       let
-        content = readFile(metafn)
+        content = readFile($metafn)
       result.js = parseJson(content)
   except Exception as e:
     discard e # noqa
