@@ -1,6 +1,6 @@
-[submodule "bump"]
-	path = bump
-  url = https://github.com/disruptek/bump
 [submodule "github"]
 	path = github
 	url = https://github.com/disruptek/github
+[submodule "bump"]
+	path = bump
+	url = https://github.com/disruptek/bump
