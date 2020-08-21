@@ -801,8 +801,8 @@ when isMainModule:
 
   const
     # these are our subcommands that we want to include in help
-    dispatchees = [scDoctor, scSearch, scClone, scPath, scFork, scLock, scUnlock,
-                   scTag, scUpDown, scRoll, scGraph, scRun]
+    dispatchees = [scDoctor, scSearch, scClone, scPath, scFork, scLock,
+                   scUnlock, scTag, scUpDown, scRoll, scGraph, scRun]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",
