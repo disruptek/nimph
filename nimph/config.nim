@@ -80,7 +80,7 @@ when false:
       var
         priorProjectPath = config.projectPath
       let
-        nextProjectPath = AbsoluteDir getCurrentDir()
+        nextProjectPath = getCurrentDir().toAbsoluteDir
         filename = nextProjectPath.string / NimCfg
 
       block complete:
@@ -117,25 +117,35 @@ var
 proc findPrefixDir(): AbsoluteDir =
   ## determine the prefix directory for the current compiler
   if compilerPrefixDir.isEmpty:
-    debug "find prefix"
-    let
-      compiler = runSomething("nim",
+    let compilerPath = findExe"nim"
+    if compilerPath == "":
+      raise newException(OSError, "cannot find a nim compiler in the path")
+
+    # start with the assumption that the compiler's parent directory works
+    compilerPrefixDir = parentDir(compilerPath.toAbsoluteFile)
+
+    if findExe("choosenim") == "":
+      # if choosenim is not found, we are done
+      result = compilerPrefixDir
+    else:
+      # if choosenim is in the path, we run the compiler to dump its config
+      let
+        compiler = runSomething(compilerPath,
                    @["--hints:off",
                      "--dump.format:json", "dump", "dummy"], {poDaemon})
-    if not compiler.ok:
-      warn "couldn't run the compiler to determine its location"
-      raise newException(OSError, "cannot find a nim compiler")
-    try:
-      let
-        js = parseJson(compiler.output)
-      compilerPrefixDir = AbsoluteDir js["prefixdir"].getStr
-    except JsonParsingError as e:
-      warn "`nim dump` json parse error: " & e.msg
-      raise
-    except KeyError:
-      warn "couldn't parse the prefix directory from `nim dump` output"
-      compilerPrefixDir = AbsoluteDir parentDir(findExe"nim")
-    debug "found prefix"
+      if not compiler.ok:
+        warn "couldn't run the compiler to determine its location"
+        warn "a choosenim-installed compiler might not work due to shims!"
+      try:
+        let
+          js = parseJson(compiler.output)
+        compilerPrefixDir = js["prefixdir"].getStr.toAbsoluteDir
+      except JsonParsingError as e:
+        warn "`nim dump` json parse error: " & e.msg
+        raise
+      except KeyError:
+        warn "couldn't parse the prefix directory from `nim dump` output"
+        warn "a choosenim-installed compiler might not work due to shims!"
   result = compilerPrefixDir
 
 proc loadAllCfgs*(directory: AbsoluteDir): ConfigRef =
