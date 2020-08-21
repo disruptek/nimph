@@ -86,7 +86,7 @@ proc add*(room: var LockerRoom; req: Requirement; name: string;
       if existing == locker:
         error &"unable to add equivalent lock for `{name}`"
         break found
-    room.add name, locker
+    room.add name.string, locker
 
 proc fillRoom(room: var LockerRoom; dependencies: DependencyGroup): bool =
   ## fill a lockerroom with lockers constructed from the dependency tree;

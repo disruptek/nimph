@@ -6,9 +6,10 @@ import std/uri
 import std/os
 import std/times
 
-import compiler/pathutils
-export pathutils
+import compiler/pathutils except toAbsoluteDir
+export pathutils except toAbsoluteDir
 
+import bump
 import cutelog
 export cutelog
 
@@ -19,20 +20,20 @@ when (NimMajor, NimMinor) >= (1, 1):
   template `///`*(a: string): string =
     ## ensure a trailing DirSep
     joinPath(a, $DirSep, "")
-  template `///`*(a: AbsoluteFile | AbsoluteDir): string =
+  template `///`*(a: AbsoluteDir): string =
     ## ensure a trailing DirSep
     `///`(a.string)
-  template `//////`*(a: string | AbsoluteFile | AbsoluteDir): string =
+  template `//////`*(a: string | AbsoluteDir): string =
     ## ensure a trailing DirSep and a leading DirSep
     joinPath($DirSep, "", `///`(a), $DirSep, "")
 else:
   template `///`*(a: string): string =
     ## ensure a trailing DirSep
     joinPath(a, "")
-  template `///`*(a: AbsoluteFile | AbsoluteDir): string =
+  template `///`*(a: AbsoluteDir): string =
     ## ensure a trailing DirSep
     `///`(a.string)
-  template `//////`*(a: string | AbsoluteFile | AbsoluteDir): string =
+  template `//////`*(a: string | AbsoluteDir): string =
     ## ensure a trailing DirSep and a leading DirSep
     "" / "" / `///`(a) / ""
 
@@ -56,6 +57,9 @@ type
     owner*: string
     repo*: string
     url*: Uri
+
+  ImportName* = distinct string
+  DotNimble* = distinct AbsoluteFile
 
 const
   dotNimble* {.strdefine.} = "".addFileExt("nimble")
@@ -86,6 +90,44 @@ const
   WhatHappensInVegas* = false
   # when true, try to support nimble
   AndNimble* = false
+
+proc parentDir*(dir: AbsoluteDir): AbsoluteDir =
+  result = dir / RelativeDir".."
+
+proc parentDir*(dir: AbsoluteFile): AbsoluteDir =
+  result = AbsoluteDir(dir) / RelativeDir".."
+
+proc hash*(p: AnyPath): Hash = hash(p.string)
+
+proc toAbsoluteDir*(s: string): AbsoluteDir =
+  ## make very, very sure our directories are very, very well-formed
+  result = pathutils.toAbsoluteDir(//////absolutePath(s).normalizedPath)
+
+proc toAbsoluteFile*(s: string): AbsoluteFile =
+  ## make very, very sure our paths are very, very well-formed
+  var s = absolutePath(s, getCurrentDir()).normalizedPath
+  result = toAbsolute(s, toAbsoluteDir(getCurrentDir()))
+
+proc `$`*(file: DotNimble): string {.borrow.}
+proc `$`*(name: ImportName): string {.borrow.}
+
+template repo*(file: DotNimble): string =
+  $parentDir(file.AbsoluteFile)
+
+template package*(file: DotNimble): string =
+  lastPathPart($file).changeFileExt("")
+
+template ext*(file: DotNimble): string =
+  splitFile($file).ext
+
+proc toDotNimble*(file: AbsoluteFile): DotNimble =
+  file.DotNimble
+
+proc toDotNimble*(file: string): DotNimble =
+  toAbsolute(file, getCurrentDir().toAbsoluteDir).toDotNimble
+
+proc toDotNimble*(file: Target): DotNimble =
+  toDotNimble($file)
 
 template withinDirectory*(path: AbsoluteDir; body: untyped): untyped =
   if not dirExists(path):
@@ -124,12 +166,6 @@ proc bareUrlsAreEqual*(a, b: Uri): bool =
       x = a.bare
       y = b.bare
     result = $x == $y
-
-proc pathToImport*(path: string): string =
-  ## calculate how a path will be imported by the compiler
-  assert path.len > 0
-  result = path.lastPathPart.split("-")[0]
-  assert result.len > 0
 
 proc normalizeUrl*(uri: Uri): Uri =
   result = uri
@@ -211,7 +247,22 @@ proc importName*(path: string): string =
     result = result.toLowerAscii
   # else, we're just emitting the existing file's basename
 
+proc pathToImport*(path: string): string =
+  ## calculate how a path will be imported by the compiler
+  assert path.len > 0
+  result = path.lastPathPart.split("-")[0]
+  assert result.len > 0
+
+proc importName*(dir: AbsoluteDir | AbsoluteFile): string =
+  ## a uniform name usable in code for imports
+  importName($dir)
+
+proc importName*(file: DotNimble): string =
+  ## a uniform name usable in code for imports
+  importName(file.package)
+
 proc importName*(url: Uri): string =
+  ## a uniform name usable in code for imports
   let url = url.normalizeUrl
   if not url.isValid:
     raise newException(ValueError, "invalid url: " & $url)
@@ -219,6 +270,9 @@ proc importName*(url: Uri): string =
     result = url.path.importName
   else:
     result = url.packageName.importName
+
+template pathToImport*(path: AbsoluteDir | string): string =
+  importName(path)
 
 proc forkTarget*(url: Uri): ForkTargetResult =
   result.url = url.normalizeUrl
@@ -246,9 +300,3 @@ proc forkTarget*(url: Uri): ForkTargetResult =
 proc destylize*(s: string): string =
   ## this is how we create a uniformly comparable token
   result = s.toLowerAscii.replace("_")
-
-proc parentDir*(dir: AbsoluteDir): AbsoluteDir =
-  ## convenience
-  result = dir / RelativeDir".."
-
-proc hash*(p: AnyPath): Hash = hash(p.string)

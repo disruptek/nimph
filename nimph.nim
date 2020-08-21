@@ -59,12 +59,12 @@ template prepareForTheWorst(body: untyped) =
     body
 
 template setupLocalProject(project: var Project; body: untyped) =
-  if not findProject(project, getCurrentDir()):
+  if not findProject(project, getCurrentDir().toAbsoluteDir):
     body
   else:
     try:
-      debug "load all configs"
-      project.cfg = loadAllCfgs(project.repo)
+      debug &"load all configs from {project.root}"
+      project.cfg = loadAllCfgs(project.root)
       debug "done loading configs"
     except Exception as e:
       crash "unable to parse nim configuration: " & e.msg
@@ -104,7 +104,7 @@ proc findChildProjectUsing(group: DependencyGroup; name: string;
     var
       nature = "dependency"
     if found.isSome:
-      result.ok found.get
+      result.ok get(found)
       break complete
     elif Strict notin flags:
       for child in group.projects.values:
@@ -129,9 +129,9 @@ proc searcher*(args: seq[string]; strict = false;
     group = waitfor searchHub(args)
   if group.isNone:
     crash &"unable to retrieve search results from github"
-  for repo in group.get.reversed:
+  for repo in get(group).reversed:
     fatal "\n" & repo.renderShortly
-  if group.get.len == 0:
+  if get(group).len == 0:
     fatal &"😢no results"
 
 proc fixer*(strict = false;
@@ -202,7 +202,7 @@ proc pather*(names: seq[string]; strict = false;
     var
       child = group.findChildProjectUsing(name, flags = flags)
     if child.isOk:
-      echo child.get.repo
+      echo get(child).root
     else:
       error child.error
       result = 1
@@ -234,12 +234,12 @@ proc runner*(args: seq[string]; git = false; strict = false;
   for req, dependency in group.pairs:
     for child in dependency.projects.values:
       if child.dist == Git or not git:
-        withinDirectory(child.repo):
-          info &"running {exe} in {child.repo}"
+        withinDirectory(child.root):
+          info &"running {exe} in {child.root}"
           let
             got = project.runSomething(exe, args)
           if not got.ok:
-            error &"{exe} didn't like that in {child.repo}"
+            error &"{exe} didn't like that in {child.root}"
             result = 1
 
 proc rollChild(child: var Project; requirement: Requirement; goal: RollGoal;
@@ -321,12 +321,12 @@ proc updowner*(names: seq[string]; goal: RollGoal; strict = false;
     for name in names.items:
       let found = group.projectForName(name)
       if found.isSome:
-        var child = found.get
+        var child = get(found)
         let require = group.reqForProject(child)
         if require.isNone:
           let emsg = &"found `{name}` but not its requirement" # noqa
           raise newException(ValueError, emsg)
-        if not child.rollChild(require.get, goal = goal, dry_run = dry_run):
+        if not child.rollChild(get(require), goal = goal, dry_run = dry_run):
           result = 1
       else:
         error &"couldn't find `{name}` among our installed dependencies"
@@ -379,7 +379,7 @@ proc roller*(names: seq[string]; strict = false;
       # everything seems groovy at the beginning
       result = 0
       # add each requirement to the dependency tree
-      for requirement in requires.get.values:
+      for requirement in get(requires).values:
         var
           dependency = newDependency(requirement)
         # we really don't care if requirements are added here
@@ -404,8 +404,9 @@ proc roller*(names: seq[string]; strict = false;
   else:
     fatal &"👎{project.name} is not where you want it"
 
-proc graphProject(project: var Project; path: string; log_level = logLevel) =
-  fatal "  directory: " & path
+proc graphProject(project: var Project; path: AbsoluteDir;
+                  log_level = logLevel) =
+  fatal "  directory: " & $path
   fatal "    project: " & $project
   if project.dist == Git:
     # show tags for info or less
@@ -476,14 +477,14 @@ proc grapher*(names: seq[string]; strict = false;
         result = 1
       else:
         fatal ""
-        let require = group.reqForProject(child.get)
+        let require = group.reqForProject(get child)
         if require.isNone:
           notice &"found `{name}` but not its requirement" # noqa
-          child.get.graphProject(child.get.repo, log_level = log_level)
+          get(child).graphProject(get(child).root, log_level = log_level)
         else:
           {.warning: "nim bug #12818".}
           for requirement, dependency in group.mpairs:
-            if requirement == require.get:
+            if requirement == get(require):
               dependency.graphDep(requirement, log_level = log_level)
 
 proc dumpLockList(project: Project) =
@@ -593,21 +594,21 @@ proc forker*(names: seq[string]; strict = false;
       result = 1
       continue
     let
-      fork = child.get.forkTarget
+      fork = get(child).forkTarget
     if not fork.ok:
       error fork.why
       result = 1
       continue
-    info &"🍴forking {child.get}"
+    info &"🍴forking {get(child)}"
     let forked = waitfor forkHub(fork.owner, fork.repo)
     if forked.isNone:
       result = 1
       continue
-    fatal &"🔱{forked.get.web}"
-    case child.get.dist:
+    fatal &"🔱{get(forked).web}"
+    case get(child).dist:
     of Git:
       let name = defaultRemote
-      if not child.get.promoteRemoteLike(forked.get.git, name = name):
+      if not get(child).promoteRemoteLike(get(forked).git, name = name):
         notice &"unable to promote new fork to {name}"
     else:
       {.warning: "optionally upgrade a gitless install to clone".}
@@ -655,7 +656,7 @@ proc cloner*(args: seq[string]; strict = false;
 
     # and pluck the first result, presumed to be the best
     block found:
-      for repo in hubs.get.values:
+      for repo in get(hubs).values:
         url = repo.git
         name = repo.name
         break found
@@ -672,7 +673,7 @@ proc cloner*(args: seq[string]; strict = false;
     crash &"problem cloning {url}"
 
   # reset our paths to, hopefully, grab the new project
-  project.cfg = loadAllCfgs(project.repo)
+  project.cfg = loadAllCfgs(project.root)
 
   # setup our dependency group
   var group = project.newDependencyGroup(flags = flags)
@@ -680,7 +681,7 @@ proc cloner*(args: seq[string]; strict = false;
     notice &"unable to resolve all dependencies for {project}"
 
   # see if we can find this project in the dependencies
-  let needed = group.projectForPath(cloned.repo)
+  let needed = group.projectForPath(cloned.root)
 
   # if it's in there, let's get its requirement and roll to meet it
   block relocated:
@@ -690,11 +691,11 @@ proc cloner*(args: seq[string]; strict = false;
         warn &"unable to retrieve requirement for {cloned.name}"
       else:
         # rollTowards will relocate us, too
-        if cloned.rollTowards(requirement.get):
+        if cloned.rollTowards(get requirement):
           notice &"rolled {cloned.name} to {cloned.version}"
           # so skip the tail of this block (and a 2nd relocate)
           break relocated
-        notice &"unable to meet {requirement.get} with {cloned}"
+        notice &"unable to meet {get(requirement)} with {cloned}"
     # rename the directory to match head release
     project.relocateDependency(cloned)
 
@@ -738,7 +739,7 @@ when isMainModule:
   const
     release = projectVersion()
   if release.isSome:
-    clCfg.version = $release.get
+    clCfg.version = $get(release)
   else:
     clCfg.version = "(unknown version)"
 

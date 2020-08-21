@@ -50,7 +50,7 @@ proc fixTags*(project: var Project; dry_run = true; force = false): bool =
       break
 
     # open the repo so we can keep it in memory for tagging purposes
-    repository := openRepository(project.gitDir):
+    repository := openRepository($project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -137,7 +137,7 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
           elif project.addSearchPath(path):
             info &"added path `{path}` to `{project.nimcfg}`"
             # yay, we get to reload again
-            project.cfg = loadAllCfgs(project.repo)
+            project.cfg = loadAllCfgs(project.root)
           else:
             warn &"couldn't add path `{path}` to `{project.nimcfg}`"
             result = false
@@ -216,7 +216,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
           error "and i wasn't able to make a new one"
     else:
       let
-        parsed = parseConfigFile($nimcfg)
+        parsed = parseConfigFile(nimcfg)
       if parsed.isNone:
         error &"i had some issues trying to parse {nimcfg}"
         result = false
@@ -261,7 +261,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
 
     # $NIMBLE_DIR could screw with our head
     if envDir != "":
-      if absolutePath(envDir) != depsDir:
+      if toAbsoluteDir(envDir) != depsDir:
         notice "i'm not sure what to do with an alternate $NIMBLE_DIR set"
         result = false
       else:
@@ -372,15 +372,13 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
     # warning if local deps exist or multiple nimblePaths are found
     block extradeps:
       if project.hasLocalDeps or project.numberOfNimblePaths > 1:
-        let imports = project.cfg.allImportTargets(project.repo)
-        for target, linked in imports.pairs:
-          if group.isUsing(target):
-            continue
-          # ignore standard library targets
-          if project.cfg.isStdLib(target.repo):
-            continue
-          let name = linked.importName
-          warn &"no `{name}` requirement for {target.repo}"
+        let available = availableProjects(project)
+        for directory, other in pairs(available):
+          # ignore anything in our dependency group
+          if not group.isUsing(directory):
+            # ignore standard library targets
+            if not project.cfg.isStdLib(directory):
+              warn &"no `{other.importName}` requirement for {other.root}"
 
   when AndNimble:
     # identify packages that aren't named according to their versions;

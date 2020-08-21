@@ -42,7 +42,7 @@ proc parseNimbleDump*(input: string): Option[StringTableRef] =
   if parsed.ok:
     result = table.some
 
-proc fetchNimbleDump*(path: string; nimbleDir = ""): DumpResult =
+proc fetchNimbleDump*(path: string; nimbleDir = AbsoluteDir""): DumpResult =
   ## parse nimble dump output into a string table
   result = DumpResult(ok: false)
   withinDirectory(path):
