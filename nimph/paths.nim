@@ -2,8 +2,8 @@ import std/strutils
 import std/hashes
 import std/os
 
-import compiler/pathutils except toAbsoluteDir
-export pathutils except toAbsoluteDir
+import compiler/pathutils except toAbsoluteDir, toAbsolute
+export pathutils except toAbsoluteDir, toAbsolute
 
 #[
 
@@ -57,7 +57,7 @@ proc toAbsoluteDir*(s: string): AbsoluteDir =
   var s = absolutePath(s).normalizedPath
   normalizePathEnd(s, trailingSep = false)
   result = pathutils.toAbsoluteDir(s)
-  assert dirExists(result)
+  assert dirExists(result), $result & " is missing"
   assert not endsWith($result, DirSep)
 
 proc toAbsoluteFile*(s: string): AbsoluteFile =
@@ -65,8 +65,8 @@ proc toAbsoluteFile*(s: string): AbsoluteFile =
   let dir = getCurrentDir().toAbsoluteDir
   var s = absolutePath(s, $dir).normalizedPath
   normalizePathEnd(s, trailingSep = false)
-  result = toAbsolute(s, dir)
-  assert fileExists(result)
+  result = pathutils.toAbsolute(s, dir)
+  assert fileExists(result), $result & " is missing"
 
 template withinDirectory*(path: AbsoluteDir; body: untyped): untyped =
   if not dirExists(path):
