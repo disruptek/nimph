@@ -12,6 +12,7 @@ import gittyup
 import badresults
 
 import nimph/spec
+import nimph/paths
 import nimph/runner
 import nimph/project
 import nimph/doctor
@@ -58,9 +59,11 @@ template prepareForTheWorst(body: untyped) =
   else:
     body
 
-template setupLocalProject(project: var Project; body: untyped) =
-  if not findProject(project, getCurrentDir().toAbsoluteDir):
+template setupLocalProject(body: untyped): Project =
+  var project = findProject(getCurrentDir().toAbsoluteDir)
+  if project.isNil:
     body
+    nil
   else:
     try:
       debug &"load all configs from {project.root}"
@@ -68,9 +71,10 @@ template setupLocalProject(project: var Project; body: untyped) =
       debug "done loading configs"
     except Exception as e:
       crash "unable to parse nim configuration: " & e.msg
+    project
 
 template setupLocalProject(project: var Project) =
-  setupLocalProject(project):
+  project = setupLocalProject:
     crash &"unable to find a project; try `git init .`?"
 
 template toggle(flags: set[Flag]; flag: Flag; switch: untyped) =
@@ -207,7 +211,7 @@ proc pather*(names: seq[string]; strict = false;
       error child.error
       result = 1
 
-proc runner*(args: seq[string]; git = false; strict = false;
+proc runion*(args: seq[string]; git = false; strict = false;
              log_level = logLevel; safe_mode = false; quiet = true;
              network = true; force = false; dry_run = false): int =
   ## this is another pather, basically, that invokes the arguments in the path
@@ -668,8 +672,8 @@ proc cloner*(args: seq[string]; strict = false;
 
   # perform the clone
   var
-    cloned: Project
-  if not project.clone(url, name, cloned):
+    cloned = project.clone(url, name)
+  if cloned.isNil:
     crash &"problem cloning {url}"
 
   # reset our paths to, hopefully, grab the new project
@@ -768,7 +772,7 @@ when isMainModule:
               doc="graph project dependencies")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
-  dispatchGen(runner, cmdName = $scRun, dispatchName = "run" & $scRun,
+  dispatchGen(runion, cmdName = $scRun, dispatchName = "run" & $scRun,
               stopWords = @["--"],
               doc="execute the program & arguments in every dependency directory")
   const

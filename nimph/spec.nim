@@ -6,36 +6,12 @@ import std/uri
 import std/os
 import std/times
 
-import compiler/pathutils except toAbsoluteDir
-export pathutils except toAbsoluteDir
-
 import bump
 import cutelog
 export cutelog
 
+import nimph/paths
 import nimph/sanitize
-
-# slash attack ///////////////////////////////////////////////////
-when (NimMajor, NimMinor) >= (1, 1):
-  template `///`*(a: string): string =
-    ## ensure a trailing DirSep
-    joinPath(a, $DirSep, "")
-  template `///`*(a: AbsoluteDir): string =
-    ## ensure a trailing DirSep
-    `///`(a.string)
-  template `//////`*(a: string | AbsoluteDir): string =
-    ## ensure a trailing DirSep and a leading DirSep
-    joinPath($DirSep, "", `///`(a), $DirSep, "")
-else:
-  template `///`*(a: string): string =
-    ## ensure a trailing DirSep
-    joinPath(a, "")
-  template `///`*(a: AbsoluteDir): string =
-    ## ensure a trailing DirSep
-    `///`(a.string)
-  template `//////`*(a: string | AbsoluteDir): string =
-    ## ensure a trailing DirSep and a leading DirSep
-    "" / "" / `///`(a) / ""
 
 type
   Flag* {.pure.} = enum
@@ -91,23 +67,6 @@ const
   # when true, try to support nimble
   AndNimble* = false
 
-proc parentDir*(dir: AbsoluteDir): AbsoluteDir =
-  result = dir / RelativeDir".."
-
-proc parentDir*(dir: AbsoluteFile): AbsoluteDir =
-  result = AbsoluteDir(dir) / RelativeDir".."
-
-proc hash*(p: AnyPath): Hash = hash(p.string)
-
-proc toAbsoluteDir*(s: string): AbsoluteDir =
-  ## make very, very sure our directories are very, very well-formed
-  result = pathutils.toAbsoluteDir(//////absolutePath(s).normalizedPath)
-
-proc toAbsoluteFile*(s: string): AbsoluteFile =
-  ## make very, very sure our paths are very, very well-formed
-  var s = absolutePath(s, getCurrentDir()).normalizedPath
-  result = toAbsolute(s, toAbsoluteDir(getCurrentDir()))
-
 proc `$`*(file: DotNimble): string {.borrow.}
 proc `$`*(name: ImportName): string {.borrow.}
 
@@ -130,20 +89,6 @@ proc toDotNimble*(file: Target): DotNimble =
   toDotNimble($file)
 
 proc fileExists*(file: DotNimble): bool {.borrow.}
-
-template withinDirectory*(path: AbsoluteDir; body: untyped): untyped =
-  if not dirExists(path):
-    raise newException(ValueError, $path & " is not a directory")
-  let cwd = getCurrentDir()
-  setCurrentDir($path)
-  try:
-    body
-  finally:
-    setCurrentDir(cwd)
-
-template withinDirectory*(path: string; body: untyped): untyped =
-  withinDirectory(path.toAbsoluteDir):
-    body
 
 template isValid*(url: Uri): bool = url.scheme.len != 0
 

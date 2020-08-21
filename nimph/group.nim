@@ -7,6 +7,7 @@ import std/uri except Url
 export strtabs.StringTableMode
 
 import nimph/spec
+import nimph/paths
 
 type
   Group*[K; V: ref object] = ref object of RootObj
