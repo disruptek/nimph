@@ -6,6 +6,7 @@ import std/sequtils
 import std/osproc
 
 import nimph/spec
+import nimph/paths
 
 type
   RunOutput* = object

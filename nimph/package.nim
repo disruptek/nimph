@@ -14,6 +14,7 @@ import npeg
 
 import nimph/spec
 import nimph/requirement
+import nimph/paths
 
 import nimph/group
 export group

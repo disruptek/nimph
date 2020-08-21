@@ -13,6 +13,7 @@ import bump
 import gittyup
 
 import nimph/spec
+import nimph/paths
 import nimph/package
 import nimph/project
 import nimph/version

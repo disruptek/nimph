@@ -9,6 +9,7 @@ import bump
 import gittyup
 
 import nimph/spec
+import nimph/paths
 import nimph/project
 import nimph/nimble
 import nimph/config
@@ -164,8 +165,11 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
     else:
       block cloneokay:
         for package in dependency.packages.mvalues:
-          var cloned: Project
-          if project.clone(package.url, package.name, cloned):
+          var cloned = project.clone(package.url, package.name)
+          if cloned.isNil:
+            error &"error cloning {package}"
+            # a subsequent iteration could clone successfully
+          else:
             if cloned.rollTowards(requirement):
               notice &"rolled to {cloned.release} to meet {requirement}"
             else:
@@ -173,9 +177,6 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
               project.relocateDependency(cloned)
             state.kind = DrRetry
             break cloneokay
-          else:
-            error &"error cloning {package}"
-            # a subsequent iteration could clone successfully
         # no package was successfully cloned
         notice &"unable to satisfy {requirement.describe}"
         result = false

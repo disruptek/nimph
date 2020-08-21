@@ -25,6 +25,7 @@ import nimph/version
 import nimph/thehub
 import nimph/versiontags
 import nimph/requirement
+import nimph/paths
 
 import nimph/group
 export group
@@ -87,17 +88,24 @@ proc findDotNimble(project: Project): Option[DotNimble] =
 proc toRoot(dir: AbsoluteDir): AbsoluteDir =
   ## find the project directory given a repository directory
   result = dir
-  if endsWith($result, dotGit):
+  if endsWith(result, dotGit):
     result = parentDir(result)
+
+proc root*(project: Project): AbsoluteDir =
+  ## it's the directory holding our .nimble
+  case project.dist
+  of Nimble:
+    result = project.nimble.repo.toAbsoluteDir.toRoot
+  of Git:
+    assert not project.repository.isEmpty
+    result = project.repository.toRoot
+  else:
+    raise newException(Defect, "unimplemented")
 
 when AndNimble:
   template hasGit*(project: Project): bool =
     ## true if the project is a git repo or submodule
     dirExists(project.gitDir) or fileExists($project.gitDir)
-
-  proc root*(project: Project): AbsoluteDir =
-    ## it's the directory holding our .nimble
-    project.nimble.repo.toAbsoluteDir.toRoot
 
   proc gitDir*(project: Project): AbsoluteDir =
     result = project.root / dotGit.RelativeFile
@@ -106,11 +114,6 @@ else:
 
   template hasGit*(project: Project): bool = true
   template gitDir*(project: Project): AbsoluteDir = project.repository
-
-  proc root*(project: Project): AbsoluteDir =
-    ## just above the .git directory unless it's a bare repo
-    assert not project.repository.isEmpty
-    result = project.gitDir.toRoot
 
   proc nimble*(project: Project): DotNimble =
     let
@@ -534,7 +537,7 @@ proc inventRelease*(project: var Project) =
         else:
           warn &"unable to parse reference from directory `{name}`"
 
-proc guessDist(project: Project): Dist =
+proc guessDist(project: Project): Dist {.deprecated.} =
   ## guess at the distribution method used to deposit the assets
   if project.hasGit or project.isSubmodule:
     result = Git
@@ -693,8 +696,7 @@ proc refresh*(project: var Project) =
     project.version = project.knowVersion
   project.inventRelease
 
-proc findProject*(project: var Project; dir: AbsoluteDir;
-                  parent: Project = nil): bool =
+proc findProject*(dir: AbsoluteDir; parent: Project = nil): Project =
   ## locate a project starting from `dir` and set its parent if applicable
   block complete:
     when AndNimble:
@@ -720,14 +722,14 @@ proc findProject*(project: var Project; dir: AbsoluteDir;
           break complete
 
       # create an instance and setup some basic (cheap) data
-      project = newProject(target.search.found.get)
+      result = newProject(target.search.found.get)
 
       # the parent will be set on child dependencies
-      project.parent = parent
+      result.parent = parent
 
       # this is the nimble-link chain that we might have a use for
-      project.develop = target.via
-      project.meta = fetchNimbleMeta(project.repo)
+      result.develop = target.via
+      result.meta = fetchNimbleMeta(result.repo)
     else:
       # get the buffer holding the path, if possible
       path := repositoryDiscover($dir):
@@ -740,23 +742,21 @@ proc findProject*(project: var Project; dir: AbsoluteDir;
         break complete
 
       # create an instance and setup some basic (cheap) data
-      project = newProject(repo)
+      result = newProject(repo)
 
       # the parent will be set on child dependencies
-      project.parent = parent
+      result.parent = parent
 
-    project.dist = project.guessDist
     # load configs, create urls, set version and release, etc.
-    project.refresh
+    result.refresh
 
-    if not project.release.isValid:
+    if not result.release.isValid:
       # we cannot determine what release this project is
-      notice &"unable to determine reference for {project.name}"
+      notice &"unable to determine reference for {result.name}"
       info "maybe add a commit?"
     else:
       # otherwise, we're golden
-      debug &"{project} version {project.version}"
-    result = true
+      debug &"{result} version {result.version}"
 
 iterator packageDirectories(project: Project): AbsoluteDir =
   ## yield directories according to the project's path configuration
@@ -810,12 +810,12 @@ proc availableProjects*(project: Project): ProjectGroup =
   result = newProjectGroup()
   result[project.root] = project
   for directory in project.packageDirectories:
-    var proj: Project
-    if findProject(proj, directory, parent = project):
+    let proj = findProject(directory, parent = project)
+    if proj.isNil:
+      debug &"no package found in {directory}"
+    else:
       if proj.root notin result:
         result[proj.root] = proj
-    else:
-      debug &"no package found in {directory}"
 
 proc `==`*(a, b: Project): bool =
   ## a dirty (if safe) way to compare equality of projects
@@ -1027,8 +1027,7 @@ proc addMissingUpstreams*(project: Project) =
             warn &"error fetching upstream for {name}: {code}"
             warn code.dumpError
 
-proc clone*(project: var Project; url: Uri; name: string;
-            cloned: var Project): bool =
+proc clone*(project: var Project; url: Uri; name: string): Project =
   ## clone a package into the project's nimbleDir
   var
     bare = url
@@ -1070,8 +1069,8 @@ proc clone*(project: var Project; url: Uri; name: string;
 
   # make sure the project we find is in the directory we cloned to;
   # this could differ if the repo does not feature a dotNimble file
-  if findProject(cloned, directory, parent = project) and
-                 cloned.root == directory:
+  result = findProject(directory, parent = project)
+  if result.root == directory:
     {.warning: "gratuitous nimblemeta write?".}
     let
       oid = repository.demandHead
@@ -1080,15 +1079,11 @@ proc clone*(project: var Project; url: Uri; name: string;
         warn &"unable to write {nimbleMeta} in {directory}"
 
     # review the local branches and add any missing tracking branches
-    cloned.addMissingUpstreams
-
-    result = true
+    result.addMissingUpstreams
   else:
     error "couldn't make sense of the project i just cloned"
-
-  # if we're gonna fail, ensure that failure is felt
-  if not result:
-    cloned = nil
+    # if we're gonna fail, ensure that failure is felt
+    result = nil
 
 when AndNimble:
   iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef): var Project =

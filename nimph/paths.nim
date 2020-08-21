@@ -29,9 +29,10 @@ else:
 
 proc parentDir*(dir: AbsoluteDir): AbsoluteDir =
   result = dir / RelativeDir".."
+  assert endsWith($result, DirSep)
 
 proc parentDir*(dir: AbsoluteFile): AbsoluteDir =
-  result = AbsoluteDir(dir) / RelativeDir".."
+  result = AbsoluteDir(dir).parentDir
 
 proc hash*(p: AnyPath): Hash = hash(p.string)
 
@@ -44,9 +45,10 @@ proc toAbsoluteDir*(s: string): AbsoluteDir =
   assert endsWith($result, DirSep)
 
 proc toAbsoluteFile*(s: string): AbsoluteFile =
-  ## make very, very sure our paths are very, very well-formed
-  var s = absolutePath(s, getCurrentDir()).normalizedPath
-  result = toAbsolute(s, toAbsoluteDir(getCurrentDir()))
+  ## make very, very sure our file paths are very, very well-formed
+  let dir = getCurrentDir().toAbsoluteDir
+  var s = absolutePath(s, $dir).normalizedPath
+  result = toAbsolute(s, dir)
   assert fileExists(result)
 
 template withinDirectory*(path: AbsoluteDir; body: untyped): untyped =

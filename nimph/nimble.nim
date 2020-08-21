@@ -11,6 +11,7 @@ import npeg
 
 import nimph/spec
 import nimph/runner
+import nimph/paths
 
 type
   DumpResult* = object

@@ -24,6 +24,7 @@ import bump
 
 import nimph/spec
 import nimph/runner
+import nimph/paths
 
 when defined(debugPath):
   from std/sequtils import count
