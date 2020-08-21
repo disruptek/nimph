@@ -59,23 +59,19 @@ template prepareForTheWorst(body: untyped) =
   else:
     body
 
-template setupLocalProject(body: untyped): Project =
-  var project = findProject(getCurrentDir().toAbsoluteDir)
-  if project.isNil:
-    body
-    nil
-  else:
+proc setupLocalProject(): Project =
+  prepareForTheWorst:
+    result = findProject(getCurrentDir().toAbsoluteDir)
+    if result.isNil:
+      error &"unable to find a project; try `git init .`?"
+      quit 1
     try:
-      debug &"load all configs from {project.root}"
-      project.cfg = loadAllCfgs(project.root)
+      debug &"load all configs from {result.root}"
+      result.cfg = loadAllCfgs(result.root)
       debug "done loading configs"
     except Exception as e:
-      crash "unable to parse nim configuration: " & e.msg
-    project
-
-template setupLocalProject(project: var Project) =
-  project = setupLocalProject:
-    crash &"unable to find a project; try `git init .`?"
+      raise newException(ValueError,
+                         "unable to parse nim configuration: " & e.msg)
 
 template toggle(flags: set[Flag]; flag: Flag; switch: untyped) =
   when switch is bool:
@@ -147,8 +143,7 @@ proc fixer*(strict = false;
   setLogFilter(log_level)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   if project.doctor(dry = dry_run):
     fatal &"👌{project.name} version {project.version} lookin' good"
@@ -166,8 +161,7 @@ proc nimbler*(args: seq[string]; strict = false;
   setLogFilter(log_level)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   let
     nimble = project.runSomething("nimble", args)
@@ -186,8 +180,7 @@ proc pather*(names: seq[string]; strict = false;
   let flags = composeFlags(defaultFlags)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   if names.len == 0:
     crash &"give me an import name to retrieve its filesystem path"
@@ -226,8 +219,7 @@ proc runion*(args: seq[string]; git = false; strict = false;
   let flags = composeFlags(defaultFlags)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   # setup our dependency group
   var group = project.newDependencyGroup(flags = flags)
@@ -306,8 +298,7 @@ proc updowner*(names: seq[string]; goal: RollGoal; strict = false;
   let flags = composeFlags(defaultFlags)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   # setup our dependency group
   var group = project.newDependencyGroup(flags = flags)
@@ -352,8 +343,7 @@ proc roller*(names: seq[string]; strict = false;
   let flags = composeFlags(defaultFlags)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   # setup our dependency group
   var group = project.newDependencyGroup(flags = flags)
@@ -455,8 +445,7 @@ proc grapher*(names: seq[string]; strict = false;
   let flags = composeFlags(defaultFlags)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   # setup our dependency group
   var group = project.newDependencyGroup(flags = flags)
@@ -506,8 +495,7 @@ proc lockfiler*(names: seq[string]; strict = false;
   setLogFilter(log_level)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   block:
     let name = names.join(" ")
@@ -530,8 +518,7 @@ proc unlockfiler*(names: seq[string]; strict = false;
   setLogFilter(log_level)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   block:
     let name = names.join(" ")
@@ -554,8 +541,7 @@ proc tagger*(strict = false;
   setLogFilter(log_level)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   if project.fixTags(dry_run = dry_run, force = force):
     if dry_run:
@@ -577,8 +563,7 @@ proc forker*(names: seq[string]; strict = false;
   let flags = composeFlags(defaultFlags)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   # setup our dependency group
   var group = project.newDependencyGroup(flags = flags)
@@ -646,8 +631,8 @@ proc cloner*(args: seq[string]; strict = false;
     except:
       discard
 
-  var project: Project
-  setupLocalProject(project)
+  var
+    project = setupLocalProject()
 
   # if the input wasn't parsed to a url,
   if not url.isValid:

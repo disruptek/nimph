@@ -5,6 +5,16 @@ import std/os
 import compiler/pathutils except toAbsoluteDir
 export pathutils except toAbsoluteDir
 
+#[
+
+i wish i had impl this in the first place; it's been a pita and a source
+of FUD.
+
+i'm still wary of the (loose) `==`(x, y: AnyPath) from the compiler, but
+at least our hash() routines shouldn't equate AbsoluteDir to AbsoluteFile.
+
+]#
+
 # slash attack ///////////////////////////////////////////////////
 when (NimMajor, NimMinor) >= (1, 1):
   template `///`*(a: string): string =
@@ -29,25 +39,32 @@ else:
 
 proc parentDir*(dir: AbsoluteDir): AbsoluteDir =
   result = dir / RelativeDir".."
-  assert endsWith($result, DirSep)
+  assert not endsWith($result, DirSep)
 
 proc parentDir*(dir: AbsoluteFile): AbsoluteDir =
   result = AbsoluteDir(dir).parentDir
 
-proc hash*(p: AnyPath): Hash = hash(p.string)
+proc hash*(p: AbsoluteDir): Hash =
+  ## we force the hash to use a trailing DirSep on directories
+  hash(normalizePathEnd(p.string, trailingSep = true))
+
+proc hash*(p: AbsoluteFile): Hash =
+  ## we force the hash to omit a trailing DirSep on files
+  hash(normalizePathEnd(p.string, trailingSep = false))
 
 proc toAbsoluteDir*(s: string): AbsoluteDir =
   ## make very, very sure our directories are very, very well-formed
   var s = absolutePath(s).normalizedPath
-  normalizePathEnd(s, trailingSep = true)
+  normalizePathEnd(s, trailingSep = false)
   result = pathutils.toAbsoluteDir(s)
   assert dirExists(result)
-  assert endsWith($result, DirSep)
+  assert not endsWith($result, DirSep)
 
 proc toAbsoluteFile*(s: string): AbsoluteFile =
   ## make very, very sure our file paths are very, very well-formed
   let dir = getCurrentDir().toAbsoluteDir
   var s = absolutePath(s, $dir).normalizedPath
+  normalizePathEnd(s, trailingSep = false)
   result = toAbsolute(s, dir)
   assert fileExists(result)
 
