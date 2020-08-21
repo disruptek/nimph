@@ -83,7 +83,7 @@ proc toDotNimble*(file: AbsoluteFile): DotNimble =
   file.DotNimble
 
 proc toDotNimble*(file: string): DotNimble =
-  toAbsolute(file, getCurrentDir().toAbsoluteDir).toDotNimble
+  toAbsoluteFile(file).toDotNimble
 
 proc toDotNimble*(file: Target): DotNimble =
   toDotNimble($file)
@@ -247,3 +247,8 @@ proc forkTarget*(url: Uri): ForkTargetResult =
 proc destylize*(s: string): string =
   ## this is how we create a uniformly comparable token
   result = s.toLowerAscii.replace("_")
+
+template timer*(name: string; body: untyped) =
+  let clock = epochTime()
+  body
+  debug name & " took " & $(epochTime() - clock)
