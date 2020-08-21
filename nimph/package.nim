@@ -19,16 +19,17 @@ import nimph/group
 export group
 
 type
-  DistMethod* = enum
+  Dist* = enum
     Local = "local"
     Git = "git"
     Nest = "nest"
     Merc = "hg"
+    Nimble = "nimble"
 
   Package* = ref object
     name*: string
     url*: Uri
-    dist*: DistMethod
+    dist*: Dist
     tags*: seq[string]
     description*: string
     license*: string
@@ -50,13 +51,13 @@ proc importName*(package: Package): string =
   result = package.name.importName.toLowerAscii
   error &"import name {result} from {package.name}"
 
-proc newPackage*(name: string; path: string; dist: DistMethod;
+proc newPackage*(name: string; path: string; dist: Dist;
                  url: Uri): Package =
   ## create a new package that probably points to a local repo
   result = Package(name: name, dist: dist, url: url,
                    path: path, local: path.dirExists)
 
-proc newPackage*(name: string; dist: DistMethod; url: Uri): Package =
+proc newPackage*(name: string; dist: Dist; url: Uri): Package =
   ## create a new package
   result = Package(name: name, dist: dist, url: url)
 
@@ -114,7 +115,7 @@ proc add(group: PackageGroup; js: JsonNode) =
   else:
     package.web = package.url
   if "method" in js:
-    package.dist = parseEnum[DistMethod](js["method"].getStr)
+    package.dist = parseEnum[Dist](js["method"].getStr)
   if "author" in js:
     package.author = js["author"].getStr
   else:
