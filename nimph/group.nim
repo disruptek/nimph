@@ -25,10 +25,15 @@ proc init*[K, V](group: Group[K, V]; flags: set[Flag]; mode = modeStyleInsensiti
   group.imports = newStringTable(group.mode)
   group.flags = flags
 
-proc addName[K: string, V](group: Group[K, V]; name: K; value: string) =
+proc addName[K: string, V](group: Group[K, V]; key: K; value: K) =
   ## add a name to the group, which points to value
-  assert group.table.hasKey(value)
-  group.imports[name] = value
+  assert group.table.hasKey(key)
+  group.imports[key.importName] = value
+
+proc addName[K: AbsoluteDir, V](group: Group[K, V]; key: K) =
+  ## add a name to the group, which points to value
+  assert group.table.hasKey(key)
+  group.imports[key.importName] = $key
 
 proc addName[K: Uri, V](group: Group[K, V]; url: K) =
   ## add a url to the group, which points to value
@@ -43,7 +48,7 @@ proc delName*(group: Group; key: string) =
   var
     remove: seq[string]
   # don't trust anyone; if the value matches, pull the name
-  for name, value in group.imports.pairs:
+  for name, value in pairs(group.imports):
     if value == key:
       remove.add name
   for name in remove:
@@ -53,6 +58,11 @@ proc del*[K: string, V](group: Group[K, V]; name: K) =
   ## remove from the group the named key and its associated value
   group.table.del name
   group.delName name
+
+proc del*[K: AbsoluteDir, V](group: Group[K, V]; key: K) =
+  ## remove from the group the named key and its associated value
+  group.table.del key
+  group.delName $key
 
 proc del*[K: Uri, V](group: Group[K, V]; url: K) =
   ## remove from the group the url key and its associated value
@@ -78,14 +88,34 @@ proc get*[K: string, V](group: Group[K, V]; key: K): V =
     let emsg = &"{key.importName} not found"
     raise newException(KeyError, emsg)
 
+proc get*[K: AbsoluteDir, V](group: Group[K, V]; key: K): V =
+  ## fetch a value from the group using a directory
+  if group.table.hasKey(key):
+    result = group.table[key]
+  elif group.imports.hasKey(key.importName):
+    result = group.table[group.imports[key.importName].toAbsoluteDir]
+  else:
+    let emsg = &"{key} not found"
+    raise newException(KeyError, emsg)
+
 proc mget*[K: string, V](group: var Group[K, V]; key: K): var V =
-  ## fetch a value from the group using style-insensitive lookup
+  ## fetch a mutable value from the group using style-insensitive lookup
   if group.table.hasKey(key):
     result = group.table[key]
   elif group.imports.hasKey(key.importName):
     result = group.table[group.imports[key.importName]]
   else:
     let emsg = &"{key.importName} not found"
+    raise newException(KeyError, emsg)
+
+proc mget*[K: AbsoluteDir, V](group: var Group[K, V]; key: K): var V =
+  ## fetch a mutable value from the group using a directory
+  if group.table.hasKey(key):
+    result = group.table[key]
+  elif group.imports.hasKey(key.importName):
+    result = group.table[group.imports[key.importName].toAbsoluteDir]
+  else:
+    let emsg = &"{key} not found"
     raise newException(KeyError, emsg)
 
 proc `[]`*[K, V](group: var Group[K, V]; key: K): var V =
@@ -96,16 +126,27 @@ proc `[]`*[K, V](group: Group[K, V]; key: K): V =
   ## fetch a value from the group using style-insensitive lookup
   result = group.get(key)
 
-proc add*[K: string, V](group: Group[K, V]; key: K; value: V) =
+proc add*[K: string; V](group: Group[K, V]; key: string; value: V) =
   ## add a key and value to the group
+  if group.table.hasKey(key):
+    group.del key
   group.table.add key, value
   group.addName(key.importName, key)
 
-proc add*[K: string, V](group: Group[K, V]; url: Uri; value: V) =
+proc add*[K: AbsoluteDir; V](group: Group[K, V]; key: AbsoluteDir; value: V) =
+  ## add a key and value to the group
+  if group.table.hasKey(key):
+    group.del key
+  group.table[key] = value
+  group.addName(key)
+
+proc add*[K: string; V](group: Group[K, V]; url: Uri; value: V) =
   ## add a (bare) url as a key
   let
     naked = url.bare
     key = $naked
+  if group.table.hasKey(key):
+    group.del key
   group.table.add key, value
   # this gets picked up during instant-instantiation of a package from
   # a project's url, a la asPackage(project: Project): Package ...
@@ -113,7 +154,7 @@ proc add*[K: string, V](group: Group[K, V]; url: Uri; value: V) =
 
 proc `[]=`*[K, V](group: Group[K, V]; key: K; value: V) =
   ## set a key to a single value
-  if group.hasKey(key):
+  if group.table.hasKey(key):
     group.del key
   group.add key, value
 
