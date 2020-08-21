@@ -92,11 +92,11 @@ proc toRequirement*(js: JsonNode): Requirement =
                           operator = js["operator"].toOperator,
                           release = js["release"].toRelease)
 
-proc toJson*(dist: DistMethod): JsonNode =
+proc toJson*(dist: Dist): JsonNode =
   result = newJString($dist)
 
-proc toDistMethod*(js: JsonNode): DistMethod =
-  result = parseEnum[DistMethod](js.getStr)
+proc toDist*(js: JsonNode): Dist =
+  result = parseEnum[Dist](js.getStr)
 
 proc toJson*(uri: Uri): JsonNode =
   let url = case uri.scheme:

@@ -21,7 +21,7 @@ type
     name*: string
     url*: Uri
     requirement*: Requirement
-    dist*: DistMethod
+    dist*: Dist
     release*: Release
   LockerRoom* = ref object of Group[string, Locker]
     name*: string
@@ -146,7 +146,7 @@ proc toLocker*(js: JsonNode): Locker =
   result.name = js["name"].getStr
   result.url = js["url"].toUri
   result.release = js["release"].toRelease
-  result.dist = js["dist"].toDistMethod
+  result.dist = js["dist"].toDist
 
 proc toJson*(room: LockerRoom): JsonNode =
   ## convert a LockerRoom to a JObject

@@ -31,23 +31,25 @@ export group
 
 type
   Project* = ref object
+    case dist*: Dist
+    of Nimble:
+      develop*: LinkedSearchResult
+      nimble*: DotNimble
+      meta*: NimbleMeta
+      dump*: StringTableRef
+      version*: Version
+    of Git:
+      repository*: AbsoluteDir
+      tags*: GitTagTable
+    else:
+      discard
     name*: string
-    version*: Version
-    dist*: DistMethod
     release*: Release
-    dump*: StringTableRef
     config*: NimphConfig
     cfg*: ConfigRef
     mycfg*: ConfigRef
-    tags*: GitTagTable
     url*: Uri
     parent*: Project
-    develop*: LinkedSearchResult
-    when AndNimble:
-      nimble*: DotNimble
-      meta*: NimbleMeta
-    else:
-      repository*: AbsoluteDir
 
   ProjectGroup* = Group[AbsoluteDir, Project]
 
@@ -73,7 +75,7 @@ proc root*(project: Project): AbsoluteDir
 proc findDotNimble(project: Project): Option[DotNimble] =
   debug &"find .nimble for {project}"
   block:
-    when AndNimble:
+    if project.dist == Nimble:
       if fileExists(project.nimble):
         result = some(project.nimble)
         break
@@ -95,7 +97,7 @@ when AndNimble:
 
   proc root*(project: Project): AbsoluteDir =
     ## it's the directory holding our .nimble
-    project.nimble.repo.toAbsoluteDir
+    project.nimble.repo.toAbsoluteDir.toRoot
 
   proc gitDir*(project: Project): AbsoluteDir =
     result = project.root / dotGit.RelativeFile
@@ -107,6 +109,7 @@ else:
 
   proc root*(project: Project): AbsoluteDir =
     ## just above the .git directory unless it's a bare repo
+    assert not project.repository.isEmpty
     result = project.gitDir.toRoot
 
   proc nimble*(project: Project): DotNimble =
@@ -263,32 +266,26 @@ proc knowVersion*(project: var Project): Version =
 
 proc newProject*(repo: GitRepository): Project =
   ## instantiate a new project from the given repo
-  new result
-  result.repository = repositoryPath(repo).toAbsoluteDir
+  result = Project(dist: Git, repository: repositoryPath(repo).toAbsoluteDir)
   var
     splat = splitFile($result.root)
-  when AndNimble:
+  when false:
     let
       search = findDotNimble(project)
     if search.found.isSome:
       result.nimble = get(search.found)
   # truncate any extension from the directory name (weirdos)
   result.name = splat.name    # this is our nominal project name
+  assert result.name != "", repr(splat)
   result.config = newNimphConfig(result.nimphConfig)
 
-proc newProject*(nimble: Target): Project {.deprecated.} =
+proc newProject*(nimble: Target): Project =
   ## instantiate a new project from the given .nimble
-  new result
   if not fileExists($nimble):
     raise newException(ValueError,
                        "unable to instantiate a project w/o a " & dotNimble)
-  let
-    splat = absolutePath($nimble).normalizedPath.splitFile
-  when AndNimble:
-    result.nimble = (repo: splat.dir, package: splat.name, ext: splat.ext)
-  else:
-    result.repository = splat.dir.toAbsoluteDir
-  result.name = splat.name
+  result = Project(dist: Nimble, nimble: nimble.toDotNimble)
+  result.name = result.nimble.package
   result.config = newNimphConfig(result.nimphConfig)
 
 proc getHeadOid*(project: Project): GitResult[GitOid] =
@@ -537,7 +534,7 @@ proc inventRelease*(project: var Project) =
         else:
           warn &"unable to parse reference from directory `{name}`"
 
-proc guessDist(project: Project): DistMethod =
+proc guessDist(project: Project): Dist =
   ## guess at the distribution method used to deposit the assets
   if project.hasGit or project.isSubmodule:
     result = Git

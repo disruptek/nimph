@@ -129,6 +129,8 @@ proc toDotNimble*(file: string): DotNimble =
 proc toDotNimble*(file: Target): DotNimble =
   toDotNimble($file)
 
+proc fileExists*(file: DotNimble): bool {.borrow.}
+
 template withinDirectory*(path: AbsoluteDir; body: untyped): untyped =
   if not dirExists(path):
     raise newException(ValueError, $path & " is not a directory")
