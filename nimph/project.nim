@@ -85,36 +85,58 @@ proc findDotNimble(project: Project): Option[DotNimble] =
     if search.found.isSome:
       result = some(get(search.found).toDotNimble)
 
-proc toRoot(dir: AbsoluteDir): AbsoluteDir =
+proc root(file: DotNimble): AbsoluteDir =
+  ## find the project directory given a .nimble
+  assert not file.AbsoluteFile.isEmpty
+  result = parentDir(file.AbsoluteFile)
+
+proc root(dir: AbsoluteDir): AbsoluteDir =
   ## find the project directory given a repository directory
+  assert not dir.isEmpty
   result = dir
   if endsWith(result, dotGit):
     result = parentDir(result)
 
 proc root*(project: Project): AbsoluteDir =
   ## it's the directory holding our .nimble
+  assert not project.isNil
   case project.dist
   of Nimble:
-    result = project.nimble.repo.toAbsoluteDir.toRoot
+    result = project.nimble.root
   of Git:
-    assert not project.repository.isEmpty
-    result = project.repository.toRoot
+    result = project.repository.root
   else:
     raise newException(Defect, "unimplemented")
 
-when AndNimble:
-  template hasGit*(project: Project): bool =
-    ## true if the project is a git repo or submodule
+proc gitDir*(project: Project): AbsoluteDir =
+  assert not project.isNil
+  case project.dist
+  of Git:
+    project.repository
+  of Nimble:
+    project.root / dotGit.RelativeDir
+  else:
+    raise newException(Defect, "unimplemented")
+
+proc hasNimble*(project: Project): bool =
+  case project.dist
+  of Git, Local:
+    false
+  of Nimble:
+    fileExists($project.nimble)
+  else:
+    raise newException(Defect, "unimplemented")
+
+proc hasGit*(project: Project): bool =
+  case project.dist
+  of Git:
+    true
+  of Nimble:
     dirExists(project.gitDir) or fileExists($project.gitDir)
+  else:
+    raise newException(Defect, "unimplemented")
 
-  proc gitDir*(project: Project): AbsoluteDir =
-    result = project.root / dotGit.RelativeFile
-
-else:
-
-  template hasGit*(project: Project): bool = true
-  template gitDir*(project: Project): AbsoluteDir = project.repository
-
+when not AndNimble:
   proc nimble*(project: Project): DotNimble =
     let
       search = findDotNimble(project)
@@ -220,20 +242,19 @@ proc guessVersion*(project: Project): Version =
 
 proc fetchDump*(project: var Project; package: string; refresh = false): bool =
   ## make sure the nimble dump is available
-  when not AndNimble:
-    return false
-  if project.dump != nil and not refresh:
-    result = true
-  else:
-    discard project.fetchConfig
-    let
-      dumped = fetchNimbleDump(package, nimbleDir = project.nimbleDir)
-    result = dumped.ok
-    if not result:
-      # puke on this for now...
-      raise newException(IOError, dumped.why)
-    # try to prevent a bug when the above changes
-    project.dump = dumped.table
+  if project.hasNimble:
+    if project.dump != nil and not refresh:
+      result = true
+    else:
+      discard project.fetchConfig
+      let
+        dumped = fetchNimbleDump(package, nimbleDir = project.nimbleDir)
+      result = dumped.ok
+      if not result:
+        # puke on this for now...
+        raise newException(IOError, dumped.why)
+      # try to prevent a bug when the above changes
+      project.dump = dumped.table
 
 proc fetchDump*(project: var Project; refresh = false): bool {.discardable.} =
   ## make sure the nimble dump is available
@@ -241,6 +262,7 @@ proc fetchDump*(project: var Project; refresh = false): bool {.discardable.} =
 
 proc knowVersion*(project: var Project): Version =
   ## pull out all the stops to determine the version of a project
+  assert project.dist == Nimble
   block:
     # this is really the most likely to work, so start with a dump
     if project.dump != nil:
@@ -296,12 +318,13 @@ proc getHeadOid*(project: Project): GitResult[GitOid] =
   if project.dist != Git:
     let emsg = &"{project} lacks a git repository to load" # noqa
     raise newException(Defect, emsg)
-  block:
-    repository := repositoryOpen($project.gitDir):
-      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
-      result.err code
-      break
-    result = repository.getHeadOid
+  else:
+    block:
+      repository := repositoryOpen($project.gitDir):
+        error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+        result.err code
+        break
+      result = repository.getHeadOid
 
 proc demandHead*(repository: GitRepository): string =
   ## retrieve the repository's #head oid as a string, or ""
@@ -521,11 +544,11 @@ proc inventRelease*(project: var Project) =
     if project.url.anchor.len > 0:
       project.release = newRelease(project.url.anchor, operator = Tag)
     # else if we have a version for the project, use that
-    elif project.version.isValid:
+    elif project.dist == Nimble and project.version.isValid:
       project.release = newRelease(project.version)
     else:
       # grab the directory name
-      let name = repo(project).lastPathPart
+      let name = lastPathPart($project.root)
       # maybe it's package-something
       var prefix = project.name & "-"
       if name.startsWith(prefix):
@@ -691,9 +714,12 @@ proc refresh*(project: var Project) =
   if mycfg.isSome:
     project.mycfg = mycfg.get
   project.url = project.createUrl(refresh = true)
-  project.dump = nil
-  when AndNimble:
+  case project.dist
+  of Nimble:
+    project.dump = nil
     project.version = project.knowVersion
+  else:
+    discard
   project.inventRelease
 
 proc findProject*(dir: AbsoluteDir; parent: Project = nil): Project =
@@ -756,7 +782,7 @@ proc findProject*(dir: AbsoluteDir; parent: Project = nil): Project =
       info "maybe add a commit?"
     else:
       # otherwise, we're golden
-      debug &"{result} version {result.version}"
+      debug "found " & $result
 
 iterator packageDirectories(project: Project): AbsoluteDir =
   ## yield directories according to the project's path configuration
@@ -985,10 +1011,13 @@ proc relocateDependency*(parent: var Project; project: var Project) =
     # now we can actually move the repo...
     moveDir(repository, future)
     # reset the package configuration target
-    when AndNimble:
-      project.nimble = newTarget(nimble)
-    else:
+    case project.dist
+    of Nimble:
+      project.nimble = nimble.toDotNimble
+    of Git:
       project.repository = future.toAbsoluteDir
+    else:
+      discard
     # the path changed, so remove the old path (if you can)
     discard parent.removeSearchPath(previous)
     # and point the parent to the new one
@@ -1074,7 +1103,7 @@ proc clone*(project: var Project; url: Uri; name: string): Project =
     {.warning: "gratuitous nimblemeta write?".}
     let
       oid = repository.demandHead
-    when AndNimble:
+    if result.dist == Nimble:
       if not writeNimbleMeta($directory, bare, oid):
         warn &"unable to write {nimbleMeta} in {directory}"
 
@@ -1124,12 +1153,12 @@ else:
       repository := repositoryDiscover($path, ceilings = @[$path]):
         continue
       # turn the .git (?) repository directory into the project root
-      let directory = repository.toAbsoluteDir.toRoot
+      let root = repository.toAbsoluteDir.root
       # if we have this project in the group,
-      if directory in group:
+      if root in group:
         # dedupe it and yield it
-        dedupe.incl directory
-        yield group[directory]
+        dedupe.incl root
+        yield group[root]
 
     # now report on anything we weren't able to discover
     for project in group.values:
