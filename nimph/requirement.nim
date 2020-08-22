@@ -28,7 +28,7 @@ type
     child*: Requirement
     notes*: string
 
-  Requires* = OrderedTableRef[Requirement, Requirement]
+  Requires* = seq[Requirement]
 
 proc newIdentity*(name: PackageName): Identity =
   result = Identity(kind: Name, name: name)
@@ -166,6 +166,9 @@ proc hash*(id: Identity): Hash =
     h = h !& hash(id.url)
   result = !$h
 
+proc `==`*(a, b: Identity): bool =
+  hash(a) == hash(b)
+
 proc hash*(req: Requirement): Hash =
   ## uniquely identify a requirement
   var h: Hash = 0
@@ -233,7 +236,7 @@ proc parseRequires*(input: string): Option[Requires] =
   ## parse a `requires` string output from `nimble dump`
   ## also supports `~` and `^` and `*` operators a la cargo
   var
-    requires = Requires()
+    requires: seq[Requirement]
     lastname: Identity
 
   let
@@ -251,16 +254,16 @@ proc parseRequires*(input: string): Option[Requires] =
         lastname = newIdentity $1
         let req = newRequirement(id = lastname, operator = Wild, spec = "*")
         if req notin requires:
-          requires[req] = req
+          requires.add req
       andrecord <- *white * >ops * *white * >spec:
         let req = newRequirement(id = lastname, operator = $1, spec = $2)
         if req notin requires:
-          requires[req] = req
+          requires.add req
       inrecord <- >name * *white * >ops * *white * >spec:
         lastname = newIdentity $1
         let req = newRequirement(id = lastname, operator = $2, spec = $3)
         if req notin requires:
-          requires[req] = req
+          requires.add req
       record <- (inrecord | andrecord | anyrecord) * ending
       document <- *record
     parsed = peggy.match(input)
