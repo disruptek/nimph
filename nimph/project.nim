@@ -138,6 +138,8 @@ proc hasGit*(project: Project): bool =
 
 when not AndNimble:
   proc nimble*(project: Project): DotNimble =
+    if project.dist != Nimble:
+      raise newException(Defect, "nimble() on non-Nimble project")
     let
       search = findDotNimble(project)
     if search.isNone:
@@ -808,10 +810,13 @@ proc importName*(linked: LinkedSearchResult): string =
 
 proc importName*(project: Project): string =
   ## a uniform name usable in code for imports
-  if project.develop != nil:
-    result = project.develop.importName
+  if project.dist == Nimble:
+    if project.develop != nil:
+      result = project.develop.importName
+    else:
+      result = project.nimble.importName
   else:
-    result = project.nimble.importName
+    result = project.root.importName
 
 proc hasProjectIn*(group: ProjectGroup; directory: AbsoluteDir): bool =
   ## true if a project is stored at the given directory
@@ -1509,10 +1514,9 @@ proc versionChangingCommits*(project: var Project): VersionTags =
           project.refresh
           result[project.version] = thing.get
 
-proc pathForName*(group: ProjectGroup; name: string): Option[string] =
+proc pathForName*(group: ProjectGroup; name: ImportName): Option[AbsoluteDir] =
   ## try to retrieve the directory for a given import name in the group
-  let name = name.destylize
   for project in group.values:
-    if project.importName.destylize == name:
-      result = project.repo.some
+    if project.importName == name:
+      result = some(project.root)
       break

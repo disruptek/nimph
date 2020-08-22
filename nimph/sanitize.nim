@@ -1,6 +1,10 @@
 import std/macros
 import std/options
 import std/strutils
+import std/hashes
+
+type
+  NimIdentifier* = distinct string       ## a valid nim identifier
 
 const
   elideUnderscoresInIdentifiers {.booldefine.} = false
@@ -30,7 +34,7 @@ template cappableAdd(s: var string; c: char) =
   else:
     s.add c
 
-proc sanitizeIdentifier*(name: string; capsOkay=false): Option[string] =
+proc sanitizeIdentifier*(name: string; capsOkay = false): Option[NimIdentifier] =
   ## convert any string to a valid nim identifier in camel_Case
   var id = ""
   block sanitized:
@@ -78,4 +82,26 @@ proc sanitizeIdentifier*(name: string; capsOkay=false): Option[string] =
         discard
       #  warn "bad identifier: " & id
       break sanitized
-    result = id.some
+    result = some(id.NimIdentifier)
+
+proc `$`*(name: NimIdentifier): string {.borrow.}
+proc len*(name: NimIdentifier): int {.borrow.}
+
+proc hash*(name: NimIdentifier): Hash =
+  ## hash an identifier in such a way that two names that are
+  ## stylistically different but refer to the same identifier will have
+  ## the same hash
+  var name = name.string
+  assert name.isValidNimIdentifier
+  var s = $name[0]
+  if len(name) > 1:
+    s.add toLowerAscii(name[1 .. ^1])
+  if s[0] != '_':       # the name might be simply `_`
+    s = s.replace("_")  # otherwise, elide underscores
+  assert s.isValidNimIdentifier
+  var h: Hash = 0
+  h = h !& hash(s)
+  result = !$h
+
+proc `==`*(a, b: NimIdentifier): bool =
+  result = cmpIgnoreStyle(a.string, b.string) == 0
