@@ -337,11 +337,6 @@ proc toMask*(version: Version): VersionMask =
   for i, field in version.pairs:
     result[i] = field.some
 
-proc importName*(target: Target): string =
-  ## a uniform name usable in code for imports
-  assert target.repo.len > 0
-  result = target.repo.pathToImport.importName
-
 iterator likelyTags*(version: Version): string =
   ## produce tags with/without silly `v` prefixes
   let v = $version
