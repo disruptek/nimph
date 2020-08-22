@@ -265,11 +265,11 @@ proc parseProjectCfg*(input: AbsoluteFile): ProjectCfgParsed =
         otherkeys <- i"path" | i"p" | i"define" | i"d"
         keys <- nimblekeys | otherkeys
         strsetting <- hyphens * >keys * equals * >strvalue * ending:
-          table.add $1, unescape($2)
+          table[$1] = unescape($2)
         anysetting <- hyphens * >keys * equals * >anyvalue * ending:
-          table.add $1, $2
+          table[$1] = $2
         toggle <- hyphens * >keys * ending:
-          table.add $1, "it's enabled, okay?"
+          table[$1] = "it's enabled, okay?"
         line <- strsetting | anysetting | toggle | (*(1 - nl) * nl)
         document <- *line * !1
       parsed = peggy.match(content)
