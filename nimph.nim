@@ -96,8 +96,8 @@ template composeFlags(defaults): set[Flag] =
 proc findChildProjectUsing(group: DependencyGroup; name: string;
                            flags: set[Flag]): Result[Project, string] =
   ## search the group for a named project using options specified in flags
+  var name = importName name
   let
-    name = name.destylize
     found = group.projectForName(name)
 
   block complete:
@@ -108,7 +108,7 @@ proc findChildProjectUsing(group: DependencyGroup; name: string;
       break complete
     elif Strict notin flags:
       for child in group.projects.values:
-        if child.importName.destylize == name:
+        if child.importName == name:
           result.ok child
           break complete
       nature = "project"
