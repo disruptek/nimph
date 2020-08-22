@@ -127,9 +127,8 @@ proc determineDeps*(project: Project): Option[Requires] =
       break
     # this is (usually) gratuitous, but it's also the right place
     # to perform this assignment, so...  go ahead and do it
-    for a, b in result.get.mpairs:
-      a.notes = project.name
-      b.notes = project.name
+    for r in mitems(get(result)):
+      r.notes = project.name
 
 proc determineDeps*(project: var Project): Option[Requires] =
   ## try to parse requirements of a project using the `nimble dump` output
