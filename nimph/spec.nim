@@ -103,18 +103,11 @@ template isValid*(url: Uri): bool = url.scheme.len != 0
 proc hash*(url: Uri): Hash =
   ## help hash URLs
   var h: Hash = 0
-  when false:
-    for field in url.fields:
-      when field is string:
-        h = h !& field.hash
-      elif field is bool:
-        h = h !& field.hash
-  else:
-    # try to work around fields() limitations in collections...
-    for field in [url.scheme, url.username, url.password, url.hostname,
-                  url.port, url.path, url.query, url.anchor]:
-      h = h !& hash(field)
-    h = h !& hash(url.opaque)
+  for field in url.fields:
+    when field is string:
+      h = h !& field.hash
+    elif field is bool:
+      h = h !& field.hash
   result = !$h
 
 proc bare*(url: Uri): Uri =
