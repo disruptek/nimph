@@ -106,3 +106,6 @@ proc hash*(name: NimIdentifier): Hash =
 
 proc `==`*(a, b: NimIdentifier): bool =
   result = cmpIgnoreStyle(a.string, b.string) == 0
+
+proc `<`*(a, b: NimIdentifier): bool =
+  result = cmpIgnoreStyle(a.string, b.string) == -1

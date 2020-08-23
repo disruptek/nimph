@@ -93,8 +93,7 @@ template composeFlags(defaults): set[Flag] =
     toggle(flags, Network, network)
     flags
 
-proc findChildProjectUsing(group: DependencyGroup; name: string;
-                           flags: set[Flag]): Result[Project, string] =
+proc findChildProjectUsing(group: DependencyGroup; name: string): Result[Project, string] =
   ## search the group for a named project using options specified in flags
   var name = importName name
   let
@@ -125,14 +124,16 @@ proc searcher*(args: seq[string]; strict = false;
 
   if args.len == 0:
     crash &"a search was requested but no query parameters were provided"
-  let
-    group = waitfor searchHub(args)
-  if group.isNone:
-    crash &"unable to retrieve search results from github"
-  for repo in get(group).reversed:
-    fatal "\n" & repo.renderShortly
-  if get(group).len == 0:
-    fatal &"😢no results"
+  else:
+    let
+      group = waitfor searchHub(args)
+    if group.isNone:
+      crash &"unable to retrieve search results from github"
+    elif get(group).len == 0:
+      fatal &"😢no results"
+    else:
+      for repo in get(group).backwards:
+        fatal "\n" & repo.renderShortly
 
 proc fixer*(strict = false;
             log_level = logLevel; safe_mode = false; quiet = false;
@@ -145,6 +146,8 @@ proc fixer*(strict = false;
   var
     project = setupLocalProject()
 
+  if dry_run:
+    flags.push flags + {DryRun}
   if project.doctor(dry = dry_run):
     fatal &"👌{project.name} version {project.version} lookin' good"
   elif not dry_run:
@@ -177,8 +180,7 @@ proc pather*(names: seq[string]; strict = false;
   setLogFilter(log_level)
 
   # setup flags for the operation
-  let flags = composeFlags(defaultFlags)
-
+  flags.push composeFlags(defaultFlags):
   var
     project = setupLocalProject()
 
@@ -186,7 +188,7 @@ proc pather*(names: seq[string]; strict = false;
     crash &"give me an import name to retrieve its filesystem path"
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = flags)
+  var group = project.newDependencyGroup()
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
@@ -197,7 +199,7 @@ proc pather*(names: seq[string]; strict = false;
 
   for name in names.items:
     var
-      child = group.findChildProjectUsing(name, flags = flags)
+      child = group.findChildProjectUsing(name)
     if child.isOk:
       echo get(child).root
     else:
@@ -216,27 +218,27 @@ proc runion*(args: seq[string]; git = false; strict = false;
   setLogFilter(log_level)
 
   # setup flags for the operation
-  let flags = composeFlags(defaultFlags)
+  flags.push composeFlags(defaultFlags)
 
-  var
-    project = setupLocalProject()
+    var
+      project = setupLocalProject()
 
-  # setup our dependency group
-  var group = project.newDependencyGroup(flags = flags)
-  if not project.resolve(group):
-    notice &"unable to resolve all dependencies for {project}"
+    # setup our dependency group
+    var group = project.newDependencyGroup()
+    if not project.resolve(group):
+      notice &"unable to resolve all dependencies for {project}"
 
-  # make sure we visit every project that fits the requirements
-  for req, dependency in group.pairs:
-    for child in dependency.projects.values:
-      if child.dist == Git or not git:
-        withinDirectory(child.root):
-          info &"running {exe} in {child.root}"
-          let
-            got = project.runSomething(exe, args)
-          if not got.ok:
-            error &"{exe} didn't like that in {child.root}"
-            result = 1
+    # make sure we visit every project that fits the requirements
+    for req, dependency in group.pairs:
+      for child in dependency.projects.values:
+        if child.dist == Git or not git:
+          withinDirectory(child.root):
+            info &"running {exe} in {child.root}"
+            let
+              got = project.runSomething(exe, args)
+            if not got.ok:
+              error &"{exe} didn't like that in {child.root}"
+              result = 1
 
 proc rollChild(child: var Project; requirement: Requirement; goal: RollGoal;
                safe_mode = false; dry_run = false): bool =
@@ -295,13 +297,13 @@ proc updowner*(names: seq[string]; goal: RollGoal; strict = false;
   setLogFilter(log_level)
 
   # setup flags for the operation
-  let flags = composeFlags(defaultFlags)
+  flags.push composeFlags(defaultFlags)
 
   var
     project = setupLocalProject()
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = flags)
+  var group = project.newDependencyGroup()
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
@@ -340,13 +342,13 @@ proc roller*(names: seq[string]; strict = false;
   setLogFilter(log_level)
 
   # setup flags for the operation
-  let flags = composeFlags(defaultFlags)
+  flags.push composeFlags(defaultFlags)
 
   var
     project = setupLocalProject()
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = flags)
+  var group = project.newDependencyGroup()
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
