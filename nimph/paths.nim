@@ -15,27 +15,12 @@ at least our hash() routines shouldn't equate AbsoluteDir to AbsoluteFile.
 
 ]#
 
-# slash attack ///////////////////////////////////////////////////
 when (NimMajor, NimMinor) >= (1, 1):
-  template `///`*(a: string): string {.deprecated.} =
-    ## ensure a trailing DirSep
-    joinPath(a, $DirSep, "")
-  template `///`*(a: AbsoluteDir): string {.deprecated.} =
-    ## ensure a trailing DirSep
-    `///`(a.string)
-  template `//////`*(a: string | AbsoluteDir): string {.deprecated.} =
-    ## ensure a trailing DirSep and a leading DirSep
-    joinPath($DirSep, "", `///`(a), $DirSep, "")
+  proc normal*(path: string): string =
+    joinPath(path, $DirSep, "")
 else:
-  template `///`*(a: string): string {.deprecated.} =
-    ## ensure a trailing DirSep
-    joinPath(a, "")
-  template `///`*(a: AbsoluteDir): string {.deprecated.} =
-    ## ensure a trailing DirSep
-    `///`(a.string)
-  template `//////`*(a: string | AbsoluteDir): string {.deprecated.} =
-    ## ensure a trailing DirSep and a leading DirSep
-    "" / "" / `///`(a) / ""
+  proc normal*(path: string): string =
+    joinPath(path, "")
 
 proc parentDir*(dir: AbsoluteDir): AbsoluteDir =
   result = dir / RelativeDir".."
@@ -44,13 +29,21 @@ proc parentDir*(dir: AbsoluteDir): AbsoluteDir =
 proc parentDir*(dir: AbsoluteFile): AbsoluteDir =
   result = AbsoluteDir(dir).parentDir
 
+proc hashCase(path: AbsoluteDir | AbsoluteFile): string =
+  ## two paths of differing case should hash identically on
+  ## case-insensitive filesystems
+  when FilesystemCaseSensitive:
+    result = path.string
+  else:
+    result = toLowerAscii(path.string)
+
 proc hash*(p: AbsoluteDir): Hash =
   ## we force the hash to use a trailing DirSep on directories
-  hash(normalizePathEnd(p.string, trailingSep = true))
+  hash normalizePathEnd(hashCase p, trailingSep = true)
 
 proc hash*(p: AbsoluteFile): Hash =
   ## we force the hash to omit a trailing DirSep on files
-  hash(normalizePathEnd(p.string, trailingSep = false))
+  hash normalizePathEnd(hashCase p, trailingSep = false)
 
 proc toAbsoluteDir*(s: string): AbsoluteDir =
   ## make very, very sure our directories are very, very well-formed
@@ -82,8 +75,26 @@ template withinDirectory*(path: string; body: untyped): untyped =
   withinDirectory(path.toAbsoluteDir):
     body
 
+proc startsWith*(path: AbsoluteDir; dir: AbsoluteDir): bool =
+  var path = path
+  block done:
+    while path != dir:
+      if path.isEmpty:
+        break done
+      path = parentDir(path)
+    result = true
+
+proc startsWith*(path: AbsoluteDir; s: string): bool =
+  var dir = toAbsoluteDir(s)
+  result = path.startsWith(dir)
+
+proc startsWith*(path: AbsoluteFile; s: string): bool =
+  toAbsoluteFile(s) == path
+
 proc endsWith*(path: AbsoluteDir; s: string): bool =
   result = parentDir(path) / RelativeDir(s) == path
 
 proc endsWith*(path: AbsoluteFile; s: string): bool =
   result = parentDir(path) / RelativeFile(s) == path
+
+proc isRootDir*(path: AbsoluteDir): bool {.borrow.}
