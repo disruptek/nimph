@@ -17,23 +17,23 @@ at least our hash() routines shouldn't equate AbsoluteDir to AbsoluteFile.
 
 # slash attack ///////////////////////////////////////////////////
 when (NimMajor, NimMinor) >= (1, 1):
-  template `///`*(a: string): string =
+  template `///`*(a: string): string {.deprecated.} =
     ## ensure a trailing DirSep
     joinPath(a, $DirSep, "")
-  template `///`*(a: AbsoluteDir): string =
+  template `///`*(a: AbsoluteDir): string {.deprecated.} =
     ## ensure a trailing DirSep
     `///`(a.string)
-  template `//////`*(a: string | AbsoluteDir): string =
+  template `//////`*(a: string | AbsoluteDir): string {.deprecated.} =
     ## ensure a trailing DirSep and a leading DirSep
     joinPath($DirSep, "", `///`(a), $DirSep, "")
 else:
-  template `///`*(a: string): string =
+  template `///`*(a: string): string {.deprecated.} =
     ## ensure a trailing DirSep
     joinPath(a, "")
-  template `///`*(a: AbsoluteDir): string =
+  template `///`*(a: AbsoluteDir): string {.deprecated.} =
     ## ensure a trailing DirSep
     `///`(a.string)
-  template `//////`*(a: string | AbsoluteDir): string =
+  template `//////`*(a: string | AbsoluteDir): string {.deprecated.} =
     ## ensure a trailing DirSep and a leading DirSep
     "" / "" / `///`(a) / ""
 
