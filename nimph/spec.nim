@@ -155,10 +155,10 @@ proc convertToSsh*(uri: Uri): Uri =
   result.hostname = ""
   result.scheme = ""
 
-proc packageName*(name: string): PackageName =
+proc packageName*(name: string; capsOkay = true): PackageName =
   ## return a string that is plausible as a package name
   let
-    sane = sanitizeIdentifier(name, capsOkay = true)
+    sane = sanitizeIdentifier(strip name, capsOkay = capsOkay)
   if sane.isSome:
     result = get(sane).PackageName
   else:
@@ -177,7 +177,7 @@ proc packageName*(url: Uri): PackageName =
 proc importName(s: string; capsOkay = true): ImportName =
   ## turns any string into a valid nim identifier
   let
-    sane = sanitizeIdentifier(s, capsOkay = capsOkay)
+    sane = sanitizeIdentifier(strip s, capsOkay = capsOkay)
   if sane.isSome:
     # if it's a sane identifier, use it
     result = get(sane).ImportName
@@ -203,7 +203,7 @@ proc importName*(path: AbsoluteDir): ImportName =
   assert not path.isEmpty
   var path = normalizePathEnd($path, trailingSep = false)
   # strip off any -1.2.3 or -#branch garbage
-  result = importName path.lastPathPart.split("-")[0]
+  result = importName path.lastPathPart.changeFileExt("").split("-")[0]
 
 proc importName*(file: DotNimble): ImportName =
   ## calculate how a file will be imported by the compiler
