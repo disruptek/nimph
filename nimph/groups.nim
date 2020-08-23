@@ -1,18 +1,14 @@
 import std/hashes
 import std/os
-import std/strtabs
-import std/tables
 from std/sequtils import toSeq
 import std/uri except Url
-
-export strtabs.StringTableMode
 
 import gittyup
 
 import nimph/spec
 import nimph/paths
-import nimph/requirement
-import nimph/version
+import nimph/requirements
+import nimph/versions
 
 ##[
 
