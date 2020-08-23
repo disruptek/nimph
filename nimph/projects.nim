@@ -52,7 +52,7 @@ type
     url*: Uri
     parent*: Project
 
-  ProjectGroup* = Group[AbsoluteDir, Project]
+  Projects* = OrderedTable[AbsoluteDir, Project]
 
   Releases* = TableRef[string, Release]
 
@@ -61,9 +61,8 @@ type
     source: string
     search: SearchResult
 
-  # same as Requires, for now
-  Requirements* = OrderedTableRef[Requirement, Requirement]
-  RequirementsTags* = Group[Requirements, GitThing]
+  Requirements* = seq[Requirement]
+  RequirementsTags* = Table[Requirements, GitThing]
 
 proc `$`*(project: Project): string =
   if project.isNil:
@@ -791,14 +790,8 @@ iterator packageDirectories(project: Project): AbsoluteDir =
   for directory in project.cfg.packagePaths(exists = true):
     yield directory
 
-proc newProjectGroup*(flags: set[Flag] = defaultFlags): ProjectGroup =
-  const mode =
-    when FilesystemCaseSensitive:
-      modeCaseSensitive
-    else:
-      modeCaseInsensitive
-  result = ProjectGroup(flags: flags)
-  result.init(flags, mode = mode)
+proc newProjects*(): Projects =
+  result = Projects()
 
 proc importName*(linked: LinkedSearchResult): string =
   ## a uniform name usable in code for imports
@@ -818,23 +811,23 @@ proc importName*(project: Project): string =
   else:
     result = project.root.importName
 
-proc hasProjectIn*(group: ProjectGroup; directory: AbsoluteDir): bool =
+proc hasProjectIn*(group: Projects; directory: AbsoluteDir): bool =
   ## true if a project is stored at the given directory
   result = group.hasKey(directory)
 
-proc getProjectIn*(group: ProjectGroup; directory: AbsoluteDir): Project =
+proc getProjectIn*(group: Projects; directory: AbsoluteDir): Project =
   ## retrieve a project via its path
   result = group.get(directory)
 
-proc mgetProjectIn*(group: var ProjectGroup;
+proc mgetProjectIn*(group: var Projects;
                     directory: AbsoluteDir): var Project =
   ## retrieve a mutable project via its path
   result = group.mget(directory)
 
-proc availableProjects*(project: Project): ProjectGroup =
+proc availableProjects*(project: Project): Projects =
   ## find packages locally available to a project; note that
   ## this will include the project itself
-  result = newProjectGroup()
+  result = newProjects()
   result[project.root] = project
   for directory in project.packageDirectories:
     let proj = findProject(directory, parent = project)
@@ -1116,7 +1109,7 @@ proc clone*(project: var Project; url: Uri; name: string): Project =
     result = nil
 
 when AndNimble:
-  iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef): var Project =
+  iterator asFoundVia*(group: var Projects; config: ConfigRef): var Project =
     ## yield projects from the group in the same order that they may be
     ## resolved by the compiler, if at all, given a particular configuration
     var
@@ -1143,7 +1136,7 @@ when AndNimble:
       if project.importName notin dedupe:
         notice &"no path to {project.root} as `{project.importName}`"
 else:
-  iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef): var Project =
+  iterator asFoundVia*(group: var Projects; config: ConfigRef): var Project =
     ## yield projects from the group in the same order that they may be
     ## resolved by the compiler, if at all, given a particular configuration
     var
@@ -1310,9 +1303,8 @@ proc promote*(project: Project; name = defaultRemote;
     if target.ok and target.owner == user.login:
       result = project.promoteRemoteLike(project.url, name = name)
 
-proc newRequirementsTags(flags = defaultFlags): RequirementsTags =
-  result = RequirementsTags(flags: flags)
-  result.init(flags, mode = modeCaseSensitive)
+proc newRequirementsTags(): RequirementsTags =
+  result = RequirementsTags()
 
 proc requirementChangingCommits*(project: Project): RequirementsTags =
   # a table of the commits that changed the Requirements in a Project's
@@ -1514,7 +1506,7 @@ proc versionChangingCommits*(project: var Project): VersionTags =
           project.refresh
           result[project.version] = thing.get
 
-proc pathForName*(group: ProjectGroup; name: ImportName): Option[AbsoluteDir] =
+proc pathForName*(group: Projects; name: ImportName): Option[AbsoluteDir] =
   ## try to retrieve the directory for a given import name in the group
   for project in group.values:
     if project.importName == name:
