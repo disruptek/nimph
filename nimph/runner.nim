@@ -19,7 +19,7 @@ proc stripPkgs*(nimbleDir: AbsoluteDir): AbsoluteDir =
   result = nimbleDir
   # the only way this is a problem is if the user stores deps in pkgs/pkgs,
   # but we can remove this hack once we have nimblePaths in nim-1.0 ...
-  if endsWith($result, //////PkgDir):
+  if endsWith(result, PkgDir):
     result = parentDir(result)
 
 proc runSomething*(exe: string; args: seq[string]; options: set[ProcessOption];
