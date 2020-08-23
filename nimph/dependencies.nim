@@ -14,15 +14,15 @@ import gittyup
 
 import nimph/spec
 import nimph/paths
-import nimph/package
-import nimph/project
-import nimph/version
+import nimph/packages
+import nimph/projects
+import nimph/versions
 import nimph/versiontags
-import nimph/requirement
+import nimph/requirements
 import nimph/config
 
-import nimph/group
-export group
+import nimph/groups
+export groups
 
 type
   Dependency* = ref object
