@@ -82,10 +82,10 @@ type
     for item in g[Release]:     # indexing iteration by Release
       item is T
 
-  FlaggedGroup* = concept g
+  FlaggedGroup*[T] = concept g
     ## this is a container that holds a Group and some contextual
     ## flags that can affect the Group's operation
-    g.group is Group
+    g.group is Group[T]
     g.flags is set[Flag]
 
 proc contains*[T](group: Group[T]; value: T): bool =
