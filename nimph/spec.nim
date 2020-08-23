@@ -22,6 +22,8 @@ type
     Safe
     Network
 
+  FlagStack = seq[set[Flag]]
+
   RollGoal* = enum
     Upgrade = "upgrade"
     Downgrade = "downgrade"
@@ -59,14 +61,27 @@ const
   excludeMissingSearchPaths* {.booldefine.} = false
   excludeMissingLazyPaths* {.booldefine.} = true
   writeNimbleDirPaths* {.booldefine.} = false
-  shortDate* = initTimeFormat "yyyy-MM-dd"
   # add Safe to defaultFlags to, uh, default to Safe mode
   defaultFlags*: set[Flag] = {Quiet, Strict}
+  shortDate* = initTimeFormat "yyyy-MM-dd"
 
   # when true, try to clamp analysis to project-local directories
   WhatHappensInVegas* = false
   # when true, try to support nimble
   AndNimble* = false
+
+# we track current options as a stack of flags
+var flags*: FlagStack = @[defaultFlags]
+proc contains*(flags: FlagStack; f: Flag): bool = f in flags[^1]
+proc contains*(flags: FlagStack; fs: set[Flag]): bool = fs <= flags[^1]
+template push*(flags: var FlagStack; fs: set[Flag]) = flags.add fs
+template withFlags*(fs: set[Flag]; body: untyped) =
+  try:
+    flags.push fs
+    var flags {.inject.} = flags[^1]
+    body
+  finally:
+    flags.pop
 
 proc `$`*(file: DotNimble): string {.borrow.}
 proc `$`*(name: ImportName): string {.borrow.}
@@ -74,6 +89,8 @@ proc `$`*(name: PackageName): string {.borrow.}
 
 proc `==`*(a, b: ImportName): bool {.borrow.}
 proc `==`*(a, b: PackageName): bool {.borrow.}
+proc `<`*(a, b: ImportName): bool {.borrow.}
+proc `<`*(a, b: PackageName): bool {.borrow.}
 
 proc hash*(name: ImportName): Hash {.borrow.}
 proc hash*(name: PackageName): Hash {.borrow.}
@@ -242,6 +259,7 @@ proc forkTarget*(url: Uri): ForkTargetResult =
       result.why = &"unable to parse url {result.url}"
 
 template timer*(name: string; body: untyped) =
+  ## crude timer for debugging purposes
   let clock = epochTime()
   body
   debug name & " took " & $(epochTime() - clock)
