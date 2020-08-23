@@ -108,13 +108,14 @@ proc hash*[T](group: Group[T]): Hash =
     h = h !& hash(item)
   result = !$h
 
-proc contains*[T](flagged: FlaggedGroup[T]; flags: set[Flag]): bool =
+proc contains*(flagged: FlaggedGroup; flags: set[Flag]): bool =
   flags <= flagged.flags
 
-proc contains*[T](flagged: FlaggedGroup[T]; flag: Flag): bool =
+proc contains*(flagged: FlaggedGroup; flag: Flag): bool =
   flag in flagged.flags
 
-proc hash*[T](flagged: FlaggedGroup[T]): Hash = hash(flagged.group)
+proc hash*(flagged: FlaggedGroup): Hash =
+  hash(flagged.group)
 
 proc add*[T, V](flagged: FlaggedGroup[T]; value: V) =
   flagged.group.add value
@@ -139,13 +140,6 @@ when false:
         result = true
         break
 
-  proc contains*[K, V](group: Group[K, V]; value: V): bool =
-    ## true if the group contains the given value
-    for v in group.values:
-      if v == value:
-        result = true
-        break
-
 iterator reversed*[T](group: Group[T]): T =
   ## yield values in reverse order
   let
@@ -164,13 +158,13 @@ proc clear*(group: Group) =
 #
 # now our customized implementations...
 #
-proc contains*[T](group: ImportGroup[T]; name: ImportName): bool =
+proc contains*(group: ImportGroup; name: ImportName): bool =
   for item in items(group):
     result = item.importName == name
     if result:
       break
 
-proc excl*[T](group: ImportGroup[T]; name: ImportName) =
+proc excl*(group: ImportGroup; name: ImportName) =
   while name in group:
     for item in items(group):
       if item.importName == name:
@@ -185,7 +179,7 @@ proc `[]`*[T](group: ImportGroup[T]; name: ImportName): T =
       result = item
       break
 
-proc free*[T](group: GitGroup[T]) =
+proc free*(group: GitGroup) =
   while len(group) > 0:
     for item in items(group):
       group.del item
