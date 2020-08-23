@@ -13,11 +13,11 @@ import std/options
 import npeg
 
 import nimph/spec
-import nimph/requirement
+import nimph/requirements
 import nimph/paths
 
-import nimph/group
-export group
+import nimph/groups
+export groups
 
 type
   Dist* = enum

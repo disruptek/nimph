@@ -14,15 +14,15 @@ import badresults
 import nimph/spec
 import nimph/paths
 import nimph/runner
-import nimph/project
+import nimph/projects
 import nimph/doctor
 import nimph/thehub
 import nimph/config
-import nimph/package
-import nimph/dependency
+import nimph/packages
+import nimph/dependencies
 import nimph/locker
-import nimph/group
-import nimph/requirement
+import nimph/groups
+import nimph/requirements
 
 template crash(why: string) =
   ## a good way to exit nimph

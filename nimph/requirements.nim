@@ -9,7 +9,7 @@ import bump
 import npeg
 
 import nimph/spec
-import nimph/version
+import nimph/versions
 
 type
   IdKind* {.pure.} = enum Name, Url
