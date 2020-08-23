@@ -20,15 +20,15 @@ import nimph/spec
 import nimph/config
 import nimph/runner
 import nimph/nimble
-import nimph/package
-import nimph/version
+import nimph/packages
+import nimph/versions
 import nimph/thehub
 import nimph/versiontags
-import nimph/requirement
+import nimph/requirements
 import nimph/paths
 
-import nimph/group
-export group
+import nimph/groups
+export groups
 
 type
   Project* = ref object
