@@ -30,11 +30,11 @@ errors and warnings (Quiet) or prevent destructive modification (DryRun).
 ]##
 
 type
-  Group[T] = concept g
-    add(g, T)                # duplicate indices are accepted
-    incl(g, T)               # do nothing if T's index exists
-    excl(g, T)               # do nothing if T's index does not exist
-    del(g, T)                # delete only T
+  Group[T] = concept g, var w
+    add(w, T)                # duplicate indices are accepted
+    incl(w, T)               # do nothing if T's index exists
+    excl(w, T)               # do nothing if T's index does not exist
+    del(w, T)                # delete only T
     # the rest of these are really trivial expectations we want to meet
     contains(g, T) is bool
     hash(T)
@@ -43,20 +43,20 @@ type
       item is T
     for index, item in pairs(g):
       item is T
-      del(g, index)
+      del(w, index)
 
-  ImportGroup*[T] = concept g ##
-    ## an ImportGroup lets you test for membership via ImportName
-    g is Group[T]
-    importName(T) is ImportName
-    contains(g, ImportName) is bool
-    excl(g, ImportName)         # delete any T that yields ImportName
-    `[]`(g, ImportName) is T    # index by ImportName
+  FlaggedGroup*[T] = concept g, var w ##
+    ## this is a container that holds a Group and some contextual
+    ## flags that can affect the Group's operation
+    g.group is Group[T]
+    w.group is Group[T]
+    g.flags is set[Flag]
 
-  IdentityGroup*[T] = concept g ##
+  IdentityGroup*[T] = concept g, var w ##
     ## an IdentityGroup lets you test for membership via Identity,
     ## PackageName, or Uri
     g is Group[T]
+    w is Group[T]
     contains(g, Identity) is bool
     contains(g, PackageName) is bool
     contains(g, Uri) is bool
@@ -64,29 +64,35 @@ type
     `[]`(g, Uri) is T           # indexing by identity types
     `[]`(g, Identity) is T      # indexing by identity types
 
-  GitGroup*[T] = concept g
+when false:
+  type ImportGroup*[T] = concept g, var w ##
+    ## an ImportGroup lets you test for membership via ImportName
+    g is Group[T]
+    w is Group[T]
+    importName(T) is ImportName
+    contains(g, ImportName) is bool
+    excl(w, ImportName)         # delete any T that yields ImportName
+    `[]`(g, ImportName) is T    # index by ImportName
+
+  type GitGroup*[T] = concept g, var w ##
     ## a GitGroup is designed to hold Git objects like tags, references,
     ## commits, and so on
     g is Group[T]
+    w is Group[T]
     oid(T) is GitOid
     contains(g, GitOid) is bool
-    excl(g, GitOid)             # delete any T that yields GitOid
+    excl(w, GitOid)             # delete any T that yields GitOid
     `[]`(g, GitOid) is T        # index by GitOid
     free(T)                     # ensure we can free the group
 
-  ReleaseGroup*[T] = concept g
+  type ReleaseGroup*[T] = concept g, var w ##
     ## a ReleaseGroup lets you test for membership via Release,
     ## (likely Version, Tag, and such as well)
     g is Group[T]
+    w is Group[T]
     contains(g, Release) is bool
     for item in g[Release]:     # indexing iteration by Release
       item is T
-
-  FlaggedGroup*[T] = concept g
-    ## this is a container that holds a Group and some contextual
-    ## flags that can affect the Group's operation
-    g.group is Group[T]
-    g.flags is set[Flag]
 
 proc contains*[T](group: Group[T]; value: T): bool =
   for item in items(group):
@@ -117,26 +123,24 @@ proc contains*(flagged: FlaggedGroup; flag: Flag): bool =
 proc hash*(flagged: FlaggedGroup): Hash =
   hash(flagged.group)
 
-proc add*[T, V](flagged: FlaggedGroup[T]; value: V) =
+proc add*[T](flagged: FlaggedGroup[T]; value: T) =
   flagged.group.add value
 
-proc del*[T, V](flagged: FlaggedGroup[T]; value: V) =
+proc del*[T](flagged: FlaggedGroup[T]; value: T) =
   flagged.group.del value
 
-proc incl*[T, V](flagged: FlaggedGroup[T]; value: V) =
+proc incl*[T](flagged: FlaggedGroup[T]; value: T) =
   flagged.group.incl value
 
-proc excl*[T, V](flagged: FlaggedGroup[T]; value: V) =
+proc excl*[T](flagged: FlaggedGroup[T]; value: T) =
   flagged.group.excl value
 
-proc contains*[T, V](flagged: FlaggedGroup[T]; value: V): bool =
+proc contains*[T](flagged: FlaggedGroup[T]; value: T): bool =
   value in flagged.group
 
 iterator reversed*[T](group: Group[T]): T =
   ## yield values in reverse order
-  let
-    elems = toSeq items(group)
-
+  let elems = toSeq items(group)
   for index in countDown(elems.high, elems.low):
     yield elems[index]
 
@@ -150,58 +154,63 @@ proc clear*(group: Group) =
 #
 # now our customized implementations...
 #
-proc contains*(group: ImportGroup; name: ImportName): bool =
-  for item in items(group):
-    result = item.importName == name
-    if result:
-      break
-
-proc excl*(group: ImportGroup; name: ImportName) =
-  while name in group:
+when false:
+  # left for impl
+  proc contains*(group: ImportGroup; name: ImportName): bool =
     for item in items(group):
-      if item.importName == name:
+      result = item.importName == name
+      if result:
+        break
+
+  proc excl*(group: ImportGroup; name: ImportName) =
+    while name in group:
+      for item in items(group):
+        if item.importName == name:
+          group.del item
+          break
+
+  proc `[]`*[T](group: ImportGroup[T]; name: ImportName): T =
+    block found:
+      for item in items(group):
+        if item.importName == name:
+          result = item
+          break found
+      raise newException(KeyError, "not found")
+
+  proc free*(group: GitGroup) =
+    while len(group) > 0:
+      for item in items(group):
         group.del item
         break
 
-proc `[]`*[T](group: ImportGroup[T]; name: ImportName): T =
-  if name notin group:
-    raise newException(KeyError, "not found")
-  for item in items(group):
-    if item.importName == name:
-      result = item
-      break
 
-proc free*(group: GitGroup) =
-  while len(group) > 0:
+  proc contains*(group: IdentityGroup; identity: Identity): bool =
     for item in items(group):
-      group.del item
-      break
+      result = item == identity
+      if result:
+        break
 
-proc contains*(group: IdentityGroup; identity: Identity): bool =
-  for item in items(group):
-    result = item == identity
-    if result:
-      break
+  proc contains*(group: IdentityGroup; name: PackageName): bool =
+    result = newIdentity(name) in group
 
-proc contains*(group: IdentityGroup; name: PackageName): bool =
-  result = newIdentity(name) in group
+  proc contains*(group: IdentityGroup; url: Uri): bool =
+    result = newIdentity(url) in group
 
-proc contains*(group: IdentityGroup; url: Uri): bool =
-  result = newIdentity(url) in group
+  proc add*[T](group: IdentityGroup[T]; value: T) =
+    if value in group:
+      raise newException(KeyError, "duplicates not supported")
+    group.incl value
 
-proc add*[T](group: IdentityGroup[T]; value: T) =
-  if value in group:
-    raise newException(KeyError, "duplicates not supported")
-  group.incl value
+    proc `[]`*[T](group: IdentityGroup[T]; identity: Identity): T =
+      block found:
+        for item in items(group):
+          if item == identity:
+            result = item
+            break found
+        raise newException(KeyError, "not found")
 
-proc `[]`*[T](group: IdentityGroup[T]; identity: Identity): T =
-  for item in items(group):
-    if item == identity:
-      result = item
-      break
+  proc `[]`*[T](group: IdentityGroup[T]; url: Uri): T =
+    result = group[newIdentity(url)]
 
-proc `[]`*[T](group: IdentityGroup[T]; url: Uri): T =
-  result = group[newIdentity(url)]
-
-proc `[]`*[T](group: IdentityGroup[T]; name: PackageName): T =
-  result = group[newIdentity(name)]
+  proc `[]`*[T](group: IdentityGroup[T]; name: PackageName): T =
+    result = group[newIdentity(name)]
