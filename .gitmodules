@@ -4,3 +4,6 @@
 [submodule "bump"]
 	path = bump
 	url = https://github.com/disruptek/bump
+[submodule "sorta"]
+	path = sorta
+	url = https://github.com/narimiran/sorta
