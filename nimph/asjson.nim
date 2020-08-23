@@ -7,9 +7,9 @@ import std/json
 import bump
 
 import nimph/spec
-import nimph/version
-import nimph/package
-import nimph/requirement
+import nimph/versions
+import nimph/packages
+import nimph/requirements
 
 proc toJson*(operator: Operator): JsonNode =
   result = newJString($operator)
