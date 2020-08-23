@@ -102,7 +102,7 @@ proc excl*[T](group: Group[T]; value: T) =
   if value in group:
     group.del value
 
-proc hash*[T](group: Group[T]): Hash =
+proc hash*(group: Group): Hash =
   var h: Hash = 0
   for item in items(group):
     h = h !& hash(item)
@@ -131,14 +131,6 @@ proc excl*[T, V](flagged: FlaggedGroup[T]; value: V) =
 
 proc contains*[T, V](flagged: FlaggedGroup[T]; value: V): bool =
   value in flagged.group
-
-when false:
-  proc contains*[K, V](group: Group[K, V]; url: Uri): bool =
-    ## true if a member of the group has the same (bare) url
-    for value in group.values:
-      if bareUrlsAreEqual(value.url, url):
-        result = true
-        break
 
 iterator reversed*[T](group: Group[T]): T =
   ## yield values in reverse order
