@@ -10,15 +10,14 @@ import gittyup
 
 import nimph/spec
 import nimph/paths
-import nimph/project
+import nimph/projects
 import nimph/nimble
 import nimph/config
 import nimph/thehub
-import nimph/package
-import nimph/dependency
-import nimph/group
-
-import nimph/requirement
+import nimph/packages
+import nimph/dependencies
+import nimph/groups
+import nimph/requirements
 
 type
   StateKind* = enum

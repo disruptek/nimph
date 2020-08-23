@@ -20,7 +20,7 @@ import nimph/thehub
 import nimph/config
 import nimph/packages
 import nimph/dependencies
-import nimph/locker
+import nimph/lockers
 import nimph/groups
 import nimph/requirements
 
