@@ -34,17 +34,18 @@ proc newIdentity*(name: PackageName): Identity =
   result = Identity(kind: Name, name: name)
 
 proc newIdentity*(url: Uri): Identity =
+  assert bare(url) == url
   result = Identity(kind: Url, url: url)
 
 proc newIdentity(s: string): Identity =
   ## create a new identity from an arbitrary string; it's crude!
   if ':' in s:
     try:
-      result = newIdentity(parseUri(s))
+      result = newIdentity(parseUri s)
     except:
       raise newException(ValueError, &"unable to parse requirement `{s}`")
   else:
-    result = newIdentity(packageName strip(s))
+    result = newIdentity(packageName s)
 
 proc `$`*(id: Identity): string =
   ## you won't be able to guess what this does
