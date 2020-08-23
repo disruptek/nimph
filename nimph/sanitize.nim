@@ -36,6 +36,7 @@ template cappableAdd(s: var string; c: char) =
 
 proc sanitizeIdentifier*(name: string; capsOkay = false): Option[NimIdentifier] =
   ## convert any string to a valid nim identifier in camel_Case
+  assert name == strip(name), "please strip whitespace"
   var id = ""
   block sanitized:
     if name.len == 0:
