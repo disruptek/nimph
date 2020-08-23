@@ -6,7 +6,7 @@ import std/hashes
 import std/strformat
 import std/sequtils
 import std/strutils
-import std/uri
+import std/uri except Url
 import std/json
 import std/options
 
@@ -27,8 +27,8 @@ type
     Merc = "hg"
     Nimble = "nimble"
 
-  Package* = ref object
-    name*: string
+  Package* = object
+    name*: PackageName
     url*: Uri
     dist*: Dist
     tags*: seq[string]
@@ -37,28 +37,30 @@ type
     web*: Uri
     naive*: bool
     local*: bool
-    path*: string
+    path*: AbsoluteDir
     author*: string
 
-  PackageGroup* = Group[string, Package]
+  Packages* = object
+    flags: set[Flag]
+    group: OrderedTable[Identity, Package]
 
   PackagesResult* = object
     ok*: bool
     why*: string
-    packages*: PackageGroup
+    packages*: Packages
     info: FileInfo
 
-proc importName*(package: Package): string =
-  result = package.name.importName.toLowerAscii
-  error &"import name {result} from {package.name}"
+proc importName*(package: Package): ImportName =
+  ## calculate how a package will be imported by the compiler
+  importName(package.name)
 
-proc newPackage*(name: string; path: string; dist: Dist;
-                 url: Uri): Package =
+proc newPackage*(name: PackageName; path: AbsoluteDir;
+                 dist: Dist; url: Uri): Package =
   ## create a new package that probably points to a local repo
   result = Package(name: name, dist: dist, url: url,
-                   path: path, local: path.dirExists)
+                   path: path, local: dirExists(path))
 
-proc newPackage*(name: string; dist: Dist; url: Uri): Package =
+proc newPackage*(name: PackageName; dist: Dist; url: Uri): Package =
   ## create a new package
   result = Package(name: name, dist: dist, url: url)
 
@@ -70,19 +72,18 @@ proc newPackage*(url: Uri): Package =
   # we had to guess at what the final name might be...
   result.naive = true
 
-proc newPackage(name: string; license: string; description: string): Package =
+proc newPackage(name: PackageName; license: string; desc: string): Package =
   ## create a new package for nimble's package list consumer
-  result = Package(name: name, license: license, description: description)
+  result = Package(name: name, license: license, description: desc)
 
 proc `$`*(package: Package): string =
-  result = package.name
+  result = $package.name
   if package.naive:
     result &= " (???)"
 
-proc newPackageGroup*(flags: set[Flag] = defaultFlags): PackageGroup =
+proc newPackages*(flags: set[Flag] = defaultFlags): Packages =
   ## instantiate a new package group for collecting a list of packages
-  result = PackageGroup(flags: flags)
-  result.init(flags, mode = modeStyleInsensitive)
+  result = Packages(flags: flags)
 
 proc aimAt*(package: Package; req: Requirement): Package =
   ## produce a refined package which might meet the requirement
@@ -98,16 +99,16 @@ proc aimAt*(package: Package; req: Requirement): Package =
   result.naive = false
   result.web = package.web
 
-proc add(group: PackageGroup; js: JsonNode) =
+proc add(group: Packages; js: JsonNode) =
   ## how packages get added to a group from the json list
   var
-    name = js["name"].getStr
+    name = packageName js["name"].getStr
     package = newPackage(name = name,
                          license = js.getOrDefault("license").getStr,
-                         description = js.getOrDefault("description").getStr)
+                         desc = js.getOrDefault("description").getStr)
 
   if "alias" in js:
-    raise newException(ValueError, "don't add aliases thusly")
+    raise newException(Defect, "don't add aliases thusly")
 
   if "url" in js:
     package.url = js["url"].getStr.parseUri
@@ -124,19 +125,19 @@ proc add(group: PackageGroup; js: JsonNode) =
   if "tags" in js:
     package.tags = mapIt(js["tags"], it.getStr.toLowerAscii)
 
-  group.add name, package
+  group.add newIdentity(name), package
 
-proc getOfficialPackages*(nimbleDir: string): PackagesResult {.raises: [].} =
+proc getOfficialPackages*(nimbleDir: AbsoluteDir): PackagesResult =
   ## parse the official packages list from nimbledir
   var
-    filename = ///nimbleDir
-  if filename.endsWith(//////PkgDir):
-    filename = nimbledir.parentDir / officialPackages
-  else:
-    filename = nimbledir / officialPackages
+    filename =
+      if nimbleDir.endsWith PkgDir:
+        nimbleDir.parentDir / officialPackages.RelativeFile
+      else:
+        nimbleDir / officialPackages.RelativeFile
 
   # make sure we have a sane return value
-  result = PackagesResult(ok: false, why: "", packages: newPackageGroup())
+  result = PackagesResult(ok: false, why: "", packages: newPackages())
 
   var group = result.packages
   block parsing:
@@ -147,29 +148,28 @@ proc getOfficialPackages*(nimbleDir: string): PackagesResult {.raises: [].} =
         break
 
       # grab the file info for aging purposes
-      result.info = getFileInfo(filename)
+      result.info = getFileInfo($filename)
 
       # okay, i guess we have to read and parse this silly thing
       let
-        content = readFile(filename)
+        content = readFile($filename)
         js = parseJson(content)
 
       # consume the json array
       var
-        aliases: seq[tuple[name: string; alias: string]]
+        aliases: seq[tuple[name: PackageName; alias: PackageName]]
       for node in js.items:
         # if it's an alias, stash it for later
         if "alias" in node:
-          aliases.add (node.getOrDefault("name").getStr,
-                       node["alias"].getStr)
-          continue
-
-        # else try to add it to the group
-        try:
-          group.add node
-        except Exception as e:
-          notice node
-          warn &"error parsing package: {e.msg}"
+          aliases.add (packageName node.getOrDefault("name").getStr,
+                       packageName node["alias"].getStr)
+        else:
+          # else try to add it to the group
+          try:
+            group.add node
+          except Exception as e:
+            notice node
+            warn &"error parsing package: {e.msg}"
 
       # now add in the aliases we collected
       for name, alias in aliases.items:
@@ -196,7 +196,45 @@ proc ageInDays*(found: PackagesResult): int64 =
   ## days since the packages file was last refreshed
   result = (getTime() - found.info.lastWriteTime).inDays
 
-proc toUrl*(requirement: Requirement; group: PackageGroup): Option[Uri] =
+proc contains*(packages: Packages; name: PackageName): bool =
+  result = name in packages.group
+
+proc contains*(packages: Packages; package: Package): bool =
+  result = package.name in packages
+
+proc contains*(packages: Packages; url: Uri): bool =
+  for package in items(packages):
+    assert bare(package.url) == package.url
+    result = package.url == url
+    if result:
+      break
+
+proc contains*(packages: Packages; identity: Identity): bool =
+  case identity.kind
+  of Name:
+    result = identity.name in packages
+  of Url:
+    result = identity.url in packages
+
+proc `[]`*(packages: Packages; name: PackageName): Package =
+  result = packages.group[name]
+
+proc `[]`*(packages: Packages; url: Uri): Package =
+  block found:
+    for package in items(packages):
+      if package.url == url:
+        result = package
+        break found
+    raise newException(KeyError, "not found")
+
+proc `[]`*(packages: Packages; identity: Identity): Package =
+  case identity.kind
+  of Name:
+    result = packages[identity.name]
+  of Url:
+    result = packages[identity.url]
+
+proc toUrl*(requirement: Requirement; group: Packages): Option[Uri] =
   ## try to determine the distribution url for a requirement
   var url: Uri
 
@@ -220,7 +258,7 @@ proc toUrl*(requirement: Requirement; group: PackageGroup): Option[Uri] =
     url.anchor = requirement.release.asUrlAnchor
     result = url.some
 
-proc hasUrl*(group: PackageGroup; url: Uri): bool =
+proc hasUrl*(group: Packages; url: Uri): bool =
   ## true if the url seems to match a package in the group
   for value in group.values:
     result = bareUrlsAreEqual(value.url.convertToGit,
@@ -228,9 +266,9 @@ proc hasUrl*(group: PackageGroup; url: Uri): bool =
     if result:
       break
 
-proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
+proc matching*(group: Packages; req: Requirement): Packages =
   ## select a subgroup of packages that appear to match the requirement
-  result = newPackageGroup()
+  result = newPackages()
   if req.isUrl:
     let
       findurl = req.toUrl(group)
@@ -250,7 +288,7 @@ proc matching*(group: PackageGroup; req: Requirement): PackageGroup =
         when defined(debug):
           debug "matched the package by name"
 
-iterator urls*(group: PackageGroup): Uri =
+iterator urls*(group: Packages): Uri =
   ## yield (an ideally git) url for each package in the group
   for package in group.values:
     yield if package.dist == Git:
