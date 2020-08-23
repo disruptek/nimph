@@ -9,10 +9,10 @@ import bump
 import gittyup
 
 import nimph/spec
-import nimph/version
+import nimph/versions
 
-import nimph/group
-export group
+import nimph/groups
+export groups
 
 type
   VersionTags* = Group[Version, GitThing]
