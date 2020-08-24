@@ -16,9 +16,7 @@ import sorta
 import nimph/spec
 import nimph/requirements
 import nimph/paths
-
 import nimph/groups
-export groups
 
 type
   Dist* = enum
@@ -53,63 +51,52 @@ proc importName*(package: Package): ImportName =
   ## calculate how a package will be imported by the compiler
   importName(package.name)
 
-when false:
-  proc add(packages: Packages; id: Identity; package: Package) =
-    # this effectively asserts Identity.kind == Name
-    if id.name in packages:
-      raise newException(ValueError, "duplicates unsupported")
-    packages.group[id.name] = package
+iterator items*(packages: Packages): Package =
+  for item in values(packages):
+    yield item
 
-  proc add*(packages: Packages; name: PackageName; package: Package) =
-    if name in packages:
-      raise newException(ValueError, "duplicates unsupported")
-    packages.group[name] = package
+proc contains*(packages: Packages; package: Package): bool =
+  result = package.name in packages
+  assert packages[package.name] == package
 
-  iterator pairs*(packages: Packages): tuple[key: Identity; val: Package] =
-    for name, package in pairs(packages.group):
-      yield (key: newIdentity(name), val: package)
+proc contains*(packages: Packages; url: Uri): bool =
+  for package in values(packages):
+    assert bare(package.url) == package.url
+    result = package.url == url
+    if result:
+      break
 
-  iterator items*(packages: Packages): Package =
-    for item in values(packages.group):
-      yield item
+proc contains*(packages: Packages; identity: Identity): bool =
+  case identity.kind
+  of Name:
+    result = identity.name in packages
+  of Url:
+    result = identity.url in packages
 
-  proc contains*(packages: Packages; name: PackageName): bool =
-    result = name in packages.group
+proc add*(packages: var Packages; id: Identity; package: Package) =
+  # this effectively asserts Identity.kind == Name
+  if id.name in packages:
+    raise newException(ValueError, "duplicates unsupported")
+  packages[id.name] = package
 
-  proc contains*(packages: Packages; package: Package): bool =
-    result = package.name in packages
+iterator pairs*(packages: Packages): tuple[key: Identity; val: Package] =
+  for name, package in sorta.pairs(packages):
+    yield (key: newIdentity(name), val: package)
 
-  proc contains*(packages: Packages; url: Uri): bool =
-    for package in items(packages):
-      assert bare(package.url) == package.url
-      result = package.url == url
-      if result:
-        break
+proc `[]`*(packages: Packages; url: Uri): Package =
+  block found:
+    for package in values(packages):
+      if package.url == url:
+        result = package
+        break found
+    raise newException(KeyError, "not found")
 
-  proc contains*(packages: Packages; identity: Identity): bool =
-    case identity.kind
-    of Name:
-      result = identity.name in packages
-    of Url:
-      result = identity.url in packages
-
-  proc `[]`*(packages: Packages; name: PackageName): Package =
-    result = packages.group[name]
-
-  proc `[]`*(packages: Packages; url: Uri): Package =
-    block found:
-      for package in items(packages):
-        if package.url == url:
-          result = package
-          break found
-      raise newException(KeyError, "not found")
-
-  proc `[]`*(packages: Packages; identity: Identity): Package =
-    case identity.kind
-    of Name:
-      result = packages[identity.name]
-    of Url:
-      result = packages[identity.url]
+proc `[]`*(packages: Packages; identity: Identity): Package =
+  case identity.kind
+  of Name:
+    result = packages[identity.name]
+  of Url:
+    result = packages[identity.url]
 
 proc newPackage*(name: PackageName; path: AbsoluteDir;
                  dist: Dist; url: Uri): Package =
@@ -140,7 +127,7 @@ proc `$`*(package: Package): string =
 
 proc newPackages*(): Packages =
   ## instantiate a new package group for collecting a list of packages
-  result = Packages()
+  result = initSortedTable[PackageName, Package]()
 
 proc aimAt*(package: Package; req: Requirement): Package =
   ## produce a refined package which might meet the requirement
@@ -315,5 +302,5 @@ iterator urls*(group: Packages): Uri =
     else:
       package.url
 
-assert Packages is ImportGroup
-assert Packages is IdentityGroup
+assert Packages is ImportGroup[Package]
+assert Packages is IdentityGroup[Package]

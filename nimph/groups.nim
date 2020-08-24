@@ -30,25 +30,36 @@ type
     hash(s) is Hash
     `==`(s, t) is bool
 
-  Collectable[T] = concept c        ## a collection of suitable items
+  Collectable[T] = concept c, var w ## a collection of suitable items
     T is Suitable
     contains(c, T) is bool
     len(c) is Ordinal
     for item in items(c):           # ...that you can iterate
       item is T
+    for index, item in pairs(c):    # pairs iteration yields the index
+      item is T
+      del(w, index)                 # the index can be used for deletion
 
+#
+# define some stuff for the Groupable concept
+#
+proc del*[T](group: var Collectable[T]; value: T) =
+  for index, item in pairs(group):
+    if item == value:
+      group.del index
+      break
+
+type
   Groupable[T] = concept g, var w   ## a collection we can grow or shrink
     g is Collectable[T]
     add(w, T)
-    del(w, T)
+    #del(w, T) # -- see tests below
 
   Group[T] = concept g, var w       ## add the concept of a unique index
     g is Groupable[T]
     incl(w, T)                      # do nothing if T's index exists
     excl(w, T)                      # do nothing if T's index does not exist
     for index, item in pairs(g):    # pairs iteration yields the index
-      item is T
-      del(w, index)                 # the index can be used for deletion
       add(w, index, T)              # it will raise if the index exists
       `[]`(w, index) is T           # get via index
       `[]=`(w, index, T)            # set via index
@@ -114,9 +125,6 @@ iterator backwards*[T](group: Collectable): T =
   for index in countDown(items.high, items.low):
     yield items[index]
 
-#
-# now our customized implementations...
-#
 proc contains*(group: Group; name: ImportName): bool =
   for item in items(group):
     result = item.importName == name
@@ -175,3 +183,30 @@ proc `[]`*[T](group: Group[T]; url: Uri): T =
 
 proc `[]`*[T](group: Group[T]; name: PackageName): T =
   result = group[newIdentity(name)]
+
+when isMainModule:
+  import testes
+
+  testes:
+    ## we start with a simple "collection".
+    var g: seq[string]
+    ## add some values.
+    g.add "Goats"
+    g.add "pigs"
+    ## make an immutable copy.
+    let h = g
+    ## a string is a suitable type for tests.
+    assert string is Suitable
+    ## g is a Collectable of strings.
+    assert g is Collectable[string]
+    ## sure, fine, as expected.
+    assert g is Collectable
+    ## ok, great.  and this works, for now!
+    assert g is Groupable[string]
+    ## this does not -- but why not?
+    assert g is Groupable
+    ## h is immutable, so isn't Groupable[string], right?
+    assert h isnot Groupable[string]
+    ## if you add `del(w, T)` to the Groupable,
+    ## then g is no longer a Groupable[string]!
+    assert g is Groupable[string]

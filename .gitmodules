@@ -25,3 +25,6 @@
 [submodule "badresults"]
 	path = badresults
 	url = https://github.com/disruptek/badresults
+[submodule "testes"]
+	path = testes
+	url = https://github.com/disruptek/testes

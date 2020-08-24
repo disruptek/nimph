@@ -191,7 +191,7 @@ proc packageName*(url: Uri): PackageName =
   removeSuffix(path, {'/'})
   result = packageName(path.extractFilename.changeFileExt(""))
 
-proc importName(s: string; capsOkay = true): ImportName =
+proc importName*(s: string; capsOkay = true): ImportName =
   ## turns any string into a valid nim identifier
   let
     sane = sanitizeIdentifier(strip s, capsOkay = capsOkay)
