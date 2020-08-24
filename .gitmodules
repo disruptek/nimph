@@ -22,3 +22,6 @@
 [submodule "gittyup"]
 	path = gittyup
 	url = https://github.com/disruptek/gittyup
+[submodule "badresults"]
+	path = badresults
+	url = https://github.com/disruptek/badresults
