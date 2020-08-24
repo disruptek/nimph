@@ -7,3 +7,18 @@
 [submodule "sorta"]
 	path = sorta
 	url = https://github.com/narimiran/sorta
+[submodule "npeg"]
+	path = npeg
+	url = https://github.com/disruptek/npeg
+[submodule "cutelog"]
+	path = cutelog
+	url = https://github.com/disruptek/cutelog
+[submodule "jsonconvert"]
+	path = jsonconvert
+	url = https://github.com/disruptek/jsonconvert
+[submodule "cligen"]
+	path = cligen
+	url = https://github.com/disruptek/cligen
+[submodule "gittyup"]
+	path = gittyup
+	url = https://github.com/disruptek/gittyup
