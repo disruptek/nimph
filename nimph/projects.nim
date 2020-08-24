@@ -54,13 +54,6 @@ type
 
   Projects* = OrderedTable[AbsoluteDir, Project]
 
-  Releases* = TableRef[string, Release]
-
-  LinkedSearchResult* = ref object
-    via: LinkedSearchResult
-    source: string
-    search: SearchResult
-
   Requirements* = seq[Requirement]
   RequirementsTags* = Table[Requirements, GitThing]
 
@@ -156,13 +149,19 @@ template nimCfg*(project: Project): AbsoluteFile =
 
 template isSubmodule*(project: Project): bool =
   fileExists($project.gitDir)
+
 template hgDir*(project: Project): string = project.repo / dotHg
 template hasHg*(project: Project): bool = dirExists(project.hgDir)
+
 proc nimphConfig*(project: Project): AbsoluteFile =
   result = project.root / RelativeFile(configFile)
+
 template hasNimph*(project: Project): bool =
   fileExists(project.nimphConfig)
-template localDeps*(project: Project): string = `///`(project.repo / DepDir)
+
+template localDeps*(project: Project): string =
+  project.root / RelativeDir(DepDir)
+
 template packageDirectory*(project: Project): string {.deprecated.} =
   project.nimbleDir / PkgDir
 
@@ -175,7 +174,7 @@ template hasLocalDeps*(project: Project): bool =
 proc nimbleDir*(project: Project): AbsoluteDir =
   ## the path to the project's dependencies
   var
-    globaldeps = getHomeDir() / ///dotNimble
+    globaldeps = getHomeDir().toAbsoluteDir / RelativeDir(dotNimble)
 
   # if we instantiated this project from another, the implication is that we
   # want to point at whatever that parent project is using as its nimbleDir.
@@ -185,8 +184,9 @@ proc nimbleDir*(project: Project): AbsoluteDir =
   # otherwise, if we have configuration data, we should use it to determine
   # what the user might be using as a package directory -- local or elsewise
   elif project.cfg != nil:
-    result = project.cfg.suggestNimbleDir(local = project.localDeps,
-                                          global = globaldeps)
+    result = suggestNimbleDir(project.cfg,
+                              local = project.localDeps,
+                              global = globaldeps)
 
   # otherwise, we'll just presume some configuration-free defaults
   else:
@@ -568,56 +568,6 @@ proc guessDist(project: Project): Dist {.deprecated.} =
   else:
     result = Local
 
-proc parseNimbleLink(path: string): tuple[nimble: string; source: string] =
-  ## parse a dotNimbleLink file into its constituent components
-  let
-    lines = readFile(path).splitLines
-  if lines.len != 2:
-    raise newException(ValueError, "malformed " & path)
-  result = (nimble: lines[0], source: lines[1])
-
-proc linkedFindTarget(dir: AbsoluteDir; target = ""; nimToo = false;
-                      ascend = true): LinkedSearchResult =
-  ## recurse through .nimble-link files to find the .nimble
-  var
-    extensions = @[dotNimble, dotNimbleLink]
-  if nimToo:
-    extensions = @["".addFileExt("nim")] & extensions
-
-  # perform the search with our cleverly-constructed extensions
-  result = LinkedSearchResult()
-  result.search = findTarget($dir, extensions = extensions,
-                             target = target, ascend = ascend)
-
-  # if we found nothing, or we found a dotNimble, then we're done
-  let found = result.search.found
-  if found.isNone or found.get.ext != dotNimbleLink:
-    return
-
-  # now we need to parse this dotNimbleLink and recurse on the target
-  try:
-    let parsed = parseNimbleLink($get(found))
-    if fileExists(parsed.nimble):
-      result.source = parsed.source
-    let parent = parentDir(parsed.nimble).toAbsoluteDir
-    # specify the path to the .nimble and the .nimble filename itself
-    var recursed = linkedFindTarget(parent, nimToo = nimToo,
-                                    target = parsed.nimble.extractFilename,
-                                    ascend = ascend)
-    # if the recursion was successful, add ourselves to the chain and return
-    if recursed.search.found.isSome:
-      recursed.via = result
-      return recursed
-
-    # a failure mode yielding a useful explanation
-    result.search.message = &"{found.get} didn't lead to a {dotNimble}"
-  except ValueError as e:
-    # a failure mode yielding a less-useful explanation
-    result.search.message = e.msg
-
-  # critically, set the search to none because ultimately, we found nothing
-  result.search.found = none(Target)
-
 proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
   ## find the (remote?) url to a given local repository
   block complete:
@@ -792,14 +742,6 @@ iterator packageDirectories(project: Project): AbsoluteDir =
 
 proc newProjects*(): Projects =
   result = Projects()
-
-proc importName*(linked: LinkedSearchResult): string =
-  ## a uniform name usable in code for imports
-  if linked.via != nil:
-    result = linked.via.importName
-  else:
-    # if found isn't populated, we SHOULD crash here
-    result = linked.search.found.get.importName
 
 proc importName*(project: Project): string =
   ## a uniform name usable in code for imports

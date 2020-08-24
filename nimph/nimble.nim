@@ -8,6 +8,7 @@ import std/osproc
 import std/strformat
 
 import npeg
+import bump
 
 import nimph/spec
 import nimph/runner
@@ -22,6 +23,11 @@ type
   NimbleMeta* = ref object
     js: JsonNode
     link: seq[string]
+
+  LinkedSearchResult* = ref object
+    via: LinkedSearchResult
+    source: string
+    search: SearchResult
 
 proc parseNimbleDump*(input: string): Option[StringTableRef] =
   ## parse output from `nimble dump`
@@ -129,3 +135,62 @@ proc fetchNimbleMeta*(path: AbsoluteDir): NimbleMeta =
   except Exception as e:
     discard e # noqa
     warn &"error while trying to parse {nimbleMeta}: {e.msg}"
+
+proc parseNimbleLink*(path: string): tuple[nimble: string; source: string] =
+  ## parse a dotNimbleLink file into its constituent components
+  let
+    lines = readFile(path).splitLines
+  if lines.len != 2:
+    raise newException(ValueError, "malformed " & path)
+  result = (nimble: lines[0], source: lines[1])
+
+proc linkedFindTarget*(dir: AbsoluteDir; target = ""; nimToo = false;
+                       ascend = true): LinkedSearchResult =
+  ## recurse through .nimble-link files to find the .nimble
+  var
+    extensions = @[dotNimble, dotNimbleLink]
+  if nimToo:
+    extensions = @["".addFileExt("nim")] & extensions
+
+  # perform the search with our cleverly-constructed extensions
+  result = LinkedSearchResult()
+  result.search = findTarget($dir, extensions = extensions,
+                             target = target, ascend = ascend)
+
+  # if we found nothing, or we found a dotNimble, then we're done
+  let found = result.search.found
+  if found.isNone or found.get.ext != dotNimbleLink:
+    return
+
+  # now we need to parse this dotNimbleLink and recurse on the target
+  try:
+    let parsed = parseNimbleLink($get(found))
+    if fileExists(parsed.nimble):
+      result.source = parsed.source
+    let parent = parentDir(parsed.nimble).toAbsoluteDir
+    # specify the path to the .nimble and the .nimble filename itself
+    var recursed = linkedFindTarget(parent, nimToo = nimToo,
+                                    target = parsed.nimble.extractFilename,
+                                    ascend = ascend)
+    # if the recursion was successful, add ourselves to the chain and return
+    if recursed.search.found.isSome:
+      recursed.via = result
+      return recursed
+
+    # a failure mode yielding a useful explanation
+    result.search.message = &"{found.get} didn't lead to a {dotNimble}"
+  except ValueError as e:
+    # a failure mode yielding a less-useful explanation
+    result.search.message = e.msg
+
+  # critically, set the search to none because ultimately, we found nothing
+  result.search.found = none(Target)
+
+proc importName*(linked: LinkedSearchResult): string =
+  ## a uniform name usable in code for imports
+  if linked.via != nil:
+    result = linked.via.importName
+  else:
+    # if found isn't populated, we SHOULD crash here
+    result = linked.search.found.get.importName
+
