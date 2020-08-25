@@ -31,35 +31,30 @@ type
     `==`(s, t) is bool
 
   Collectable[T] = concept c, var w ## a collection of suitable items
-    T is Suitable
     contains(c, T) is bool
     len(c) is Ordinal
     for item in items(c):           # ...that you can iterate
       item is T
+      item is Suitable
     for index, item in pairs(c):    # pairs iteration yields the index
       item is T
+      item is Suitable
       del(w, index)                 # the index can be used for deletion
+    T is Suitable
 
-#
-# define some stuff for the Groupable concept
-#
-proc del*[T](group: var Collectable[T]; value: T) =
-  for index, item in pairs(group):
-    if item == value:
-      group.del index
-      break
-
-type
   Groupable[T] = concept g, var w   ## a collection we can grow or shrink
+    g is Collectable
     g is Collectable[T]
     add(w, T)
-    #del(w, T) # -- see tests below
+    del(w, T)
 
   Group[T] = concept g, var w       ## add the concept of a unique index
     g is Groupable[T]
     incl(w, T)                      # do nothing if T's index exists
     excl(w, T)                      # do nothing if T's index does not exist
     for index, item in pairs(g):    # pairs iteration yields the index
+      item is T
+      item is Suitable
       add(w, index, T)              # it will raise if the index exists
       `[]`(w, index) is T           # get via index
       `[]=`(w, index, T)            # set via index
@@ -184,6 +179,12 @@ proc `[]`*[T](group: Group[T]; url: Uri): T =
 proc `[]`*[T](group: Group[T]; name: PackageName): T =
   result = group[newIdentity(name)]
 
+proc del*[T](group: var Collectable[T]; value: T) =
+  for index, item in pairs(group):
+    if item == value:
+      group.del index
+      break
+
 when isMainModule:
   import testes
 
@@ -201,12 +202,23 @@ when isMainModule:
     assert g is Collectable[string]
     ## sure, fine, as expected.
     assert g is Collectable
+    ## del() was written against Collectable
+    g.del "pigs"
     ## ok, great.  and this works, for now!
     assert g is Groupable[string]
     ## this does not -- but why not?
     assert g is Groupable
     ## h is immutable, so isn't Groupable[string], right?
     assert h isnot Groupable[string]
-    ## if you add `del(w, T)` to the Groupable,
-    ## then g is no longer a Groupable[string]!
-    assert g is Groupable[string]
+    ## so does that mean we can add to h?
+    h.add "horses"
+    ## but wait, i thought h was Collectable
+    assert h is Collectable
+    ## so we can iterate and delete, right?
+    for index, item in pairs(h):
+      h.del index
+      break
+    ## oh, but we can use our del(var w, T)?
+    h.del "pigs"
+    ## right, so, uh, how is h a Groupable[string]?
+    assert h is Groupable[string]
