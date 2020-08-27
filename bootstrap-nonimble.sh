@@ -17,7 +17,7 @@ git clone --depth 1 https://github.com/disruptek/badresults.git
 git clone --depth 1 https://github.com/disruptek/github.git
 git clone --depth 1 https://github.com/disruptek/rest.git
 git clone --depth 1 https://github.com/disruptek/foreach.git
-nim c --path:nim-regex/src --path:nim-unicodedb/src --path:nim-unicodeplus/src --path:nim-segmentation/src --path:cligen nimterop/nimterop/toast.nim
+nim cpp --path:nim-regex/src --path:nim-unicodedb/src --path:nim-unicodeplus/src --path:nim-segmentation/src --path:cligen nimterop/nimterop/toast.nim
 nim c --outdir:.. --path:cligen --path:foreach --path:github/src --path:rest --path:npeg/src --path:jsonconvert --path:badresults --path:bump --path:cutelog --path:gittyup --path:nimgit2 --path:nimterop --path:nim-regex/src --path:nim-unicodedb/src --path:nim-unicodeplus/src --path:nim-segmentation/src nimph.nim
 cd ..
 
