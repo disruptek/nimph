@@ -704,7 +704,8 @@ proc cloner*(args: seq[string]; strict = false;
 
 template dumpHelp(fun: typed; use: string) =
   try:
-    discard fun(cmdline = @["--help"], prefix = "    ", usage = use)
+    discard fun(cmdline = @["--help"], prefix = "    ",
+                usage = use, noHdr = true)
   except HelpOnly:
     discard
 
