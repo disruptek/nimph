@@ -83,7 +83,8 @@ type
 
 template repo*(project: Project): string = project.nimble.repo
 template gitDir*(project: Project): string = project.repo / dotGit
-template hasGit*(project: Project): bool = dirExists(project.gitDir)
+template hasGit*(project: Project): bool =
+  dirExists(project.gitDir) or fileExists(project.gitDir)
 template hgDir*(project: Project): string = project.repo / dotHg
 template hasHg*(project: Project): bool = dirExists(project.hgDir)
 template nimphConfig*(project: Project): string = project.repo / configFile
@@ -877,6 +878,10 @@ proc relocateDependency*(parent: var Project; project: var Project) =
 
   block:
     if current == name:
+      break
+
+    if fileExists(project.gitDir):
+      debug &"not renaming `{current}` to `{name}` -- it's a submodule"
       break
 
     if dirExists(future):
