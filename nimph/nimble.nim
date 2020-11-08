@@ -193,4 +193,3 @@ proc importName*(linked: LinkedSearchResult): string =
   else:
     # if found isn't populated, we SHOULD crash here
     result = linked.search.found.get.importName
-
