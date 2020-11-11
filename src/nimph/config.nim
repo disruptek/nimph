@@ -9,6 +9,7 @@ import std/options
 import std/strutils
 import std/algorithm
 
+import compiler/ast
 import compiler/idents
 import compiler/nimconf
 import compiler/options as compileropts
@@ -160,7 +161,13 @@ proc loadAllCfgs*(directory: string): ConfigRef =
 
     # now follow the compiler process of loading the configs
     var cache = newIdentCache()
-    loadConfigs(NimCfg.RelativeFile, cache, result)
+
+    # thanks, araq
+    when (NimMajor, NimMinor) >= (1, 5):
+      var idgen = IdGenerator(module: 0.int32, item: 0.int32)
+      loadConfigs(NimCfg.RelativeFile, cache, result, idgen)
+    else:
+      loadConfigs(NimCfg.RelativeFile, cache, result)
 
   when defined(debugPath):
     debug "loaded", result.searchPaths.len, "search paths"
