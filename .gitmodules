@@ -28,3 +28,7 @@
 [submodule "testes"]
 	path = testes
 	url = https://github.com/disruptek/testes
+[submodule "ups"]
+	path = ups
+	url = https://github.com/disruptek/ups
+  branch = master

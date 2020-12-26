@@ -11,7 +11,7 @@ import cutelog
 export cutelog
 
 import nimph/paths
-import nimph/sanitize
+import ups/sanitize
 
 type
   Flag* {.pure.} = enum
