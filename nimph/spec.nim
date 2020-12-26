@@ -6,34 +6,12 @@ import std/uri
 import std/os
 import std/times
 
-import compiler/pathutils
-
+import bump
 import cutelog
 export cutelog
 
-import nimph/sanitize
-
-# slash attack ///////////////////////////////////////////////////
-when NimMajor >= 1 and NimMinor >= 1:
-  template `///`*(a: string): string =
-    # ensure a trailing DirSep
-    joinPath(a, $DirSep, "")
-  template `///`*(a: AbsoluteFile | AbsoluteDir): string =
-    # ensure a trailing DirSep
-    `///`(a.string)
-  template `//////`*(a: string | AbsoluteFile | AbsoluteDir): string =
-    # ensure a trailing DirSep and a leading DirSep
-    joinPath($DirSep, "", `///`(a), $DirSep, "")
-else:
-  template `///`*(a: string): string =
-    # ensure a trailing DirSep
-    joinPath(a, "")
-  template `///`*(a: AbsoluteFile | AbsoluteDir): string =
-    # ensure a trailing DirSep
-    `///`(a.string)
-  template `//////`*(a: string | AbsoluteFile | AbsoluteDir): string =
-    # ensure a trailing DirSep and a leading DirSep
-    "" / "" / `///`(a) / ""
+import nimph/paths
+import ups/sanitize
 
 type
   Flag* {.pure.} = enum
@@ -43,6 +21,8 @@ type
     Dry
     Safe
     Network
+
+  FlagStack = seq[set[Flag]]
 
   RollGoal* = enum
     Upgrade = "upgrade"
@@ -56,13 +36,17 @@ type
     repo*: string
     url*: Uri
 
+  ImportName* = distinct NimIdentifier  ## a valid nim import
+  PackageName* = distinct ImportName    ## a valid nimble package
+  DotNimble* = distinct AbsoluteFile
+
 const
   dotNimble* {.strdefine.} = "".addFileExt("nimble")
   dotNimbleLink* {.strdefine.} = "".addFileExt("nimble-link")
   dotGit* {.strdefine.} = "".addFileExt("git")
   dotHg* {.strdefine.} = "".addFileExt("hg")
-  DepDir* {.strdefine.} = //////"deps"
-  PkgDir* {.strdefine.} = //////"pkgs"
+  DepDir* {.strdefine.} = "deps"
+  PkgDir* {.strdefine.} = "pkgs"
   NimCfg* {.strdefine.} = "nim".addFileExt("cfg")
   ghTokenFn* {.strdefine.} = "github_api_token"
   ghTokenEnv* {.strdefine.} = "NIMPH_TOKEN"
@@ -77,21 +61,59 @@ const
   excludeMissingSearchPaths* {.booldefine.} = false
   excludeMissingLazyPaths* {.booldefine.} = true
   writeNimbleDirPaths* {.booldefine.} = false
-  shortDate* = initTimeFormat "yyyy-MM-dd"
   # add Safe to defaultFlags to, uh, default to Safe mode
   defaultFlags*: set[Flag] = {Quiet, Strict}
+  shortDate* = initTimeFormat "yyyy-MM-dd"
 
   # when true, try to clamp analysis to project-local directories
   WhatHappensInVegas* = false
+  # when true, try to support nimble
+  AndNimble* = false
 
-template withinDirectory*(path: string; body: untyped): untyped =
-  if not path.dirExists:
-    raise newException(ValueError, path & " is not a directory")
-  let cwd = getCurrentDir()
-  setCurrentDir(path)
-  defer:
-    setCurrentDir(cwd)
-  body
+# we track current options as a stack of flags
+var flags*: FlagStack = @[defaultFlags]
+proc contains*(flags: FlagStack; f: Flag): bool = f in flags[^1]
+proc contains*(flags: FlagStack; fs: set[Flag]): bool = fs <= flags[^1]
+template push*(flags: var FlagStack; fs: set[Flag]) = flags.add fs
+template withFlags*(fs: set[Flag]; body: untyped) =
+  try:
+    flags.push fs
+    var flags {.inject.} = flags[^1]
+    body
+  finally:
+    flags.pop
+
+proc `$`*(file: DotNimble): string {.borrow.}
+proc `$`*(name: ImportName): string {.borrow.}
+proc `$`*(name: PackageName): string {.borrow.}
+
+proc `==`*(a, b: ImportName): bool {.borrow.}
+proc `==`*(a, b: PackageName): bool {.borrow.}
+proc `<`*(a, b: ImportName): bool {.borrow.}
+proc `<`*(a, b: PackageName): bool {.borrow.}
+
+proc hash*(name: ImportName): Hash {.borrow.}
+proc hash*(name: PackageName): Hash {.borrow.}
+
+template repo*(file: DotNimble): string =
+  $parentDir(file.AbsoluteFile)
+
+template package*(file: DotNimble): string =
+  lastPathPart($file).changeFileExt("")
+
+template ext*(file: DotNimble): string =
+  splitFile($file).ext
+
+proc toDotNimble*(file: AbsoluteFile): DotNimble =
+  file.DotNimble
+
+proc toDotNimble*(file: string): DotNimble =
+  toAbsoluteFile(file).toDotNimble
+
+proc toDotNimble*(file: Target): DotNimble =
+  toDotNimble($file)
+
+proc fileExists*(file: DotNimble): bool {.borrow.}
 
 template isValid*(url: Uri): bool = url.scheme.len != 0
 
@@ -116,12 +138,6 @@ proc bareUrlsAreEqual*(a, b: Uri): bool =
       x = a.bare
       y = b.bare
     result = $x == $y
-
-proc pathToImport*(path: string): string =
-  ## calculate how a path will be imported by the compiler
-  assert path.len > 0
-  result = path.lastPathPart.split("-")[0]
-  assert result.len > 0
 
 proc normalizeUrl*(uri: Uri): Uri =
   result = uri
@@ -156,24 +172,16 @@ proc convertToSsh*(uri: Uri): Uri =
   result.hostname = ""
   result.scheme = ""
 
-proc packageName*(name: string): string =
+proc packageName*(name: string; capsOkay = true): PackageName =
   ## return a string that is plausible as a package name
-  when true:
-    result = name
+  let
+    sane = sanitizeIdentifier(strip name, capsOkay = capsOkay)
+  if sane.isSome:
+    result = get(sane).PackageName
   else:
-    const capsOkay =
-      when FilesystemCaseSensitive:
-        true
-      else:
-        false
-    let
-      sane = name.sanitizeIdentifier(capsOkay = capsOkay)
-    if sane.isSome:
-      result = sane.get
-    else:
-      raise newException(ValueError, "unable to sanitize `" & name & "`")
+    raise newException(ValueError, "invalid package name `" & name & "`")
 
-proc packageName*(url: Uri): string =
+proc packageName*(url: Uri): PackageName =
   ## guess the name of a package from a url
   when defined(debug) or defined(debugPath):
     assert url.isValid
@@ -183,34 +191,50 @@ proc packageName*(url: Uri): string =
   removeSuffix(path, {'/'})
   result = packageName(path.extractFilename.changeFileExt(""))
 
-proc importName*(path: string): string =
-  ## a uniform name usable in code for imports
-  assert path.len > 0
-  # strip any leading directories and extensions
-  result = splitFile(path).name
-  const capsOkay =
-    when FilesystemCaseSensitive:
-      true
-    else:
-      false
+proc importName*(s: string; capsOkay = true): ImportName =
+  ## turns any string into a valid nim identifier
   let
-    sane = path.sanitizeIdentifier(capsOkay = capsOkay)
-  # if it's a sane identifier, use it
+    sane = sanitizeIdentifier(strip s, capsOkay = capsOkay)
   if sane.isSome:
-    result = sane.get
-  elif not capsOkay:
-    # emit a lowercase name on case-insensitive filesystems
-    result = path.toLowerAscii
-  # else, we're just emitting the existing file's basename
+    # if it's a sane identifier, use it
+    result = get(sane).ImportName
+  else:
+    # otherwise, this is a serious problem!
+    raise newException(ValueError,
+                       "unable to determine import name for `" & s & "`")
 
-proc importName*(url: Uri): string =
+proc importName*(name: ImportName): ImportName = name
+
+proc importName*(name: PackageName): ImportName =
+  ## calculate how a package will be imported by the compiler
+  result = name.ImportName
+
+proc importName*(path: AbsoluteFile): ImportName =
+  ## calculate how a file will be imported by the compiler
+  assert not path.isEmpty
+  # strip any leading directories and extensions
+  result = importName splitFile($path).name
+
+proc importName*(path: AbsoluteDir): ImportName =
+  ## calculate how a path will be imported by the compiler
+  assert not path.isEmpty
+  var path = normalizePathEnd($path, trailingSep = false)
+  # strip off any -1.2.3 or -#branch garbage
+  result = importName path.lastPathPart.changeFileExt("").split("-")[0]
+
+proc importName*(file: DotNimble): ImportName =
+  ## calculate how a file will be imported by the compiler
+  result = importName(file.AbsoluteFile)
+
+proc importName*(url: Uri): ImportName =
+  ## a uniform name usable in code for imports
   let url = url.normalizeUrl
   if not url.isValid:
     raise newException(ValueError, "invalid url: " & $url)
   elif url.scheme == "file":
-    result = url.path.importName
+    result = importName toAbsoluteDir(url.path)
   else:
-    result = url.packageName.importName
+    result = importName packageName(url)
 
 proc forkTarget*(url: Uri): ForkTargetResult =
   result.url = url.normalizeUrl
@@ -234,7 +258,12 @@ proc forkTarget*(url: Uri): ForkTargetResult =
     if not result.ok:
       result.why = &"unable to parse url {result.url}"
 
-{.warning: "replace this with compiler code".}
-proc destylize*(s: string): string =
-  ## this is how we create a uniformly comparable token
-  result = s.toLowerAscii.replace("_")
+template timer*(name: string; body: untyped) =
+  ## crude timer for debugging purposes
+  let clock = epochTime()
+  body
+  debug name & " took " & $(epochTime() - clock)
+
+const
+  # these are used by the isVirtual(): bool test in requirement.nim
+  virtualNimImports* = [importName"nim", importName"Nim"]

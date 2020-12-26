@@ -13,15 +13,16 @@ import bump
 import gittyup
 
 import nimph/spec
-import nimph/package
-import nimph/project
-import nimph/version
+import nimph/paths
+import nimph/packages
+import nimph/projects
+import nimph/versions
 import nimph/versiontags
-import nimph/requirement
+import nimph/requirements
 import nimph/config
 
-import nimph/group
-export group
+import nimph/groups
+export groups
 
 type
   Dependency* = ref object
@@ -126,9 +127,8 @@ proc determineDeps*(project: Project): Option[Requires] =
       break
     # this is (usually) gratuitous, but it's also the right place
     # to perform this assignment, so...  go ahead and do it
-    for a, b in result.get.mpairs:
-      a.notes = project.name
-      b.notes = project.name
+    for r in mitems(get(result)):
+      r.notes = project.name
 
 proc determineDeps*(project: var Project): Option[Requires] =
   ## try to parse requirements of a project using the `nimble dump` output
@@ -150,7 +150,7 @@ proc peelRelease*(project: Project; release: Release): Release =
       break
 
     # else, open the repo
-    repository := openRepository(project.gitDir):
+    repository := openRepository($project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -251,7 +251,7 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
         for branch in project.matchingBranches(req.release.reference):
           debug &"found {req.release.reference} in {project}"
           yield newRelease($branch.oid, operator = Tag)
-        repository := openRepository(project.gitDir):
+        repository := openRepository($project.gitDir):
           error &"unable to open repo at `{project.repo}`: {code.dumpError}"
           break
         # else, it's a random oid, maybe?  look it up!
@@ -319,7 +319,7 @@ proc isSatisfiedBy*(req: Requirement; project: Project; release: Release): bool 
             break satisfied
 
           block:
-            repository := openRepository(project.gitDir):
+            repository := openRepository($project.gitDir):
               error &"unable to open repo at `{project.repo}`: {code.dumpError}"
               break
             thing := repository.lookupThing(name = release.reference):
@@ -425,7 +425,8 @@ proc add(dependency: var Dependency; packages: PackageGroup) =
   for package in packages.values:
     dependency.add package
 
-proc add(dependency: var Dependency; directory: string; project: Project) =
+proc add(dependency: var Dependency; directory: AbsoluteDir;
+         project: Project) =
   ## add a local project in the given directory to an existing dependency
   if dependency.projects.hasKey(directory):
     raise newException(Defect, "attempt to duplicate project dependency")
@@ -440,7 +441,7 @@ proc newDependency*(project: Project): Dependency =
     requirement = newRequirement(project.name, Equal, project.release)
   requirement.notes = project.name
   result = newDependency(requirement)
-  result.add project.repo, project
+  result.add project.root, project
 
 proc mergeContents(existing: var Dependency; dependency: Dependency): bool =
   ## combine two dependencies and yield true if a new project is added
@@ -460,10 +461,10 @@ proc addName(group: var DependencyGroup; req: Requirement; dep: Dependency) =
   for directory, project in dep.projects.pairs:
     let name = project.importName
     if name notin group.imports:
-      group.imports[name] = directory
-    elif group.imports[name] != directory:
+      group.imports[name] = $directory
+    elif group.imports[name] != $directory:
       warn &"name collision for import `{name}`:"
-      for path in [directory, group.imports[name]]:
+      for path in [$directory, group.imports[name]]:
         warn &"\t{path}"
   when defined(debugImportNames):
     when not defined(release) and not defined(danger):
@@ -524,19 +525,22 @@ proc addedRequirements*(dependencies: var DependencyGroup;
     # point to the merged dependency
     dependency = existing
 
-proc pathForName*(dependencies: DependencyGroup; name: string): Option[string] =
+proc pathForName*(dependencies: DependencyGroup;
+                  name: string): Option[AbsoluteDir] =
   ## try to retrieve the directory for a given import
   if dependencies.imports.hasKey(name):
-    result = dependencies.imports[name].some
+    result = some(dependencies.imports[name].toAbsoluteDir)
 
-proc projectForPath*(deps: DependencyGroup; path: string): Option[Project] =
+proc projectForPath*(deps: DependencyGroup;
+                     path: AbsoluteDir): Option[Project] =
   ## retrieve a project from the dependencies using its path
   for dependency in deps.values:
     if dependency.projects.hasKey(path):
-      result = dependency.projects[path].some
+      result = some(dependency.projects[path])
       break
 
-proc reqForProject*(group: DependencyGroup; project: Project): Option[Requirement] =
+proc reqForProject*(group: DependencyGroup;
+                    project: Project): Option[Requirement] =
   ## try to retrieve a requirement given a project
   for requirement, dependency in group.pairs:
     if project in dependency.projects:
@@ -593,19 +597,18 @@ proc resolveUsing*(projects: ProjectGroup; packages: PackageGroup;
         result.add findurl.get
         break success
 
-proc isUsing*(dependencies: DependencyGroup; target: Target;
+proc isUsing*(dependencies: DependencyGroup; target: AbsoluteDir;
               outside: Dependency = nil): bool =
-  ## true if the target points to a repo we're importing
+  ## true if the target directory holds a project we're importing
   block found:
-    for requirement, dependency in dependencies.pairs:
-      if dependency == outside:
-        continue
-      for directory, project in dependency.projects.pairs:
-        if directory == target.repo:
-          result = true
-          break found
+    for requirement, dependency in pairs(dependencies):
+      if dependency != outside:
+        for directory, project in pairs(dependency.projects):
+          result = directory == target
+          if result:
+            break found
   when defined(debug):
-    debug &"is using {target.repo}: {result}"
+    debug &"is using {target}: {result}"
 
 proc resolve*(project: Project; deps: var DependencyGroup;
               req: Requirement): bool
@@ -647,7 +650,7 @@ proc resolve*(project: Project; deps: var DependencyGroup;
              req: Requirement): bool =
   ## resolve a single project's requirement, storing the result
   var resolved = resolveUsing(deps.projects, deps.packages, req)
-  case resolved.packages.len:
+  case len(resolved.packages):
   of 0:
     warn &"unable to resolve requirement `{req}`"
     result = false
@@ -667,27 +670,30 @@ proc resolve*(project: Project; deps: var DependencyGroup;
 
     # else, we'll resolve dependencies introduced in any new dependencies.
     # note: we're using project.cfg and project.repo as a kind of scope
-    for recurse in resolved.projects.asFoundVia(project.cfg, project.repo):
+    for recurse in resolved.projects.asFoundVia(project.cfg):
       # if one of the existing dependencies is using the same project, then
       # we won't bother to recurse into it and process its requirements
-      if deps.isUsing(recurse.nimble, outside = resolved):
-        continue
-      result = result and recurse.resolve(deps)
-      # if we failed, there's no point in continuing
-      if not result:
-        break complete
+      if not deps.isUsing(recurse.root, outside = resolved):
+        result = result and recurse.resolve(deps)
+        # if we failed, there's no point in continuing
+        if not result:
+          break complete
 
-proc getOfficialPackages(project: Project): PackagesResult =
-  result = getOfficialPackages(project.nimbleDir)
+when AndNimble:
+  proc getOfficialPackages(project: Project): PackagesResult =
+    result = getOfficialPackages(project.nimbleDir)
 
 proc newDependencyGroup*(project: Project;
                          flags = defaultFlags): DependencyGroup =
   ## a convenience to load packages and projects for resolution
   result = newDependencyGroup(flags)
 
-  # try to load the official packages list; either way, a group will exist
-  let official = project.getOfficialPackages
-  result.packages = official.packages
+  when AndNimble:
+    # try to load the official packages list; either way, a group will exist
+    let official = project.getOfficialPackages
+    result.packages = official.packages
+  else:
+    result.packages = newPackageGroup(flags)
 
   # collect all the packages from the environment
   result.projects = project.childProjects
@@ -697,7 +703,7 @@ proc reset*(dependencies: var DependencyGroup; project: var Project) =
   # empty the group of all requirements and dependencies
   dependencies.clear
   # reset the project's configuration to find new paths, etc.
-  project.cfg = loadAllCfgs(project.repo)
+  project.cfg = loadAllCfgs(project.root)
   # rescan for package dependencies applicable to this project
   dependencies.projects = project.childProjects
 

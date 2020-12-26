@@ -9,18 +9,51 @@ import bump
 import npeg
 
 import nimph/spec
-import nimph/version
+import nimph/versions
 
 type
+  IdKind* {.pure.} = enum Name, Url
+  Identity* = object
+    case kind*: IdKind
+    of Name:
+      name*: PackageName
+    of Url:
+      url*: Uri
+
   # the specification of a package requirement
   Requirement* = ref object
-    identity*: string
+    identity*: Identity
     operator*: Operator
     release*: Release
     child*: Requirement
     notes*: string
 
-  Requires* = OrderedTableRef[Requirement, Requirement]
+  Requires* = seq[Requirement]
+
+proc newIdentity*(name: PackageName): Identity =
+  result = Identity(kind: Name, name: name)
+
+proc newIdentity*(url: Uri): Identity =
+  assert bare(url) == url
+  result = Identity(kind: Url, url: url)
+
+proc newIdentity(s: string): Identity =
+  ## create a new identity from an arbitrary string; it's crude!
+  if ':' in s:
+    try:
+      result = newIdentity(parseUri s)
+    except:
+      raise newException(ValueError, &"unable to parse requirement `{s}`")
+  else:
+    result = newIdentity(packageName s)
+
+proc `$`*(id: Identity): string =
+  ## you won't be able to guess what this does
+  result = case id.kind
+  of Name:
+    $id.name
+  of Url:
+    $id.url
 
 proc `$`*(req: Requirement): string =
   result = &"{req.identity}{req.operator}{req.release}"
@@ -123,6 +156,20 @@ proc isSatisfiedBy*(req: Requirement; spec: Release): bool =
     else:
       result = req.isSatisfiedBy spec.effectively
 
+proc hash*(id: Identity): Hash =
+  ## uniquely identify a requirement's package name or url
+  var h: Hash = 0
+  h = h !& hash(id.kind)
+  case id.kind
+  of Name:
+    h = h !& hash(id.name)
+  of Url:
+    h = h !& hash(id.url)
+  result = !$h
+
+proc `==`*(a, b: Identity): bool =
+  hash(a) == hash(b)
+
 proc hash*(req: Requirement): Hash =
   ## uniquely identify a requirement
   var h: Hash = 0
@@ -150,15 +197,10 @@ iterator children*(parent: Requirement; andParent = false): Requirement =
     req = req.child
     yield req
 
-proc newRequirement*(id: string; operator: Operator;
+proc newRequirement*(id: Identity; operator: Operator;
                      release: Release, notes = ""): Requirement =
   ## create a requirement from a release, eg. that of a project
-  when defined(debug):
-    if id != id.strip:
-      warn &"whitespace around requirement identity: `{id}`"
-  if id == "":
-    raise newException(ValueError, "requirements must have length, if not girth")
-  result = Requirement(identity: id.strip, release: release, notes: notes)
+  result = Requirement(identity: id, release: release, notes: notes)
   # if it parsed as Caret, Tilde, or Wild, then paint the requirement as such
   if result.release.kind in Wildlings:
     result.operator = result.release.kind
@@ -169,11 +211,13 @@ proc newRequirement*(id: string; operator: Operator;
   else:
     result.operator = operator
 
-proc newRequirement*(id: string; operator: Operator; spec: string): Requirement =
+proc newRequirement*(id: Identity; operator: Operator;
+                     spec: string): Requirement =
   ## parse a requirement from a string
   result = newRequirement(id, operator, newRelease(spec, operator = operator))
 
-proc newRequirement(id: string; operator: string; spec: string): Requirement =
+proc newRequirement(id: Identity; operator: string;
+                    spec: string): Requirement =
   ## parse a requirement with the given operator from a string
   var
     op = Equal
@@ -193,8 +237,8 @@ proc parseRequires*(input: string): Option[Requires] =
   ## parse a `requires` string output from `nimble dump`
   ## also supports `~` and `^` and `*` operators a la cargo
   var
-    requires = Requires()
-    lastname: string
+    requires: seq[Requirement]
+    lastname: Identity
 
   let
     peggy = peg "document":
@@ -208,19 +252,19 @@ proc parseRequires*(input: string): Option[Requires] =
       tag <- '#' * +(1 - ending)
       spec <- tag | ver
       anyrecord <- >name:
-        lastname = $1
-        let req = newRequirement(id = $1, operator = Wild, spec = "*")
+        lastname = newIdentity $1
+        let req = newRequirement(id = lastname, operator = Wild, spec = "*")
         if req notin requires:
-          requires[req] = req
+          requires.add req
       andrecord <- *white * >ops * *white * >spec:
         let req = newRequirement(id = lastname, operator = $1, spec = $2)
         if req notin requires:
-          requires[req] = req
+          requires.add req
       inrecord <- >name * *white * >ops * *white * >spec:
-        lastname = $1
-        let req = newRequirement(id = $1, operator = $2, spec = $3)
+        lastname = newIdentity $1
+        let req = newRequirement(id = lastname, operator = $2, spec = $3)
         if req notin requires:
-          requires[req] = req
+          requires.add req
       record <- (inrecord | andrecord | anyrecord) * ending
       document <- *record
     parsed = peggy.match(input)
@@ -229,11 +273,11 @@ proc parseRequires*(input: string): Option[Requires] =
 
 proc isVirtual*(requirement: Requirement): bool =
   ## is the requirement something we should overlook?
-  result = requirement.identity.toLowerAscii in ["nim"]
+  if requirement.identity.kind == Name:
+    result = requirement.identity.name.importName in virtualNimImports
 
 proc isUrl*(requirement: Requirement): bool =
-  ## a terrible way to determine if the requirement is a url
-  result = ':' in requirement.identity
+  requirement.identity.kind == Url
 
 proc asUrlAnchor*(release: Release): string =
   ## produce a suitable url anchor referencing a release
@@ -250,23 +294,21 @@ proc toUrl*(requirement: Requirement): Option[Uri] =
   ## try to determine the distribution url for a requirement
   # if it could be a url, try to parse it as such
   if requirement.isUrl:
-    try:
-      var url = parseUri(requirement.identity)
-      if requirement.release.kind in {Equal, Tag}:
-        url.anchor = requirement.release.asUrlAnchor
-      result = url.some
-    except:
-      warn &"unable to parse requirement `{requirement.identity}`"
+    var url = requirement.identity.url
+    if requirement.release.kind in {Equal, Tag}:
+      url.anchor = requirement.release.asUrlAnchor
+    result = some(url)
 
-proc importName*(requirement: Requirement): string =
+proc importName*(identity: Identity): ImportName =
+  case identity.kind
+  of Name:
+    result = importName identity.name
+  of Url:
+    result = importName identity.url
+
+proc importName*(requirement: Requirement): ImportName =
   ## guess the import name given only a requirement
-  block:
-    if requirement.isUrl:
-      let url = requirement.toUrl
-      if url.isSome:
-        result = url.get.importName
-        break
-    result = requirement.identity.importName
+  result = importName requirement.identity
 
 proc describe*(requirement: Requirement): string =
   ## describe a requirement and where it may have come from, if possible

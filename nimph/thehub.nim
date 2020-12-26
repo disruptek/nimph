@@ -17,7 +17,6 @@ import github
 import jsonconvert
 
 import nimph/spec
-import nimph/group
 
 const
   hubTime* = initTimeFormat "yyyy-MM-dd\'T\'HH:mm:ss\'Z\'"
@@ -113,7 +112,7 @@ type
       original*: bool
       score*: float
 
-  HubGroup* = ref object of Group[Uri, HubResult]
+  HubGroup* = OrderedTable[Uri, HubResult]
 
   HubSort* {.pure.} = enum
     Ascending = "asc"
@@ -124,6 +123,8 @@ type
     Stars = "stars"
     Forks = "forks"
     Updated = "updated"
+
+proc url*(r: HubResult): Uri = r.htmlUrl
 
 proc shortly(stamp: DateTime): string =
   ## render a date shortly
@@ -318,13 +319,8 @@ proc newHubResult*(kind: HubKind; js: JsonNode): HubResult =
   result.htmlUrl = js.get("html_url", "").parseUri
   result.init(js)
 
-proc newHubGroup*(flags: set[Flag] = defaultFlags): HubGroup =
-  result = HubGroup(flags: flags)
-  result.init(flags, mode = modeCaseSensitive)
-
-proc add*(group: var HubGroup; hub: HubResult) =
-  {.warning: "nim bug #12818".}
-  add[Uri, HubResult](group, hub.htmlUrl, hub)
+proc newHubGroup*(): HubGroup =
+  result = HubGroup()
 
 proc authorize*(request: Recallable): bool =
   ## find and inject credentials into a github request
@@ -374,20 +370,19 @@ proc queryMany(recallable: Recallable; kind: HubKind): Future[Option[HubGroup]]
     let js = parseJson(await response.body)
 
     # we know now that we'll be returning a group of some size
-    var
-      group = newHubGroup()
-    result = group.some
+    var group = newHubGroup()
 
     # add any parseable results to the group
     for node in js["items"].items:
       try:
         let item = newHubResult(kind, node)
         # if these are repositories, ignore forks
-        if kind == HubRepo and not item.original:
-          continue
-        group.add item
+        if kind != HubRepo or item.original:
+          group[item.url] = item
       except Exception as e:
         warn "error parsing repo: " & e.msg
+
+    result = some(group)
 
 proc getGitHubUser*(): Future[Option[HubResult]] {.async.} =
   ## attempt to retrieve the authorized user

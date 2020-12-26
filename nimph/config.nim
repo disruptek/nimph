@@ -1,3 +1,4 @@
+import std/sets
 import std/osproc
 import std/json
 import std/nre
@@ -13,7 +14,6 @@ import compiler/ast
 import compiler/idents
 import compiler/nimconf
 import compiler/options as compileropts
-import compiler/pathutils
 import compiler/condsyms
 import compiler/lineinfos
 
@@ -25,6 +25,7 @@ import bump
 
 import nimph/spec
 import nimph/runner
+import nimph/paths
 
 when defined(debugPath):
   from std/sequtils import count
@@ -39,8 +40,32 @@ type
     LockerRooms = "lockfiles"
 
   NimphConfig* = ref object
-    path: string
+    path: AbsoluteFile
     js: JsonNode
+
+  SubType = enum                    ## tokens we use for path substitution
+    stCache = "nimcache"
+    stConfig = "config"
+    stNimbleDir = "nimbledir"
+    stNimblePath = "nimblepath"
+    stProjectDir = "projectdir"
+    stProjectPath = "projectpath"
+    stLib = "lib"
+    stNim = "nim"
+    stHome = "home"
+
+  SubstitutePath = distinct string  ##
+  ## this is a path that /may/ have a $pathsub inside of it
+
+proc `$`(path: SubstitutePath): string {.borrow.}
+
+const
+  readSubs = {SubType.low .. SubType.high}
+  writeSubs =
+    when writeNimbleDirPaths:
+      readSubs
+    else:
+      {stCache, stConfig, stProjectDir, stLib, stNim, stHome}
 
 template excludeAllNotes(config: ConfigRef; n: typed) =
   config.notes.excl n
@@ -57,11 +82,10 @@ template setDefaultsForConfig(result: ConfigRef) =
     excludeAllNotes(result, hintConf)
   excludeAllNotes(result, hintLineTooLong)
 
-proc parseConfigFile*(path: string): Option[ConfigRef] =
+proc parseConfigFile*(path: AbsoluteFile): Option[ConfigRef] =
   ## use the compiler to parse a nim.cfg without changing to its directory
   var
     cache = newIdentCache()
-    filename = path.absolutePath
     config = newConfigRef()
 
   # define symbols such as, say, nimbabel;
@@ -70,7 +94,7 @@ proc parseConfigFile*(path: string): Option[ConfigRef] =
 
   setDefaultsForConfig(config)
 
-  if readConfigFile(filename.AbsoluteFile, cache, config):
+  if readConfigFile(path, cache, config):
     result = some(config)
 
 when false:
@@ -81,7 +105,7 @@ when false:
       var
         priorProjectPath = config.projectPath
       let
-        nextProjectPath = AbsoluteDir getCurrentDir()
+        nextProjectPath = getCurrentDir().toAbsoluteDir
         filename = nextProjectPath.string / NimCfg
 
       block complete:
@@ -118,28 +142,38 @@ var
 proc findPrefixDir(): AbsoluteDir =
   ## determine the prefix directory for the current compiler
   if compilerPrefixDir.isEmpty:
-    debug "find prefix"
-    let
-      compiler = runSomething("nim",
+    let compilerPath = findExe"nim"
+    if compilerPath == "":
+      raise newException(OSError, "cannot find a nim compiler in the path")
+
+    # start with the assumption that the compiler's parent directory works
+    compilerPrefixDir = parentDir(compilerPath.toAbsoluteFile)
+
+    if findExe("choosenim") == "":
+      # if choosenim is not found, we are done
+      result = compilerPrefixDir
+    else:
+      # if choosenim is in the path, we run the compiler to dump its config
+      let
+        compiler = runSomething(compilerPath,
                    @["--hints:off",
                      "--dump.format:json", "dump", "dummy"], {poDaemon})
-    if not compiler.ok:
-      warn "couldn't run the compiler to determine its location"
-      raise newException(OSError, "cannot find a nim compiler")
-    try:
-      let
-        js = parseJson(compiler.output)
-      compilerPrefixDir = AbsoluteDir js["prefixdir"].getStr
-    except JsonParsingError as e:
-      warn "`nim dump` json parse error: " & e.msg
-      raise
-    except KeyError:
-      warn "couldn't parse the prefix directory from `nim dump` output"
-      compilerPrefixDir = AbsoluteDir parentDir(findExe"nim")
-    debug "found prefix"
+      if not compiler.ok:
+        warn "couldn't run the compiler to determine its location"
+        warn "a choosenim-installed compiler might not work due to shims!"
+      try:
+        let
+          js = parseJson(compiler.output)
+        compilerPrefixDir = js["prefixdir"].getStr.toAbsoluteDir
+      except JsonParsingError as e:
+        warn "`nim dump` json parse error: " & e.msg
+        raise
+      except KeyError:
+        warn "couldn't parse the prefix directory from `nim dump` output"
+        warn "a choosenim-installed compiler might not work due to shims!"
   result = compilerPrefixDir
 
-proc loadAllCfgs*(directory: string): ConfigRef =
+proc loadAllCfgs*(directory: AbsoluteDir): ConfigRef =
   ## use the compiler to parse all the usual nim.cfgs;
   ## optionally change to the given (project?) directory first
 
@@ -157,7 +191,7 @@ proc loadAllCfgs*(directory: string): ConfigRef =
 
   withinDirectory(directory):
     # stuff the current directory as the project path
-    result.projectPath = AbsoluteDir getCurrentDir()
+    result.projectPath = getCurrentDir().toAbsoluteDir
 
     # now follow the compiler process of loading the configs
     var cache = newIdentCache()
@@ -172,60 +206,60 @@ proc loadAllCfgs*(directory: string): ConfigRef =
   when defined(debugPath):
     debug "loaded", result.searchPaths.len, "search paths"
     debug "loaded", result.lazyPaths.len, "lazy paths"
-    for path in result.lazyPaths.items:
-      debug "\t", path
-    for path in result.lazyPaths.items:
+    for path in items(result.lazyPaths):
+      debug "\t" & $path
+    for path in items(result.lazyPaths):
       if result.lazyPaths.count(path) > 1:
-        raise newException(Defect, "duplicate lazy path: " & path.string)
+        raise newException(Defect, "duplicate lazy path: " & $path)
 
-proc appendConfig*(path: Target; config: string): bool =
+proc appendConfig*(path: AbsoluteFile; line: string): bool =
   # make a temp file in an appropriate spot, with a significant name
   let
-    temp = createTemporaryFile(path.package, dotNimble)
+    temp = createTemporaryFile(lastPathPart($path), dotNimble).absolutePath
   debug &"writing {temp}"
-  # but remember to remove the temp file later
-  defer:
+
+  try:
+    block complete:
+      try:
+        # if there's already a config, we'll start there
+        if fileExists($path):
+          debug &"copying {path} to {temp}"
+          copyFile($path, temp)
+      except Exception as e:
+        warn &"unable make a copy of {path} to to {temp}: {e.msg}"
+        break complete
+
+      block writing:
+        # open our temp file for writing
+        var
+          writer = temp.open(fmAppend)
+        try:
+          # add our new content with a trailing newline
+          writer.writeLine "# added by nimph:\n" & line
+        finally:
+          # remember to close the temp file in any event
+          writer.close
+
+      # make sure the compiler can parse our new config
+      if parseConfigFile(temp.AbsoluteFile).isNone:
+        break complete
+
+      # copy the temp file over the original config
+      try:
+        debug &"copying {temp} over {path}"
+        copyFile(temp, $path)
+      except Exception as e:
+        warn &"unable make a copy of {temp} to to {path}: {e.msg}"
+        break complete
+
+      # it worked, thank $deity
+      result = true
+  finally:
     debug &"removing {temp}"
     if not tryRemoveFile(temp):
       warn &"unable to remove temporary file `{temp}`"
 
-  block complete:
-    try:
-      # if there's already a config, we'll start there
-      if fileExists($path):
-        debug &"copying {path} to {temp}"
-        copyFile($path, temp)
-    except Exception as e:
-      warn &"unable make a copy of {path} to to {temp}: {e.msg}"
-      break complete
-
-    block writing:
-      # open our temp file for writing
-      var
-        writer = temp.open(fmAppend)
-      try:
-        # add our new content with a trailing newline
-        writer.writeLine "# added by nimph:\n" & config
-      finally:
-        # remember to close the temp file in any event
-        writer.close
-
-    # make sure the compiler can parse our new config
-    if parseConfigFile(temp).isNone:
-      break complete
-
-    # copy the temp file over the original config
-    try:
-      debug &"copying {temp} over {path}"
-      copyFile(temp, $path)
-    except Exception as e:
-      warn &"unable make a copy of {temp} to to {path}: {e.msg}"
-      break complete
-
-    # it worked, thank $deity
-    result = true
-
-proc parseProjectCfg*(input: Target): ProjectCfgParsed =
+proc parseProjectCfg*(input: AbsoluteFile): ProjectCfgParsed =
   ## parse a .cfg for any lines we are entitled to mess with
   result = ProjectCfgParsed(ok: false, table: newTable[string, string]())
   var
@@ -256,11 +290,11 @@ proc parseProjectCfg*(input: Target): ProjectCfgParsed =
         otherkeys <- i"path" | i"p" | i"define" | i"d"
         keys <- nimblekeys | otherkeys
         strsetting <- hyphens * >keys * equals * >strvalue * ending:
-          table.add $1, unescape($2)
+          table[$1] = unescape($2)
         anysetting <- hyphens * >keys * equals * >anyvalue * ending:
-          table.add $1, $2
+          table[$1] = $2
         toggle <- hyphens * >keys * ending:
-          table.add $1, "it's enabled, okay?"
+          table[$1] = "it's enabled, okay?"
         line <- strsetting | anysetting | toggle | (*(1 - nl) * nl)
         document <- *line * !1
       parsed = peggy.match(content)
@@ -275,59 +309,49 @@ proc parseProjectCfg*(input: Target): ProjectCfgParsed =
 proc isEmpty*(config: NimphConfig): bool =
   result = config.js.kind == JNull
 
-proc newNimphConfig*(path: string): NimphConfig =
+proc newNimphConfig*(path: AbsoluteFile): NimphConfig =
   ## instantiate a new nimph config using the given path
-  result = NimphConfig(path: path.absolutePath)
-  if not result.path.fileExists:
+  result = NimphConfig(path: path)
+  if not fileExists(result.path):
     result.js = newJNull()
   else:
     try:
-      result.js = parseFile(path)
+      result.js = parseFile($path)
     except Exception as e:
       error &"unable to parse {path}:"
       error e.msg
 
-template isStdLib*(config: ConfigRef; path: string): bool =
-  path.startsWith(///config.libpath)
+template isStdLib*(config: ConfigRef; path: AbsoluteDir): bool =
+  path.startsWith(config.libpath)
 
-template isStdlib*(config: ConfigRef; path: AbsoluteDir): bool =
-  path.string.isStdLib
-
-iterator likelySearch*(config: ConfigRef; libsToo: bool): string =
-  ## yield /-terminated directory paths likely added via --path
-  for search in config.searchPaths.items:
-    let
-      search = ///search
+iterator likelySearch*(config: ConfigRef; libsToo: bool): AbsoluteDir =
+  ## yield absolute directory paths likely added via --path
+  for search in items(config.searchPaths):
     # we don't care about library paths
-    if not libsToo and config.isStdLib(search):
-      continue
-    yield search
+    if libsToo or not config.isStdLib(search):
+      yield search
 
-iterator likelySearch*(config: ConfigRef; repo: string; libsToo: bool): string =
-  ## yield /-terminated directory paths likely added via --path
-  when defined(debug):
-    if repo != repo.absolutePath:
-      error &"repo {repo} wasn't normalized"
-
+iterator likelySearch*(config: ConfigRef; repo: AbsoluteDir;
+                       libsToo: bool): AbsoluteDir =
+  ## yield absolute directory paths likely added via --path
   for search in config.likelySearch(libsToo = libsToo):
     # limit ourselves to the repo?
     when WhatHappensInVegas:
-      if search.startsWith(repo):
+      if startsWith($search, $repo):
         yield search
     else:
       yield search
 
-iterator likelyLazy*(config: ConfigRef; least = 0): string =
-  ## yield /-terminated directory paths likely added via --nimblePath
+iterator likelyLazy*(config: ConfigRef; least = 0): AbsoluteDir =
+  ## yield absolute directory paths likely added via --nimblePath
   # build a table of sightings of directories
-  var popular = newCountTable[string]()
-  for search in config.lazyPaths.items:
+  var popular = newCountTable[AbsoluteDir]()
+  for search in items(config.lazyPaths):
     let
-      search = ///search
-      parent = ///parentDir(search)
+      parent = parentDir(search)
     when defined(debugPath):
       if search in popular:
-        raise newException(Defect, "duplicate lazy path: " & search)
+        raise newException(Defect, "duplicate lazy path: " & $search)
     if search notin popular:
       popular.inc search
     if search != parent:               # silly: elide /
@@ -340,246 +364,203 @@ iterator likelyLazy*(config: ConfigRef; least = 0): string =
   # yield the directories that exist
   for search, count in popular.pairs:
     # maybe we can ignore unpopular paths
-    if least > count:
-      continue
-    yield search
+    if least <= count:
+      yield search
 
-iterator likelyLazy*(config: ConfigRef; repo: string; least = 0): string =
-  ## yield /-terminated directory paths likely added via --nimblePath
-  when defined(debug):
-    if repo != repo.absolutePath:
-      error &"repo {repo} wasn't normalized"
-
+iterator likelyLazy*(config: ConfigRef; repo: AbsoluteDir;
+                     least = 0): AbsoluteDir =
+  ## yield absolute directory paths likely added via --nimblePath
   for search in config.likelyLazy(least = least):
     # limit ourselves to the repo?
     when WhatHappensInVegas:
-      if search.startsWith(repo):
+      if startsWith($search, $repo):
         yield search
     else:
       yield search
 
-iterator packagePaths*(config: ConfigRef; exists = true): string =
-  ## yield package paths from the configuration as /-terminated strings;
+iterator packagePaths*(config: ConfigRef; exists = true): AbsoluteDir =
+  ## yield package paths from the configuration as absolute directories;
   ## if the exists flag is passed, then the path must also exist.
   ## this should closely mimic the compiler's search
-
-  # the method by which we de-dupe paths
-  const mode =
-    when FilesystemCaseSensitive:
-      modeCaseSensitive
-    else:
-      modeCaseInsensitive
-  var
-    paths: seq[string]
-    dedupe = newStringTable(mode)
-
-  template addOne(p: AbsoluteDir) =
-    let
-      path = ///path
-    if path in dedupe:
-      continue
-    dedupe[path] = ""
-    paths.add path
-
   if config == nil:
     raise newException(Defect, "attempt to load search paths from nil config")
 
+  var dedupe = initHashSet[AbsoluteDir]()
+
+  # yield search paths first; these are more likely to be explicit
   for path in config.searchPaths:
-    addOne(path)
+    if not containsOrIncl(dedupe, path):
+      if not exists or dirExists(path):
+        yield path
+
   for path in config.lazyPaths:
-    addOne(path)
-  when defined(debugPath):
-    debug &"package directory count: {paths.len}"
+    if not containsOrIncl(dedupe, path):
+      if not exists or dirExists(path):
+        yield path
 
-  # finally, emit paths as appropriate
-  for path in paths:
-    if exists and not path.dirExists:
-      continue
-    yield path
-
-proc suggestNimbleDir*(config: ConfigRef; local = ""; global = ""): string =
+proc suggestNimbleDir*(config: ConfigRef;
+                       local: AbsoluteDir ; global: AbsoluteDir): AbsoluteDir =
   ## come up with a useful nimbleDir based upon what we find in the
   ## current configuration, the location of the project, and the provided
   ## suggestions for local or global package directories
-  var
-    local = local
-    global = global
-
   block either:
     # if a local directory is suggested, see if we can confirm its use
-    if local != "" and local.dirExists:
-      local = ///local
-      assert local.endsWith(DirSep)
+    if not local.isEmpty and dirExists(local):
       for search in config.likelySearch(libsToo = false):
-        if search.startsWith(local):
+        if startsWith(search, local):
           # we've got a path statement pointing to a local path,
           # so let's assume that the suggested local path is legit
           result = local
           break either
 
     # nim 1.1.1 supports nimblePath storage in the config;
-    # we follow a "standard" that we expect Nimble to use,
-    # too, wherein the last-added --nimblePath wins
-    when NimMajor >= 1 and NimMinor >= 1:
-      if config.nimblePaths.len > 0:
-        result = config.nimblePaths[0].string
+    # the last-added --nimblePath (first in the list) wins
+    when (NimMajor, NimMinor) >= (1, 1):
+      if len(config.nimblePaths) > 0:
+        result = config.nimblePaths[0]
         break either
 
     # otherwise, try to pick a global .nimble directory based upon lazy paths
     for search in config.likelyLazy:
-      if search.endsWith(PkgDir & DirSep):
-        result = search.parentDir  # ie. the parent of pkgs
+      if endsWith(search, PkgDir):
+        result = parentDir(search) # ie. the parent of pkgs
       else:
         result = search            # doesn't look like pkgs... just use it
       break either
 
     # otherwise, try to make one up using the suggestion
-    if global == "":
-      raise newException(IOError, "can't guess global {dotNimble} directory")
-    global = ///global
-    assert global.endsWith(DirSep)
+    if global.isEmpty:
+      raise newException(ValueError, "can't guess global {dotNimble} path")
     result = global
     break either
 
-iterator pathSubsFor(config: ConfigRef; sub: string; conf: string): string =
+iterator pathSubsFor(config: ConfigRef; sub: SubType;
+                     conf: AbsoluteDir): AbsoluteDir =
   ## a convenience to work around the compiler's broken pathSubs; the `conf`
   ## string represents the path to the "current" configuration file
-  block:
-    if sub.toLowerAscii notin ["nimbledir", "nimblepath"]:
-      yield ///config.pathSubs(&"${sub}", conf)
-      break
-
+  if sub notin {stNimbleDir, stNimblePath}:
+    # if we don't need to handle a nimbledir or nimblepath, it's one and done
+    yield config.pathSubs(&"${sub}", $conf).toAbsoluteDir
+  else:
     when declaredInScope nimbleSubs:
+      # use the later compiler's nimbleSubs()
       for path in config.nimbleSubs(&"${sub}"):
-        yield ///path
+        yield path.toAbsoluteDir
     else:
+      # earlier compilers don't have nimbleSubs(), so we'll emulate it;
       # we have to pick the first lazy path because that's what Nimble does
       for search in config.lazyPaths:
-        let
-          search = ///search
-        if search.endsWith(PkgDir & DirSep):
-          yield ///parentDir(search)
+        if endsWith(search, PkgDir):
+          yield parentDir(search)
         else:
           yield search
         break
 
-iterator pathSubstitutions(config: ConfigRef; path: string;
-                           conf: string; write: bool): string =
+iterator pathSubstitutions(config: ConfigRef; path: AbsoluteDir;
+                           conf: AbsoluteDir; write: bool): SubstitutePath =
   ## compute the possible path substitions, including the original path
-  const
-    readSubs = @["nimcache", "config", "nimbledir", "nimblepath",
-                 "projectdir", "projectpath", "lib", "nim", "home"]
-    writeSubs =
-      when writeNimbleDirPaths:
-        readSubs
-      else:
-        @["nimcache", "config", "projectdir", "lib", "nim", "home"]
   var
     matchedPath = false
   when defined(debug):
-    if not conf.dirExists:
+    if not dirExists(conf):
       raise newException(Defect, "passed a config file and not its path")
   let
-    path = ///path
-    conf = if conf.dirExists: conf else: conf.parentDir
+    conf = if dirExists(conf): conf else: parentDir(conf)
     substitutions = if write: writeSubs else: readSubs
 
-  for sub in substitutions.items:
-    for attempt in config.pathSubsFor(sub, conf):
+  for sub in items(substitutions):
+    for attempt in pathSubsFor(config, sub, conf):
       # ignore any empty substitutions
-      if attempt == "/":
-        continue
-      # note if any substitution matches the path
-      if path == attempt:
-        matchedPath = true
-      if path.startsWith(attempt):
-        yield path.replace(attempt, ///fmt"${sub}")
-  # if a substitution matches the path, don't yield it at the end
+      if not attempt.isEmpty and not attempt.isRootDir:
+        # note if any substitution matches the path
+        if path == attempt:
+          matchedPath = true
+        if startsWith(path, attempt):
+          # it's okay if paths that we yield here don't end in a DirSep
+          yield replace($path, $attempt, fmt"${sub}").SubstitutePath
+  # if we never matched the path,
   if not matchedPath:
-    yield path
+    # simply return the path we were provided
+    yield path.SubstitutePath
 
-proc bestPathSubstitution(config: ConfigRef; path: string; conf: string): string =
+proc bestPathSubstitution(config: ConfigRef; path: AbsoluteDir;
+                          conf: AbsoluteDir): SubstitutePath =
   ## compute the best path substitution, if any
   block found:
     for sub in config.pathSubstitutions(path, conf, write = true):
       result = sub
       break found
-    result = path
+    result = path.SubstitutePath
 
-proc removeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
+proc removeSearchPath*(config: ConfigRef; nimcfg: AbsoluteFile;
+                       path: AbsoluteDir): bool =
   ## try to remove a path from a nim.cfg; true if it was
   ## successful and false if any error prevented success
-  let
-    fn = $nimcfg
-
   block complete:
     # well, that was easy
-    if not fn.fileExists:
+    if not fileExists(nimcfg):
       break complete
 
     # make sure we can parse the configuration with the compiler
-    if parseConfigFile(fn).isNone:
+    if parseConfigFile(nimcfg).isNone:
       error &"the compiler couldn't parse {nimcfg}"
       break complete
 
     # make sure we can parse the configuration using our "naive" npeg parser
     let
-      parsed = nimcfg.parseProjectCfg
+      parsed = parseProjectCfg(nimcfg)
     if not parsed.ok:
       error &"could not parse {nimcfg} naïvely:"
       error parsed.why
       break complete
 
-    # sanity
-    when defined(debug):
-      if path.absolutePath != path:
-        raise newException(Defect, &"path `{path}` is not absolute")
-
     var
-      content = fn.readFile
+      content = readFile($nimcfg)
     # iterate over the entries we parsed naively,
     for key, value in parsed.table.pairs:
-      # skipping anything that it's a path,
-      if key.toLowerAscii notin ["p", "path", "nimblepath"]:
-        continue
-      # and perform substitutions to see if one might match the value
-      # we are trying to remove; the write flag is false so that we'll
-      # use any $nimbleDir substitutions available to us, if possible
-      for sub in config.pathSubstitutions(path, nimcfg.repo, write = false):
-        if sub notin [value, ///value]:
-          continue
-        # perform a regexp substition to remove the entry from the content
-        let
-          regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key.escapeRe &
-                      "[:=]\"?" & value.escapeRe & "/?\"?)\\s*")
-          swapped = content.replace(regexp, "")
-        # if that didn't work, cry a bit and move on
-        if swapped == content:
-          notice &"failed regex edit to remove path `{value}`"
-          continue
-        # make sure we search the new content next time through the loop
-        content = swapped
-        result = true
-        # keep performing more substitutions
+      # skipping anything that isn't a path,
+      if key.toLowerAscii in ["p", "path", "nimblepath"]:
+        let normalized = normal($value)
+        # and perform substitutions to see if one might match the value
+        # we are trying to remove; the write flag is false so that we'll
+        # use any $nimbleDir substitutions available to us, if possible
+        for sub in pathSubstitutions(config, path, parentDir(nimcfg),
+                                     write = false):
+          if normal($sub) == normalized:
+            # perform a regexp substition to remove the entry from the content
+            let
+              regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key.escapeRe &
+                          "[:=]\"?" & value.escapeRe & "/?\"?)\\s*")
+              swapped = content.replace(regexp, "")
+            # if that didn't work, cry a bit and move on
+            if swapped == content:
+              notice &"failed regex edit to remove path `{value}`"
+            else:
+              # make sure we search the new content next time through the loop
+              content = swapped
+              result = true
+            # keep performing more substitutions...
 
     # finally, write the edited content
-    fn.writeFile(content)
+    writeFile(nimcfg, content)
 
-proc addSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
+proc addSearchPath*(config: ConfigRef; nimcfg: AbsoluteFile;
+                    path: AbsoluteDir): bool =
   ## add the given path to the given config file, using the compiler's
   ## configuration as input to determine the best path substitution
   let
-    best = config.bestPathSubstitution(path, $nimcfg.repo)
+    best = config.bestPathSubstitution(path, parentDir(nimcfg))
   result = appendConfig(nimcfg, &"""--path="{best}"""")
 
-proc excludeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
+proc excludeSearchPath*(config: ConfigRef; nimcfg: AbsoluteFile;
+                        path: AbsoluteDir): bool =
   ## add an exclusion for the given path to the given config file, using the
   ## compiler's configuration as input to determine the best path substitution
   let
-    best = config.bestPathSubstitution(path, $nimcfg.repo)
+    best = config.bestPathSubstitution(path, parentDir(nimcfg))
   result = appendConfig(nimcfg, &"""--excludePath="{best}"""")
 
-iterator extantSearchPaths*(config: ConfigRef; least = 0): string =
+iterator extantSearchPaths*(config: ConfigRef; least = 0): AbsoluteDir =
   ## yield existing search paths from the configuration as /-terminated strings;
   ## this will yield library paths and nimblePaths with at least `least` uses
   if config == nil:

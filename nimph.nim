@@ -12,16 +12,17 @@ import gittyup
 import badresults
 
 import nimph/spec
+import nimph/paths
 import nimph/runner
-import nimph/project
+import nimph/projects
 import nimph/doctor
 import nimph/thehub
 import nimph/config
-import nimph/package
-import nimph/dependency
-import nimph/locker
-import nimph/group
-import nimph/requirement
+import nimph/packages
+import nimph/dependencies
+import nimph/lockers
+import nimph/groups
+import nimph/requirements
 
 template crash(why: string) =
   ## a good way to exit nimph
@@ -58,20 +59,19 @@ template prepareForTheWorst(body: untyped) =
   else:
     body
 
-template setupLocalProject(project: var Project; body: untyped) =
-  if not findProject(project, getCurrentDir()):
-    body
-  else:
+proc setupLocalProject(): Project =
+  prepareForTheWorst:
+    result = findProject(getCurrentDir().toAbsoluteDir)
+    if result.isNil:
+      error &"unable to find a project; try `git init .`?"
+      quit 1
     try:
-      debug "load all configs"
-      project.cfg = loadAllCfgs(project.repo)
+      debug &"load all configs from {result.root}"
+      result.cfg = loadAllCfgs(result.root)
       debug "done loading configs"
     except Exception as e:
-      crash "unable to parse nim configuration: " & e.msg
-
-template setupLocalProject(project: var Project) =
-  setupLocalProject(project):
-    crash &"unable to find a project; try `nimble init`?"
+      raise newException(ValueError,
+                         "unable to parse nim configuration: " & e.msg)
 
 template toggle(flags: set[Flag]; flag: Flag; switch: untyped) =
   when switch is bool:
@@ -93,22 +93,21 @@ template composeFlags(defaults): set[Flag] =
     toggle(flags, Network, network)
     flags
 
-proc findChildProjectUsing(group: DependencyGroup; name: string;
-                           flags: set[Flag]): Result[Project, string] =
+proc findChildProjectUsing(group: DependencyGroup; name: string): Result[Project, string] =
   ## search the group for a named project using options specified in flags
+  var name = importName name
   let
-    name = name.destylize
     found = group.projectForName(name)
 
   block complete:
     var
       nature = "dependency"
     if found.isSome:
-      result.ok found.get
+      result.ok get(found)
       break complete
     elif Strict notin flags:
       for child in group.projects.values:
-        if child.importName.destylize == name:
+        if child.importName == name:
           result.ok child
           break complete
       nature = "project"
@@ -125,14 +124,16 @@ proc searcher*(args: seq[string]; strict = false;
 
   if args.len == 0:
     crash &"a search was requested but no query parameters were provided"
-  let
-    group = waitfor searchHub(args)
-  if group.isNone:
-    crash &"unable to retrieve search results from github"
-  for repo in group.get.reversed:
-    fatal "\n" & repo.renderShortly
-  if group.get.len == 0:
-    fatal &"😢no results"
+  else:
+    let
+      group = waitfor searchHub(args)
+    if group.isNone:
+      crash &"unable to retrieve search results from github"
+    elif get(group).len == 0:
+      fatal &"😢no results"
+    else:
+      for repo in get(group).backwards:
+        fatal "\n" & repo.renderShortly
 
 proc fixer*(strict = false;
             log_level = logLevel; safe_mode = false; quiet = false;
@@ -143,9 +144,10 @@ proc fixer*(strict = false;
   setLogFilter(log_level)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
+  if dry_run:
+    flags.push flags + {DryRun}
   if project.doctor(dry = dry_run):
     fatal &"👌{project.name} version {project.version} lookin' good"
   elif not dry_run:
@@ -162,8 +164,7 @@ proc nimbler*(args: seq[string]; strict = false;
   setLogFilter(log_level)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   let
     nimble = project.runSomething("nimble", args)
@@ -179,17 +180,15 @@ proc pather*(names: seq[string]; strict = false;
   setLogFilter(log_level)
 
   # setup flags for the operation
-  let flags = composeFlags(defaultFlags)
-
+  flags.push composeFlags(defaultFlags):
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   if names.len == 0:
     crash &"give me an import name to retrieve its filesystem path"
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = flags)
+  var group = project.newDependencyGroup()
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
@@ -200,14 +199,14 @@ proc pather*(names: seq[string]; strict = false;
 
   for name in names.items:
     var
-      child = group.findChildProjectUsing(name, flags = flags)
+      child = group.findChildProjectUsing(name)
     if child.isOk:
-      echo child.get.repo
+      echo get(child).root
     else:
       error child.error
       result = 1
 
-proc runner*(args: seq[string]; git = false; strict = false;
+proc runion*(args: seq[string]; git = false; strict = false;
              log_level = logLevel; safe_mode = false; quiet = true;
              network = true; force = false; dry_run = false): int =
   ## this is another pather, basically, that invokes the arguments in the path
@@ -219,28 +218,27 @@ proc runner*(args: seq[string]; git = false; strict = false;
   setLogFilter(log_level)
 
   # setup flags for the operation
-  let flags = composeFlags(defaultFlags)
+  flags.push composeFlags(defaultFlags)
 
-  var
-    project: Project
-  setupLocalProject(project)
+    var
+      project = setupLocalProject()
 
-  # setup our dependency group
-  var group = project.newDependencyGroup(flags = flags)
-  if not project.resolve(group):
-    notice &"unable to resolve all dependencies for {project}"
+    # setup our dependency group
+    var group = project.newDependencyGroup()
+    if not project.resolve(group):
+      notice &"unable to resolve all dependencies for {project}"
 
-  # make sure we visit every project that fits the requirements
-  for req, dependency in group.pairs:
-    for child in dependency.projects.values:
-      if child.dist == Git or not git:
-        withinDirectory(child.repo):
-          info &"running {exe} in {child.repo}"
-          let
-            got = project.runSomething(exe, args)
-          if not got.ok:
-            error &"{exe} didn't like that in {child.repo}"
-            result = 1
+    # make sure we visit every project that fits the requirements
+    for req, dependency in group.pairs:
+      for child in dependency.projects.values:
+        if child.dist == Git or not git:
+          withinDirectory(child.root):
+            info &"running {exe} in {child.root}"
+            let
+              got = project.runSomething(exe, args)
+            if not got.ok:
+              error &"{exe} didn't like that in {child.root}"
+              result = 1
 
 proc rollChild(child: var Project; requirement: Requirement; goal: RollGoal;
                safe_mode = false; dry_run = false): bool =
@@ -299,14 +297,13 @@ proc updowner*(names: seq[string]; goal: RollGoal; strict = false;
   setLogFilter(log_level)
 
   # setup flags for the operation
-  let flags = composeFlags(defaultFlags)
+  flags.push composeFlags(defaultFlags)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = flags)
+  var group = project.newDependencyGroup()
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
@@ -321,12 +318,12 @@ proc updowner*(names: seq[string]; goal: RollGoal; strict = false;
     for name in names.items:
       let found = group.projectForName(name)
       if found.isSome:
-        var child = found.get
+        var child = get(found)
         let require = group.reqForProject(child)
         if require.isNone:
           let emsg = &"found `{name}` but not its requirement" # noqa
           raise newException(ValueError, emsg)
-        if not child.rollChild(require.get, goal = goal, dry_run = dry_run):
+        if not child.rollChild(get(require), goal = goal, dry_run = dry_run):
           result = 1
       else:
         error &"couldn't find `{name}` among our installed dependencies"
@@ -345,14 +342,13 @@ proc roller*(names: seq[string]; strict = false;
   setLogFilter(log_level)
 
   # setup flags for the operation
-  let flags = composeFlags(defaultFlags)
+  flags.push composeFlags(defaultFlags)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   # setup our dependency group
-  var group = project.newDependencyGroup(flags = flags)
+  var group = project.newDependencyGroup()
   if not project.resolve(group):
     notice &"unable to resolve all dependencies for {project}"
 
@@ -379,7 +375,7 @@ proc roller*(names: seq[string]; strict = false;
       # everything seems groovy at the beginning
       result = 0
       # add each requirement to the dependency tree
-      for requirement in requires.get.values:
+      for requirement in get(requires).values:
         var
           dependency = newDependency(requirement)
         # we really don't care if requirements are added here
@@ -404,8 +400,9 @@ proc roller*(names: seq[string]; strict = false;
   else:
     fatal &"👎{project.name} is not where you want it"
 
-proc graphProject(project: var Project; path: string; log_level = logLevel) =
-  fatal "  directory: " & path
+proc graphProject(project: var Project; path: AbsoluteDir;
+                  log_level = logLevel) =
+  fatal "  directory: " & $path
   fatal "    project: " & $project
   if project.dist == Git:
     # show tags for info or less
@@ -450,8 +447,7 @@ proc grapher*(names: seq[string]; strict = false;
   let flags = composeFlags(defaultFlags)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   # setup our dependency group
   var group = project.newDependencyGroup(flags = flags)
@@ -476,14 +472,14 @@ proc grapher*(names: seq[string]; strict = false;
         result = 1
       else:
         fatal ""
-        let require = group.reqForProject(child.get)
+        let require = group.reqForProject(get child)
         if require.isNone:
           notice &"found `{name}` but not its requirement" # noqa
-          child.get.graphProject(child.get.repo, log_level = log_level)
+          get(child).graphProject(get(child).root, log_level = log_level)
         else:
           {.warning: "nim bug #12818".}
           for requirement, dependency in group.mpairs:
-            if requirement == require.get:
+            if requirement == get(require):
               dependency.graphDep(requirement, log_level = log_level)
 
 proc dumpLockList(project: Project) =
@@ -501,8 +497,7 @@ proc lockfiler*(names: seq[string]; strict = false;
   setLogFilter(log_level)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   block:
     let name = names.join(" ")
@@ -525,8 +520,7 @@ proc unlockfiler*(names: seq[string]; strict = false;
   setLogFilter(log_level)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   block:
     let name = names.join(" ")
@@ -549,8 +543,7 @@ proc tagger*(strict = false;
   setLogFilter(log_level)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   if project.fixTags(dry_run = dry_run, force = force):
     if dry_run:
@@ -572,8 +565,7 @@ proc forker*(names: seq[string]; strict = false;
   let flags = composeFlags(defaultFlags)
 
   var
-    project: Project
-  setupLocalProject(project)
+    project = setupLocalProject()
 
   # setup our dependency group
   var group = project.newDependencyGroup(flags = flags)
@@ -593,21 +585,21 @@ proc forker*(names: seq[string]; strict = false;
       result = 1
       continue
     let
-      fork = child.get.forkTarget
+      fork = get(child).forkTarget
     if not fork.ok:
       error fork.why
       result = 1
       continue
-    info &"🍴forking {child.get}"
+    info &"🍴forking {get(child)}"
     let forked = waitfor forkHub(fork.owner, fork.repo)
     if forked.isNone:
       result = 1
       continue
-    fatal &"🔱{forked.get.web}"
-    case child.get.dist:
+    fatal &"🔱{get(forked).web}"
+    case get(child).dist:
     of Git:
       let name = defaultRemote
-      if not child.get.promoteRemoteLike(forked.get.git, name = name):
+      if not get(child).promoteRemoteLike(get(forked).git, name = name):
         notice &"unable to promote new fork to {name}"
     else:
       {.warning: "optionally upgrade a gitless install to clone".}
@@ -641,8 +633,8 @@ proc cloner*(args: seq[string]; strict = false;
     except:
       discard
 
-  var project: Project
-  setupLocalProject(project)
+  var
+    project = setupLocalProject()
 
   # if the input wasn't parsed to a url,
   if not url.isValid:
@@ -655,7 +647,7 @@ proc cloner*(args: seq[string]; strict = false;
 
     # and pluck the first result, presumed to be the best
     block found:
-      for repo in hubs.get.values:
+      for repo in get(hubs).values:
         url = repo.git
         name = repo.name
         break found
@@ -667,12 +659,12 @@ proc cloner*(args: seq[string]; strict = false;
 
   # perform the clone
   var
-    cloned: Project
-  if not project.clone(url, name, cloned):
+    cloned = project.clone(url, name)
+  if cloned.isNil:
     crash &"problem cloning {url}"
 
   # reset our paths to, hopefully, grab the new project
-  project.cfg = loadAllCfgs(project.repo)
+  project.cfg = loadAllCfgs(project.root)
 
   # setup our dependency group
   var group = project.newDependencyGroup(flags = flags)
@@ -680,7 +672,7 @@ proc cloner*(args: seq[string]; strict = false;
     notice &"unable to resolve all dependencies for {project}"
 
   # see if we can find this project in the dependencies
-  let needed = group.projectForPath(cloned.repo)
+  let needed = group.projectForPath(cloned.root)
 
   # if it's in there, let's get its requirement and roll to meet it
   block relocated:
@@ -690,11 +682,11 @@ proc cloner*(args: seq[string]; strict = false;
         warn &"unable to retrieve requirement for {cloned.name}"
       else:
         # rollTowards will relocate us, too
-        if cloned.rollTowards(requirement.get):
+        if cloned.rollTowards(get requirement):
           notice &"rolled {cloned.name} to {cloned.version}"
           # so skip the tail of this block (and a 2nd relocate)
           break relocated
-        notice &"unable to meet {requirement.get} with {cloned}"
+        notice &"unable to meet {get(requirement)} with {cloned}"
     # rename the directory to match head release
     project.relocateDependency(cloned)
 
@@ -738,7 +730,7 @@ when isMainModule:
   const
     release = projectVersion()
   if release.isSome:
-    clCfg.version = $release.get
+    clCfg.version = $get(release)
   else:
     clCfg.version = "(unknown version)"
 
@@ -767,7 +759,7 @@ when isMainModule:
               doc="graph project dependencies")
   dispatchGen(nimbler, cmdName = $scNimble, dispatchName = "run" & $scNimble,
               doc="Nimble handles other subcommands (with a proper nimbleDir)")
-  dispatchGen(runner, cmdName = $scRun, dispatchName = "run" & $scRun,
+  dispatchGen(runion, cmdName = $scRun, dispatchName = "run" & $scRun,
               stopWords = @["--"],
               doc="execute the program & arguments in every dependency directory")
   const
@@ -800,8 +792,8 @@ when isMainModule:
 
   const
     # these are our subcommands that we want to include in help
-    dispatchees = [scDoctor, scSearch, scClone, scPath, scFork, scLock, scUnlock,
-                   scTag, scUpDown, scRoll, scGraph, scRun]
+    dispatchees = [scDoctor, scSearch, scClone, scPath, scFork, scLock,
+                   scUnlock, scTag, scUpDown, scRoll, scGraph, scRun]
 
     # these are nimble subcommands that we don't need to warn about
     passthrough = ["install", "uninstall", "build", "test", "doc", "dump",

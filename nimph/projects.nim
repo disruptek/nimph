@@ -1,30 +1,8 @@
-#[
-
-this is the workflow we want...
-
-git clone --depth 1 --branch 1.8.0 someurl somedir
-
-  ... later ...
-
-git fetch origin tag 1.8.1
-git checkout 1.8.1
-
-some outstanding issues:
-
-✅clone a repo from a url;
-❌shallow clone with only the most recent reference?
-✅rename package directory to match nimble semantics;
-✅determine a url for the original repo -- use origin;
-✅determine the appropriate reference to add to the anchor;
-✅does the current commit match an existing tag?
-
-
-]#
-
 import std/math
 import std/hashes
 import std/strutils
 import std/tables
+import std/sets
 import std/uri
 import std/options
 import std/strformat
@@ -42,70 +20,161 @@ import nimph/spec
 import nimph/config
 import nimph/runner
 import nimph/nimble
-import nimph/package
-import nimph/version
+import nimph/packages
+import nimph/versions
 import nimph/thehub
 import nimph/versiontags
-import nimph/requirement
+import nimph/requirements
+import nimph/paths
 
-import nimph/group
-export group
+import nimph/groups
+export groups
 
 type
   Project* = ref object
+    case dist*: Dist
+    of Nimble:
+      develop*: LinkedSearchResult
+      nimble*: DotNimble
+      meta*: NimbleMeta
+      dump*: StringTableRef
+      version*: Version
+    of Git:
+      repository*: AbsoluteDir
+      tags*: GitTagTable
+    else:
+      discard
     name*: string
-    nimble*: Target
-    version*: Version
-    dist*: DistMethod
     release*: Release
-    dump*: StringTableRef
     config*: NimphConfig
     cfg*: ConfigRef
     mycfg*: ConfigRef
-    tags*: GitTagTable
-    meta*: NimbleMeta
     url*: Uri
     parent*: Project
-    develop*: LinkedSearchResult
 
-  ProjectGroup* = Group[string, Project]
+  Projects* = OrderedTable[AbsoluteDir, Project]
 
-  Releases* = TableRef[string, Release]
+  Requirements* = seq[Requirement]
+  RequirementsTags* = Table[Requirements, GitThing]
 
-  LinkedSearchResult* = ref object
-    via: LinkedSearchResult
-    source: string
-    search: SearchResult
+proc `$`*(project: Project): string =
+  if project.isNil:
+    result = &"(nil project)"
+  else:
+    result = &"{project.name}-{project.release}"
 
-  # same as Requires, for now
-  Requirements* = OrderedTableRef[Requirement, Requirement]
-  RequirementsTags* = Group[Requirements, GitThing]
+proc root*(project: Project): AbsoluteDir
 
-template repo*(project: Project): string = project.nimble.repo
-template gitDir*(project: Project): string = project.repo / dotGit
-template hasGit*(project: Project): bool =
-  dirExists(project.gitDir) or fileExists(project.gitDir)
+proc findDotNimble(project: Project): Option[DotNimble] =
+  debug &"find .nimble for {project}"
+  block:
+    if project.dist == Nimble:
+      if fileExists(project.nimble):
+        result = some(project.nimble)
+        break
+    let search = findTarget($project.root, ascend = false,
+                            extensions = @[dotNimble])
+    if search.found.isSome:
+      result = some(get(search.found).toDotNimble)
+
+proc root(file: DotNimble): AbsoluteDir =
+  ## find the project directory given a .nimble
+  assert not file.AbsoluteFile.isEmpty
+  result = parentDir(file.AbsoluteFile)
+
+proc root(dir: AbsoluteDir): AbsoluteDir =
+  ## find the project directory given a repository directory
+  assert not dir.isEmpty
+  result = dir
+  if endsWith(result, dotGit):
+    result = parentDir(result)
+
+proc root*(project: Project): AbsoluteDir =
+  ## it's the directory holding our .nimble
+  assert not project.isNil
+  case project.dist
+  of Nimble:
+    result = project.nimble.root
+  of Git:
+    result = project.repository.root
+  else:
+    raise newException(Defect, "unimplemented")
+
+proc gitDir*(project: Project): AbsoluteDir =
+  assert not project.isNil
+  case project.dist
+  of Git:
+    project.repository
+  of Nimble:
+    project.root / dotGit.RelativeDir
+  else:
+    raise newException(Defect, "unimplemented")
+
+proc hasNimble*(project: Project): bool =
+  case project.dist
+  of Git, Local:
+    false
+  of Nimble:
+    fileExists($project.nimble)
+  else:
+    raise newException(Defect, "unimplemented")
+
+proc hasGit*(project: Project): bool =
+  case project.dist
+  of Git:
+    true
+  of Nimble:
+    dirExists(project.gitDir) or fileExists($project.gitDir)
+  else:
+    raise newException(Defect, "unimplemented")
+
+when not AndNimble:
+  proc nimble*(project: Project): DotNimble =
+    if project.dist != Nimble:
+      raise newException(Defect, "nimble() on non-Nimble project")
+    let
+      search = findDotNimble(project)
+    if search.isNone:
+      error &"unable to find a {dotNimble} file for {project}"
+      quit 1
+    else:
+      result = get(search)
+
+template repo*(project: Project): string {.deprecated: "use root".} =
+  $project.root
+
+template nimCfg*(project: Project): AbsoluteFile =
+  ## the location of the project's nim.cfg
+  project.root / NimCfg.RelativeFile
+
+template isSubmodule*(project: Project): bool =
+  fileExists($project.gitDir)
+
 template hgDir*(project: Project): string = project.repo / dotHg
 template hasHg*(project: Project): bool = dirExists(project.hgDir)
-template nimphConfig*(project: Project): string = project.repo / configFile
-template hasNimph*(project: Project): bool = fileExists(project.nimphConfig)
-template localDeps*(project: Project): string = `///`(project.repo / DepDir)
+
+proc nimphConfig*(project: Project): AbsoluteFile =
+  result = project.root / RelativeFile(configFile)
+
+template hasNimph*(project: Project): bool =
+  fileExists(project.nimphConfig)
+
+template localDeps*(project: Project): string =
+  project.root / RelativeDir(DepDir)
+
 template packageDirectory*(project: Project): string {.deprecated.} =
   project.nimbleDir / PkgDir
 
 template hasReleaseTag*(project: Project): bool =
   project.release.kind == Tag
 
-template nimCfg*(project: Project): Target =
-  newTarget(project.nimble.repo / NimCfg)
-
 template hasLocalDeps*(project: Project): bool =
   dirExists(project.localDeps)
 
-proc nimbleDir*(project: Project): string =
+proc nimbleDir*(project: Project): AbsoluteDir =
   ## the path to the project's dependencies
   var
-    globaldeps = getHomeDir() / ///dotNimble
+    globaldeps = getHomeDir().toAbsoluteDir / RelativeDir(dotNimble)
 
   # if we instantiated this project from another, the implication is that we
   # want to point at whatever that parent project is using as its nimbleDir.
@@ -115,33 +184,32 @@ proc nimbleDir*(project: Project): string =
   # otherwise, if we have configuration data, we should use it to determine
   # what the user might be using as a package directory -- local or elsewise
   elif project.cfg != nil:
-    result = project.cfg.suggestNimbleDir(local = project.localDeps,
-                                          global = globaldeps)
+    result = suggestNimbleDir(project.cfg,
+                              local = project.localDeps,
+                              global = globaldeps)
 
   # otherwise, we'll just presume some configuration-free defaults
   else:
-    if project.hasLocalDeps:
-      result = project.localDeps
-    else:
-      result = globaldeps
-    result = absolutePath(result).normalizedPath
-
-proc `$`*(project: Project): string =
-  result = &"{project.name}-{project.release}"
+    result = toAbsoluteDir:
+      if project.hasLocalDeps:
+        project.localDeps
+      else:
+        globaldeps
 
 proc fetchConfig*(project: var Project; force = false): bool =
   ## ensure we've got a valid configuration to work with
   if project.cfg == nil or force:
     if project.parent == nil:
       debug &"config fetch for parent {project}"
-      project.cfg = loadAllCfgs(project.repo)
+      project.cfg = loadAllCfgs(project.root)
     else:
       project.cfg = project.parent.cfg
     result = true
   else:
     discard
     when defined(debug):
-      notice &"unnecessary config fetch for {project}"
+      if not force:
+        notice &"unnecessary config fetch for {project}"
 
 proc runSomething*(project: Project; exe: string; args: seq[string];
                    opts = {poParentStreams}): RunOutput =
@@ -173,27 +241,25 @@ proc guessVersion*(project: Project): Version =
     if not result.isValid:
       error &"the version in {project.nimble} seems to be invalid"
 
-proc fetchDump*(project: var Project; package: string; refresh = false): bool =
-  ## make sure the nimble dump is available
-  if project.dump == nil or refresh:
-    discard project.fetchConfig
-    let
-      dumped = fetchNimbleDump(package, nimbleDir = project.nimbleDir)
-    result = dumped.ok
-    if not result:
-      # puke on this for now...
-      raise newException(IOError, dumped.why)
-    # try to prevent a bug when the above changes
-    project.dump = dumped.table
-  else:
-    result = true
-
 proc fetchDump*(project: var Project; refresh = false): bool {.discardable.} =
   ## make sure the nimble dump is available
-  result = project.fetchDump(project.nimble.repo, refresh = refresh)
+  if project.hasNimble:
+    if project.dump != nil and not refresh:
+      result = true
+    else:
+      discard project.fetchConfig
+      let
+        dumped = fetchNimbleDump(project.root, nimbleDir = project.nimbleDir)
+      result = dumped.ok
+      if not result:
+        # puke on this for now...
+        raise newException(IOError, dumped.why)
+      # try to prevent a bug when the above changes
+      project.dump = dumped.table
 
 proc knowVersion*(project: var Project): Version =
   ## pull out all the stops to determine the version of a project
+  assert project.dist == Nimble
   block:
     # this is really the most likely to work, so start with a dump
     if project.dump != nil:
@@ -216,31 +282,46 @@ proc knowVersion*(project: var Project): Version =
         result = project.knowVersion
 
   if not result.isValid:
-    raise newException(IOError, "unable to determine {project.package} version")
+    let msg = &"unable to determine {project.name} version"
+    error msg
+    raise newException(ValueError, msg)
+
+proc newProject*(repo: GitRepository): Project =
+  ## instantiate a new project from the given repo
+  result = Project(dist: Git, repository: repositoryPath(repo).toAbsoluteDir)
+  var
+    splat = splitFile($result.root)
+  when false:
+    let
+      search = findDotNimble(project)
+    if search.found.isSome:
+      result.nimble = get(search.found)
+  # truncate any extension from the directory name (weirdos)
+  result.name = splat.name    # this is our nominal project name
+  assert result.name != "", repr(splat)
+  result.config = newNimphConfig(result.nimphConfig)
 
 proc newProject*(nimble: Target): Project =
   ## instantiate a new project from the given .nimble
-  new result
   if not fileExists($nimble):
     raise newException(ValueError,
                        "unable to instantiate a project w/o a " & dotNimble)
-  let
-    splat = absolutePath($nimble).normalizedPath.splitFile
-  result.nimble = (repo: splat.dir, package: splat.name, ext: splat.ext)
-  result.name = splat.name
-  result.config = newNimphConfig(splat.dir / configFile)
+  result = Project(dist: Nimble, nimble: nimble.toDotNimble)
+  result.name = result.nimble.package
+  result.config = newNimphConfig(result.nimphConfig)
 
 proc getHeadOid*(project: Project): GitResult[GitOid] =
   ## retrieve the #head oid from the project's repository
   if project.dist != Git:
     let emsg = &"{project} lacks a git repository to load" # noqa
     raise newException(Defect, emsg)
-  block:
-    repository := openRepository(project.gitDir):
-      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
-      result.err code
-      break
-    result = repository.getHeadOid
+  else:
+    block:
+      repository := repositoryOpen($project.gitDir):
+        error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+        result.err code
+        break
+      result = repository.getHeadOid
 
 proc demandHead*(repository: GitRepository): string =
   ## retrieve the repository's #head oid as a string, or ""
@@ -268,7 +349,7 @@ proc shortOid(oid: GitOid; size = 6): string =
 
 template matchingBranches(project: Project; body: untyped): untyped =
   block:
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen($project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
     for bref in repository.branches:
@@ -351,7 +432,7 @@ proc fetchTagTable*(project: var Project) =
   block:
     if project.dist != Git:
       break
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen($project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
     let
@@ -373,7 +454,7 @@ proc releaseSummary*(project: Project): string =
   else:
     # else, lookup the summary for the tag or commit
     block:
-      repository := openRepository(project.gitDir):
+      repository := repositoryOpen($project.gitDir):
         error &"unable to open repo at `{project.repo}`: {code.dumpError}"
         break
       thing := repository.lookupThing(project.release.reference):
@@ -460,11 +541,11 @@ proc inventRelease*(project: var Project) =
     if project.url.anchor.len > 0:
       project.release = newRelease(project.url.anchor, operator = Tag)
     # else if we have a version for the project, use that
-    elif project.version.isValid:
+    elif project.dist == Nimble and project.version.isValid:
       project.release = newRelease(project.version)
     else:
       # grab the directory name
-      let name = repo(project).lastPathPart
+      let name = lastPathPart($project.root)
       # maybe it's package-something
       var prefix = project.name & "-"
       if name.startsWith(prefix):
@@ -476,9 +557,9 @@ proc inventRelease*(project: var Project) =
         else:
           warn &"unable to parse reference from directory `{name}`"
 
-proc guessDist(project: Project): DistMethod =
+proc guessDist(project: Project): Dist {.deprecated.} =
   ## guess at the distribution method used to deposit the assets
-  if project.hasGit:
+  if project.hasGit or project.isSubmodule:
     result = Git
   elif project.hasHg:
     result = Merc
@@ -487,60 +568,11 @@ proc guessDist(project: Project): DistMethod =
   else:
     result = Local
 
-proc parseNimbleLink(path: string): tuple[nimble: string; source: string] =
-  ## parse a dotNimbleLink file into its constituent components
-  let
-    lines = readFile(path).splitLines
-  if lines.len != 2:
-    raise newException(ValueError, "malformed " & path)
-  result = (nimble: lines[0], source: lines[1])
-
-proc linkedFindTarget(dir: string; target = ""; nimToo = false;
-                      ascend = true): LinkedSearchResult =
-  ## recurse through .nimble-link files to find the .nimble
-  var
-    extensions = @[dotNimble, dotNimbleLink]
-  if nimToo:
-    extensions = @["".addFileExt("nim")] & extensions
-
-  # perform the search with our cleverly-constructed extensions
-  result = LinkedSearchResult()
-  result.search = findTarget(dir, extensions = extensions,
-                             target = target, ascend = ascend)
-
-  # if we found nothing, or we found a dotNimble, then we're done
-  let found = result.search.found
-  if found.isNone or found.get.ext != dotNimbleLink:
-    return
-
-  # now we need to parse this dotNimbleLink and recurse on the target
-  try:
-    let parsed = parseNimbleLink($found.get)
-    if fileExists(parsed.nimble):
-      result.source = parsed.source
-    # specify the path to the .nimble and the .nimble filename itself
-    var recursed = linkedFindTarget(parsed.nimble.parentDir, nimToo = nimToo,
-                                    target = parsed.nimble.extractFilename,
-                                    ascend = ascend)
-    # if the recursion was successful, add ourselves to the chain and return
-    if recursed.search.found.isSome:
-      recursed.via = result
-      return recursed
-
-    # a failure mode yielding a useful explanation
-    result.search.message = &"{found.get} didn't lead to a {dotNimble}"
-  except ValueError as e:
-    # a failure mode yielding a less-useful explanation
-    result.search.message = e.msg
-
-  # critically, set the search to none because ultimately, we found nothing
-  result.search.found = none(Target)
-
 proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
   ## find the (remote?) url to a given local repository
   block complete:
     block found:
-      repository := openRepository(project.gitDir):
+      repository := repositoryOpen($project.gitDir):
         error &"unable to open repo at `{project.repo}`: {code.dumpError}"
         break found
       let
@@ -582,10 +614,15 @@ proc createUrl*(project: Project; refresh = false): Uri =
     # make something up
     case project.dist:
     of Local:
-      # sometimes nimble provides a url during installation
-      if project.meta.hasUrl:
-        # sometimes...
-        result = project.meta.url
+      when AndNimble:
+        # sometimes nimble provides a url during installation
+        if project.meta.hasUrl:
+          # sometimes...
+          result = project.meta.url
+      else:
+        # we don't handle "Local" projects anymore
+        error &"unable to determine source url for {project.name}"
+        raise newException(Defect, "define AndNimble to support Nimble")
     of Git:
       # try looking at remotes
       let url = findRepositoryUrl(project, defaultRemote)
@@ -611,7 +648,7 @@ proc createUrl*(project: var Project; refresh = false): Uri =
   result = readonly.createUrl(refresh = refresh)
   if result != project.url:
     # update the nimble metadata with this new url
-    if not writeNimbleMeta(project.repo, result, result.anchor):
+    if not writeNimbleMeta(project.root, result, result.anchor):
       warn &"unable to update {project.name}'s {nimbleMeta}"
 
   # cache the result if the project is mutable
@@ -620,63 +657,81 @@ proc createUrl*(project: var Project; refresh = false): Uri =
 proc refresh*(project: var Project) =
   ## appropriate to run to scan for and set some basic project data
   let
-    mycfg = parseConfigFile($project.nimCfg)
+    mycfg = parseConfigFile(project.nimCfg)
   if mycfg.isSome:
     project.mycfg = mycfg.get
   project.url = project.createUrl(refresh = true)
-  project.dump = nil
-  project.version = project.knowVersion
+  case project.dist
+  of Nimble:
+    project.dump = nil
+    project.version = project.knowVersion
+  else:
+    discard
   project.inventRelease
 
-proc findProject*(project: var Project; dir: string;
-                  parent: Project = nil): bool =
+proc findProject*(dir: AbsoluteDir; parent: Project = nil): Project =
   ## locate a project starting from `dir` and set its parent if applicable
   block complete:
-    let
-      target = linkedFindTarget(dir, ascend = true)
-    # a failure lets us out early
-    if target.search.found.isNone:
-      if target.search.message != "":
-        error target.search.message
-      break complete
+    when AndNimble:
+      let
+        target = linkedFindTarget(dir, ascend = true)
+      # a failure lets us out early
+      if target.search.found.isNone:
+        if target.search.message != "":
+          error target.search.message
+        break complete
+      elif target.via != nil:
+        var
+          target = target  # shadow linked search result
+        # output some debugging data to show how we got from here to there
+        while target.via != nil:
+          debug &"--> via {target.via.search.found.get}"
+          target = target.via
 
-    elif target.via != nil:
-      var
-        target = target  # shadow linked search result
-      # output some debugging data to show how we got from here to there
-      while target.via != nil:
-        debug &"--> via {target.via.search.found.get}"
-        target = target.via
+      # there's really no scenario in which we need to instantiate a
+      # new parent project when looking for children...
+      if parent != nil:
+        if parent.nimble == target.search.found.get:
+          break complete
 
-    # there's really no scenario in which we need to instantiate a
-    # new parent project when looking for children...
-    if parent != nil:
-      if parent.nimble == target.search.found.get:
+      # create an instance and setup some basic (cheap) data
+      result = newProject(target.search.found.get)
+
+      # the parent will be set on child dependencies
+      result.parent = parent
+
+      # this is the nimble-link chain that we might have a use for
+      result.develop = target.via
+      result.meta = fetchNimbleMeta(result.repo)
+    else:
+      # get the buffer holding the path, if possible
+      path := repositoryDiscover($dir):
+        error &"no git repository found in any parent of `{dir}`"
         break complete
 
-    # create an instance and setup some basic (cheap) data
-    project = newProject(target.search.found.get)
-    # the parent will be set on child dependencies
-    project.parent = parent
-    # this is the nimble-link chain that we might have a use for
-    project.develop = target.via
-    project.meta = fetchNimbleMeta(project.repo)
-    project.dist = project.guessDist
+      # we have a path, so try to open the repo
+      repo := repositoryOpen(path):
+        error &"unable to open repo at `{path}`: {code.dumpError}"
+        break complete
+
+      # create an instance and setup some basic (cheap) data
+      result = newProject(repo)
+
+      # the parent will be set on child dependencies
+      result.parent = parent
+
     # load configs, create urls, set version and release, etc.
-    project.refresh
+    result.refresh
 
-    # if we cannot determine what release this project is, just bail
-    if not project.release.isValid:
-      # but make sure to zero out the result so as not to confuse the user
-      project = nil
-      error &"unable to determine reference for {project}"
-      break complete
+    if not result.release.isValid:
+      # we cannot determine what release this project is
+      notice &"unable to determine reference for {result.name}"
+      info "maybe add a commit?"
+    else:
+      # otherwise, we're golden
+      debug "found " & $result
 
-    # otherwise, we're golden
-    debug &"{project} version {project.version}"
-    result = true
-
-iterator packageDirectories(project: Project): string =
+iterator packageDirectories(project: Project): AbsoluteDir =
   ## yield directories according to the project's path configuration
   if project.parent != nil:
     raise newException(Defect, "nonsensical outside root project")
@@ -685,54 +740,44 @@ iterator packageDirectories(project: Project): string =
   for directory in project.cfg.packagePaths(exists = true):
     yield directory
 
-proc newProjectGroup*(flags: set[Flag] = defaultFlags): ProjectGroup =
-  const mode =
-    when FilesystemCaseSensitive:
-      modeCaseSensitive
-    else:
-      modeCaseInsensitive
-  result = ProjectGroup(flags: flags)
-  result.init(flags, mode = mode)
-
-proc importName*(linked: LinkedSearchResult): string =
-  ## a uniform name usable in code for imports
-  if linked.via != nil:
-    result = linked.via.importName
-  else:
-    # if found isn't populated, we SHOULD crash here
-    result = linked.search.found.get.importName
+proc newProjects*(): Projects =
+  result = Projects()
 
 proc importName*(project: Project): string =
   ## a uniform name usable in code for imports
-  if project.develop != nil:
-    result = project.develop.importName
+  if project.dist == Nimble:
+    if project.develop != nil:
+      result = project.develop.importName
+    else:
+      result = project.nimble.importName
   else:
-    result = project.nimble.importName
+    result = project.root.importName
 
-proc hasProjectIn*(group: ProjectGroup; directory: string): bool =
+proc hasProjectIn*(group: Projects; directory: AbsoluteDir): bool =
   ## true if a project is stored at the given directory
   result = group.hasKey(directory)
 
-proc getProjectIn*(group: ProjectGroup; directory: string): Project =
+proc getProjectIn*(group: Projects; directory: AbsoluteDir): Project =
   ## retrieve a project via its path
   result = group.get(directory)
 
-proc mgetProjectIn*(group: var ProjectGroup; directory: string): var Project =
+proc mgetProjectIn*(group: var Projects;
+                    directory: AbsoluteDir): var Project =
   ## retrieve a mutable project via its path
   result = group.mget(directory)
 
-proc availableProjects*(project: Project): ProjectGroup =
+proc availableProjects*(project: Project): Projects =
   ## find packages locally available to a project; note that
   ## this will include the project itself
-  result = newProjectGroup()
-  result.add project.repo, project
+  result = newProjects()
+  result[project.root] = project
   for directory in project.packageDirectories:
-    var proj: Project
-    if findProject(proj, directory, parent = project):
-      if proj.repo notin result:
-        result.add proj.repo, proj
-    else:
+    let proj = findProject(directory, parent = project)
+    if proj.isNil:
       debug &"no package found in {directory}"
+    else:
+      if proj.root notin result:
+        result[proj.root] = proj
 
 proc `==`*(a, b: Project): bool =
   ## a dirty (if safe) way to compare equality of projects
@@ -740,8 +785,8 @@ proc `==`*(a, b: Project): bool =
     result = a.isNil == b.isNil
   else:
     let
-      apath = $a.nimble
-      bpath = $b.nimble
+      apath = $a.root
+      bpath = $b.root
     if apath == bpath:
       result = true
     else:
@@ -749,11 +794,11 @@ proc `==`*(a, b: Project): bool =
         debug &"had to use samefile to compare {apath} to {bpath}"
       result = sameFile(apath, bpath)
 
-proc removeSearchPath*(project: Project; path: string): bool =
+proc removeSearchPath*(project: Project; path: AbsoluteDir): bool =
   ## remove a search path from the project's nim.cfg
   result = project.cfg.removeSearchPath(project.nimCfg, path)
 
-proc removeSearchPath*(project: var Project; path: string): bool =
+proc removeSearchPath*(project: var Project; path: AbsoluteDir): bool =
   ## remove a search path from the project's nim.cfg; reload config
   let
     readonly = project
@@ -762,11 +807,11 @@ proc removeSearchPath*(project: var Project; path: string): bool =
     if not project.fetchConfig(force = true):
       warn &"unable to read config for {project}"
 
-proc excludeSearchPath*(project: Project; path: string): bool =
+proc excludeSearchPath*(project: Project; path: AbsoluteDir): bool =
   ## exclude a search path from the project's nim.cfg
   result = project.cfg.excludeSearchPath(project.nimCfg, path)
 
-proc excludeSearchPath*(project: var Project; path: string): bool =
+proc excludeSearchPath*(project: var Project; path: AbsoluteDir): bool =
   ## exclude a search path from the project's nim.cfg; reload config
   let
     readonly = project
@@ -775,7 +820,7 @@ proc excludeSearchPath*(project: var Project; path: string): bool =
     if not project.fetchConfig(force = true):
       warn &"unable to read config for {project}"
 
-proc addSearchPath*(project: Project; path: string): bool =
+proc addSearchPath*(project: Project; path: AbsoluteDir): bool =
   ## add a search path to the given project's configuration;
   ## true if we added the search path
   block complete:
@@ -786,7 +831,7 @@ proc addSearchPath*(project: Project; path: string): bool =
       raise newException(Defect, "load a configuration first")
     result = project.cfg.addSearchPath(project.nimCfg, path)
 
-proc addSearchPath*(project: var Project; path: string): bool =
+proc addSearchPath*(project: var Project; path: AbsoluteDir): bool =
   ## add a search path to the project's nim.cfg; reload config
   let
     readonly = project
@@ -795,7 +840,7 @@ proc addSearchPath*(project: var Project; path: string): bool =
     if not project.fetchConfig(force = true):
       warn &"unable to read config for {project}"
 
-proc determineSearchPath(project: Project): string =
+proc determineSearchPath(project: Project): AbsoluteDir =
   ## produce the search path to add for a given project
   if project.dump == nil:
     raise newException(Defect, "no dump available")
@@ -804,20 +849,20 @@ proc determineSearchPath(project: Project): string =
     if "srcDir" in project.dump:
       let srcDir = project.dump["srcDir"]
       if srcDir != "":
-        withinDirectory(project.repo):
-          result = srcDir.absolutePath
-        if result.dirExists:
+        withinDirectory(project.root):
+          result = srcDir.toAbsoluteDir
+        if dirExists(result):
           break
-    result = project.repo
-  result = ///result
+    result = project.root
 
-iterator missingSearchPaths*(project: Project; target: Project): string =
-  ## one (or more?) paths to the target package which are
-  ## apparently missing from the project's search paths
+iterator missingSearchPaths*(project: Project;
+                             target: Project): AbsoluteDir =
+  ## one (or more?) paths to the target package which are apparently
+  ## missing from the project's search paths
   let
-    path = ///determineSearchPath(target)
+    path = determineSearchPath(target)
   block found:
-    if not path.dirExists:
+    if not dirExists(path):
       warn &"search path for {project.name} doesn't exist"
       break
     for search in project.cfg.packagePaths(exists = false):
@@ -825,10 +870,12 @@ iterator missingSearchPaths*(project: Project; target: Project): string =
         break found
     yield path
 
-iterator missingSearchPaths*(project: Project; target: var Project): string =
-  ## one (or more?) path to the target package which are apparently missing from
-  ## the project's search paths; this will resolve up the parent tree to find
-  ## the highest project in which to modify a configuration
+iterator missingSearchPaths*(project: Project;
+                             target: var Project): AbsoluteDir =
+  ## one (or more?) path to the target package which are apparently
+  ## missing from the project's search paths; this will resolve up
+  ## the parent tree to find the highest project in which to modify a
+  ## configuration
   if not target.fetchDump:
     warn &"unable to fetch dump for {target}; this won't end well"
 
@@ -853,7 +900,7 @@ proc addMissingSearchPathsTo*(project: var Project; cloned: var Project) =
    then vary.
 
   ]#
-  project.cfg = loadAllCfgs(project.repo)
+  project.cfg = loadAllCfgs(project.root)
   # a future relocation will break this, of course
   for path in project.missingSearchPaths(cloned):
     if project.addSearchPath(path):
@@ -900,7 +947,13 @@ proc relocateDependency*(parent: var Project; project: var Project) =
     # now we can actually move the repo...
     moveDir(repository, future)
     # reset the package configuration target
-    project.nimble = newTarget(nimble)
+    case project.dist
+    of Nimble:
+      project.nimble = nimble.toDotNimble
+    of Git:
+      project.repository = future.toAbsoluteDir
+    else:
+      discard
     # the path changed, so remove the old path (if you can)
     discard parent.removeSearchPath(previous)
     # and point the parent to the new one
@@ -909,7 +962,7 @@ proc relocateDependency*(parent: var Project; project: var Project) =
 proc addMissingUpstreams*(project: Project) =
   ## review the local branches and add any missing tracking branches
   block:
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen($project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -939,13 +992,12 @@ proc addMissingUpstreams*(project: Project) =
             warn &"error fetching upstream for {name}: {code}"
             warn code.dumpError
 
-proc clone*(project: var Project; url: Uri; name: string;
-            cloned: var Project): bool =
+proc clone*(project: var Project; url: Uri; name: string): Project =
   ## clone a package into the project's nimbleDir
   var
     bare = url
     tag: string
-    directory = project.nimbleDir.stripPkgs / PkgDir
+    directory = project.nimbleDir.stripPkgs / RelativeDir(PkgDir)
 
   if bare.anchor != "":
     tag = bare.anchor
@@ -954,107 +1006,113 @@ proc clone*(project: var Project; url: Uri; name: string;
   {.warning: "clone into a temporary directory".}
   # we have to strip the # from a version tag for the compiler's benefit
   let loose = parseVersionLoosely(tag)
-  if loose.isSome and loose.get.isValid:
-    directory = directory / name & "-" & $loose.get
+  if loose.isSome and get(loose).isValid:
+    directory = directory / RelativeDir(name & "-" & $get(loose))
   elif tag.len != 0:
-    directory = directory / name & "-#" & tag
+    directory = directory / RelativeDir(name & "-#" & tag)
   else:
-    directory = directory / name & "-#head"
+    directory = directory / RelativeDir(name & "-#head")
 
-  if directory.dirExists:
+  if dirExists(directory):
     error &"tried to clone into {directory}, but it already exists"
     return
 
   # don't clone the compiler when we're debugging nimph
   when defined(debug):
     if "github.com/nim-lang/Nim" in $bare:
-      raise newException(Defect, "won't clone the compiler when debugging nimph")
+      raise newException(Defect,
+                         "won't clone the compiler when debugging nimph")
 
   fatal &"👭cloning {bare}..."
   info &"... into {directory}"
 
   # clone the bare url into the given directory, yielding a repository object
-  repository := clone(bare, directory):
+  repository := clone(bare, $directory):
     # or, if there was a problem, dump some error messages and bail out
     error &"unable to clone into `{directory}`: {code.dumpError}"
     return
 
   # make sure the project we find is in the directory we cloned to;
   # this could differ if the repo does not feature a dotNimble file
-  if findProject(cloned, directory, parent = project) and
-                 cloned.repo == directory:
+  result = findProject(directory, parent = project)
+  if result.root == directory:
     {.warning: "gratuitous nimblemeta write?".}
     let
       oid = repository.demandHead
-    if not writeNimbleMeta(directory, bare, oid):
-      warn &"unable to write {nimbleMeta} in {directory}"
+    if result.dist == Nimble:
+      if not writeNimbleMeta(directory, bare, oid):
+        warn &"unable to write {nimbleMeta} in {directory}"
 
     # review the local branches and add any missing tracking branches
-    cloned.addMissingUpstreams
-
-    result = true
+    result.addMissingUpstreams
   else:
     error "couldn't make sense of the project i just cloned"
+    # if we're gonna fail, ensure that failure is felt
+    result = nil
 
-  # if we're gonna fail, ensure that failure is felt
-  if not result:
-    cloned = nil
+when AndNimble:
+  iterator asFoundVia*(group: var Projects; config: ConfigRef): var Project =
+    ## yield projects from the group in the same order that they may be
+    ## resolved by the compiler, if at all, given a particular configuration
+    var
+      dedupe = initHashSet[string]()
 
-proc allImportTargets*(config: ConfigRef; repo: string):
-  OrderedTableRef[Target, LinkedSearchResult] =
-  ## yield projects from the group in the same order that they may be
-  ## resolved by the compiler, if at all, given a particular configuration
-  result = newOrderedTable[Target, LinkedSearchResult]()
+    # procede in path order to try to find projects using the paths
+    for path in config.packagePaths(exists = true):
+      let
+        target = linkedFindTarget(path, ascend = false)
+        found = target.search.found
+      if found.isNone:
+        continue
+      # see if the target project is in our group
+      for project in group.mvalues:
+        if found.get == project.nimble:
+          # if it is, put it in the dedupe and yield it
+          if project.importName notin dedupe:
+            dedupe.incl project.importName
+            yield project
+          break
 
-  for path in config.extantSearchPaths:
-    let
-      target = linkedFindTarget(path, target = path.pathToImport.importName,
-                                nimToo = true, ascend = false)
-      found = target.search.found
-    if found.isNone:
-      continue
-    result.add found.get, target
+    # now report on anything we weren't able to discover
+    for project in group.values:
+      if project.importName notin dedupe:
+        notice &"no path to {project.root} as `{project.importName}`"
+else:
+  iterator asFoundVia*(group: var Projects; config: ConfigRef): var Project =
+    ## yield projects from the group in the same order that they may be
+    ## resolved by the compiler, if at all, given a particular configuration
+    var
+      dedupe = initHashSet[AbsoluteDir]()
 
-iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef;
-                     repo: string): var Project =
-  ## yield projects from the group in the same order that they may be
-  ## resolved by the compiler, if at all, given a particular configuration
-  var
-    dedupe = newTable[string, Project](nextPowerOfTwo(group.len))
+    # procede in path order to try to find projects using the paths
+    for path in config.packagePaths(exists = true):
+      repository := repositoryDiscover($path, ceilings = @[$path]):
+        continue
+      # turn the .git (?) repository directory into the project root
+      let root = repository.toAbsoluteDir.root
+      # if we have this project in the group,
+      if root in group:
+        # dedupe it and yield it
+        dedupe.incl root
+        yield group[root]
 
-  # procede in path order to try to find projects using the paths
-  for path in config.packagePaths(exists = true):
-    let
-      target = linkedFindTarget(path, ascend = false)
-      found = target.search.found
-    if found.isNone:
-      continue
-    # see if the target project is in our group
-    for project in group.mvalues:
-      if found.get == project.nimble:
-        # if it is, put it in the dedupe and yield it
-        if project.importName notin dedupe:
-          dedupe.add project.importName, project
-          yield project
-        break
-
-  # now report on anything we weren't able to discover
-  for project in group.values:
-    if project.importName notin dedupe:
-      notice &"no path to {project.repo} as `{project.importName}`"
+    # now report on anything we weren't able to discover
+    for project in group.values:
+      if project.root notin dedupe:
+        notice &"no path to {project.root}"
 
 proc countNimblePaths*(project: Project):
-  tuple[local: int; global: int; paths: seq[string]] =
+  tuple[local: int; global: int; paths: seq[AbsoluteDir]] =
   ## try to count the effective number of --nimblePaths
-  let
-    repository = project.repo
-  # we start with looking for the most-used directories and then resort to the
-  # least-frequently used entries, eventually settling for *any* lazy path at all
+
+  # we start with looking for the most-used directories and then resort to
+  # the least-frequently used entries, eventually settling for *any* lazy
+  # path at all
   for iteration in countDown(2, 0):
-    for path in likelyLazy(project.cfg, repository, least = iteration):
+    for path in likelyLazy(project.cfg, project.root, least = iteration):
       # we'll also differentiate between lazy
       # paths inside/outside the project tree
-      if path.startsWith(repository):
+      if startsWith($path, $project.root):
         result.local.inc
       else:
         result.global.inc
@@ -1099,7 +1157,7 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
 
   # we'll add missing upstreams after this block
   block donehere:
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen($project.gitDir):
       error &"unable to open repo at `{path}`: {code.dumpError}"
       break
 
@@ -1187,9 +1245,8 @@ proc promote*(project: Project; name = defaultRemote;
     if target.ok and target.owner == user.login:
       result = project.promoteRemoteLike(project.url, name = name)
 
-proc newRequirementsTags(flags = defaultFlags): RequirementsTags =
-  result = RequirementsTags(flags: flags)
-  result.init(flags, mode = modeCaseSensitive)
+proc newRequirementsTags(): RequirementsTags =
+  result = RequirementsTags()
 
 proc requirementChangingCommits*(project: Project): RequirementsTags =
   # a table of the commits that changed the Requirements in a Project's
@@ -1202,7 +1259,7 @@ proc repoLockReady*(project: Project): bool =
     return
 
   block:
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen($project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -1313,7 +1370,7 @@ proc setHeadToRelease*(project: var Project; release: Release): bool =
     {.warning: "roll to arbitrary releases".}
     if not release.isValid or release.kind != Tag:
       break
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen($project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
     # we want the code because it'll tell us what went wrong
@@ -1343,7 +1400,7 @@ template returnToHeadAfter*(project: var Project; body: untyped) =
       error "refusing to roll the repo when it's dirty"
       break
 
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen($project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -1376,7 +1433,7 @@ proc versionChangingCommits*(project: var Project): VersionTags =
 
   project.returnToHeadAfter:
     block:
-      repository := openRepository(project.gitDir):
+      repository := repositoryOpen($project.gitDir):
         error &"unable to open repo at `{project.repo}`: {code.dumpError}"
         break
       # iterate over commits to the dotNimble file
@@ -1391,10 +1448,9 @@ proc versionChangingCommits*(project: var Project): VersionTags =
           project.refresh
           result[project.version] = thing.get
 
-proc pathForName*(group: ProjectGroup; name: string): Option[string] =
+proc pathForName*(group: Projects; name: ImportName): Option[AbsoluteDir] =
   ## try to retrieve the directory for a given import name in the group
-  let name = name.destylize
   for project in group.values:
-    if project.importName.destylize == name:
-      result = project.repo.some
+    if project.importName == name:
+      result = some(project.root)
       break

@@ -9,15 +9,15 @@ import bump
 import gittyup
 
 import nimph/spec
-import nimph/project
+import nimph/paths
+import nimph/projects
 import nimph/nimble
 import nimph/config
 import nimph/thehub
-import nimph/package
-import nimph/dependency
-import nimph/group
-
-import nimph/requirement
+import nimph/packages
+import nimph/dependencies
+import nimph/groups
+import nimph/requirements
 
 type
   StateKind* = enum
@@ -50,7 +50,7 @@ proc fixTags*(project: var Project; dry_run = true; force = false): bool =
       break
 
     # open the repo so we can keep it in memory for tagging purposes
-    repository := openRepository(project.gitDir):
+    repository := openRepository($project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -137,7 +137,7 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
           elif project.addSearchPath(path):
             info &"added path `{path}` to `{project.nimcfg}`"
             # yay, we get to reload again
-            project.cfg = loadAllCfgs(project.repo)
+            project.cfg = loadAllCfgs(project.root)
           else:
             warn &"couldn't add path `{path}` to `{project.nimcfg}`"
             result = false
@@ -164,8 +164,11 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
     else:
       block cloneokay:
         for package in dependency.packages.mvalues:
-          var cloned: Project
-          if project.clone(package.url, package.name, cloned):
+          var cloned = project.clone(package.url, package.name)
+          if cloned.isNil:
+            error &"error cloning {package}"
+            # a subsequent iteration could clone successfully
+          else:
             if cloned.rollTowards(requirement):
               notice &"rolled to {cloned.release} to meet {requirement}"
             else:
@@ -173,9 +176,6 @@ proc fixDependencies*(project: var Project; group: var DependencyGroup;
               project.relocateDependency(cloned)
             state.kind = DrRetry
             break cloneokay
-          else:
-            error &"error cloning {package}"
-            # a subsequent iteration could clone successfully
         # no package was successfully cloned
         notice &"unable to satisfy {requirement.describe}"
         result = false
@@ -216,7 +216,7 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
           error "and i wasn't able to make a new one"
     else:
       let
-        parsed = parseConfigFile($nimcfg)
+        parsed = parseConfigFile(nimcfg)
       if parsed.isNone:
         error &"i had some issues trying to parse {nimcfg}"
         result = false
@@ -232,24 +232,22 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         result = false
 
     # try to parse all nim configuration files
-    block globalconfig:
-      when defined(debugPath):
-        for path in project.cfg.likelySearch(libsToo = true):
-          debug &"\tsearch: {path}"
-        for path in project.cfg.likelyLazy:
-          debug &"\t  lazy: {path}"
-      else:
-        ## this space intentionally left blank
+    when defined(debugPath):
+      for path in project.cfg.likelySearch(libsToo = true):
+        debug &"\tsearch: {path}"
+      for path in project.cfg.likelyLazy:
+        debug &"\t  lazy: {path}"
 
-  block whoami:
-    debug "checking project version"
-    # check our project version
-    let
-      version = project.knowVersion
-    # contextual errors are output by knowVersion
-    result = version.isValid
-    if result:
-      debug &"{project.name} version {version}"
+  when AndNimble:
+    block whoami:
+      debug "checking project version"
+      # check our project version
+      let
+        version = project.knowVersion
+      # contextual errors are output by knowVersion
+      result = version.isValid
+      if result:
+        debug &"{project.name} version {version}"
 
   block dependencies:
     debug "checking dependencies"
@@ -263,28 +261,29 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
 
     # $NIMBLE_DIR could screw with our head
     if envDir != "":
-      if absolutePath(envDir) != depsDir:
+      if toAbsoluteDir(envDir) != depsDir:
         notice "i'm not sure what to do with an alternate $NIMBLE_DIR set"
         result = false
       else:
         info "your $NIMBLE_DIR is set, but it's set correctly"
 
-  block checknimble:
-    debug "checking nimble"
-    # make sure nimble is a thing
-    if findExe("nimble") == "":
-      error "i can't find nimble in the path"
-      result = false
+  when AndNimble:
+    block checknimble:
+      debug "checking nimble"
+      # make sure nimble is a thing
+      if findExe("nimble") == "":
+        error "i can't find nimble in the path"
+        result = false
 
-    debug "checking nimble dump of our project"
-    # make sure we can dump our project
-    let
-      damp = fetchNimbleDump(project.nimble.repo)
-    if not damp.ok:
-      error damp.why
-      result = false
-    else:
-      project.dump = damp.table
+      debug "checking nimble dump of our project"
+      # make sure we can dump our project
+      let
+        damp = fetchNimbleDump(project.nimble.repo)
+      if not damp.ok:
+        error damp.why
+        result = false
+      else:
+        project.dump = damp.table
 
   # see if we can find a github token
   block github:
@@ -307,41 +306,46 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
     else:
       debug "git init/shut seems to be working"
 
-  # see if we can get the packages list; try to refresh it if necessary
-  block packages:
-    while true:
-      let
-        packs = getOfficialPackages(project.nimbleDir)
-      once:
-        block skiprefresh:
-          if not packs.ok:
-            if packs.why != "":
-              error packs.why
-            notice &"couldn't get nimble's package list from {project.nimbleDir}"
-          elif packs.ageInDays > stalePackages:
-            notice &"the nimble package list in {project.nimbleDir} is stale"
-          elif packs.ageInDays > 1:
-            info "the nimble package list is " &
-                 &"{packs.ageInDays} days old"
-            break skiprefresh
-          else:
-            break skiprefresh
-          if not dry:
-            let refresh = project.runSomething("nimble", @["refresh", "--accept"])
-            if refresh.ok:
-              info "nimble refreshed the package list"
-              continue
-          result = false
-      if packs.ok:
-        let packages {.used.} = packs.packages
-        debug &"loaded {packages.len} packages from nimble"
-      break
+  when AndNimble:
+    # see if we can get the packages list; try to refresh it if necessary
+    block packages:
+      while true:
+        let
+          packs = getOfficialPackages(project.nimbleDir)
+        once:
+          block skiprefresh:
+            if not packs.ok:
+              if packs.why != "":
+                error packs.why
+              notice &"couldn't get nimble's package list from {project.nimbleDir}"
+            elif packs.ageInDays > stalePackages:
+              notice &"the nimble package list in {project.nimbleDir} is stale"
+            elif packs.ageInDays > 1:
+              info "the nimble package list is " &
+                   &"{packs.ageInDays} days old"
+              break skiprefresh
+            else:
+              break skiprefresh
+            if not dry:
+              let refresh = project.runSomething("nimble", @["refresh", "--accept"])
+              if refresh.ok:
+                info "nimble refreshed the package list"
+                continue
+            result = false
+        if packs.ok:
+          let packages {.used.} = packs.packages
+          debug &"loaded {packages.len} packages from nimble"
+        break
 
   # check dependencies and maybe install some
   block dependencies:
     var
       group = project.newDependencyGroup(flags)
       state = DrState(kind: DrRetry)
+
+      # we'll cache the old result so we can reset it if we are able to
+      # fix all the dependencies
+      prior = result
 
     while state.kind == DrRetry:
       # we need to reload the config each repeat through this loop so that we
@@ -352,6 +356,9 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         state.kind = DrError
       elif not project.fixDependencies(group, state):
         result = false
+      else:
+        # reset the state in the event that dependencies are fixed
+        result = prior
       # maybe we're done here
       if state.kind notin {DrRetry}:
         break
@@ -365,19 +372,18 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
     # warning if local deps exist or multiple nimblePaths are found
     block extradeps:
       if project.hasLocalDeps or project.numberOfNimblePaths > 1:
-        let imports = project.cfg.allImportTargets(project.repo)
-        for target, linked in imports.pairs:
-          if group.isUsing(target):
-            continue
-          # ignore standard library targets
-          if project.cfg.isStdLib(target.repo):
-            continue
-          let name = linked.importName
-          warn &"no `{name}` requirement for {target.repo}"
+        let available = availableProjects(project)
+        for directory, other in pairs(available):
+          # ignore anything in our dependency group
+          if not group.isUsing(directory):
+            # ignore standard library targets
+            if not project.cfg.isStdLib(directory):
+              warn &"no `{other.importName}` requirement for {other.root}"
 
-  # identify packages that aren't named according to their versions; rename
-  # local dependencies and merely warn about others
-  {.warning: "mislabeled project directories unimplemented".}
+  when AndNimble:
+    # identify packages that aren't named according to their versions;
+    # rename local dependencies and merely warn about others
+    {.warning: "mislabeled project directories unimplemented".}
 
   # remove missing paths from nim.cfg if possible
   block missingpaths:
@@ -428,16 +434,17 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
   block shadoweddeps:
     {.warning: "shadowed deps needs implementing".}
 
-  # if a package exists and is local to the project and picked up by the
-  # config (search paths or lazy paths) and it isn't listed in the
-  # requirements, then we should warn about it
-  block unspecifiedrequirement:
-    {.warning: "unspecified requirements needs implementing".}
+  when AndNimble:
+    # if a package exists and is local to the project and picked up by the
+    # config (search paths or lazy paths) and it isn't listed in the
+    # requirements, then we should warn about it
+    block unspecifiedrequirement:
+      {.warning: "unspecified requirements needs implementing".}
 
-  # if a required packaged has a srcDir defined in the .nimble, then it needs to
-  # be specified in the search paths
-  block unspecifiedsearchpath:
-    {.warning: "unspecified search path needs implementing".}
+    # if a required package has a srcDir defined in the .nimble, then it
+    # needs to be specified in the search paths
+    block unspecifiedsearchpath:
+      {.warning: "unspecified search path needs implementing".}
 
   # warn of tags missing for a particular version/commit pair
   block identifymissingtags:
@@ -453,4 +460,4 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
       fatal "❔it looks like you have multiple --nimblePaths defined:"
       for index, path in found.paths.pairs:
         fatal &"❔\t{index + 1}\t{path}"
-      fatal "❔nim and nimph support this, but some humans find it confusing 😏"
+      fatal "❔nim and nimph support this, but humans can find it confusing 😏"

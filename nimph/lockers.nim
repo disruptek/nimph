@@ -6,24 +6,24 @@ import std/tables
 import std/uri
 
 import nimph/spec
-import nimph/version
-import nimph/group
+import nimph/versions
+import nimph/groups
 import nimph/config
-import nimph/project
-import nimph/dependency
-import nimph/package
+import nimph/projects
+import nimph/dependencies
+import nimph/packages
 import nimph/asjson
 import nimph/doctor
-import nimph/requirement
+import nimph/requirements
 
 type
   Locker* = ref object
     name*: string
     url*: Uri
     requirement*: Requirement
-    dist*: DistMethod
+    dist*: Dist
     release*: Release
-  LockerRoom* = ref object of Group[string, Locker]
+  Lockers* = ref object of Group[string, Locker]
     name*: string
     root*: Locker
 
@@ -39,22 +39,22 @@ proc hash*(locker: Locker): Hash =
   h = h !& locker.release.hash
   result = !$h
 
-proc hash*(room: LockerRoom): Hash =
-  ## the hash of a lockerroom is the hash of its root and all lockers
+proc hash*(group: Lockers): Hash =
+  ## the hash of a lockers is the hash of its root and all lockers
   var h: Hash = 0
-  for locker in room.values:
+  for locker in group.values:
     h = h !& locker.hash
-  h = h !& room.root.hash
+  h = h !& group.root.hash
   result = !$h
 
 proc `==`(a, b: Locker): bool =
   result = a.hash == b.hash
 
-proc `==`(a, b: LockerRoom): bool =
+proc `==`(a, b: Lockers): bool =
   result = a.hash == b.hash
 
-proc newLockerRoom*(name = ""; flags = defaultFlags): LockerRoom =
-  result = LockerRoom(name: name, flags: flags)
+proc newLockers*(name = ""; flags = defaultFlags): Lockers =
+  result = Lockers(name: name, flags: flags)
   result.init(flags, mode = modeStyleInsensitive)
 
 proc newLocker(requirement: Requirement): Locker =
@@ -69,27 +69,27 @@ proc newLocker(req: Requirement; name: string; project: Project): Locker =
   result.dist = project.dist
   result.release = project.release
 
-proc newLockerRoom*(project: Project; flags = defaultFlags): LockerRoom =
-  ## a new lockerroom using the project release as the root
+proc newLockers*(project: Project; flags = defaultFlags): Lockers =
+  ## a new lockers using the project release as the root
   let
     requirement = newRequirement(project.name, Equal, project.release)
-  result = newLockerRoom(flags = flags)
+  result = newLockers(flags = flags)
   result.root = newLocker(requirement, rootName, project)
 
-proc add*(room: var LockerRoom; req: Requirement; name: string;
+proc add*(room: var Lockers; req: Requirement; name: string;
           project: Project) =
   ## create a new locker for the requirement from the project and
-  ## safely add it to the lockerroom
+  ## safely add it to the lockers
   var locker = newLocker(req, name, project)
   block found:
     for existing in room.values:
       if existing == locker:
         error &"unable to add equivalent lock for `{name}`"
         break found
-    room.add name, locker
+    room.add name.string, locker
 
-proc fillRoom(room: var LockerRoom; dependencies: DependencyGroup): bool =
-  ## fill a lockerroom with lockers constructed from the dependency tree;
+proc fillLockers(room: var Lockers; dependencies: DependencyGroup): bool =
+  ## fill a lockers with lockers constructed from the dependency tree;
   ## returns true if there were no missing/unready/shadowed dependencies
   result = true
   for requirement, dependency in dependencies.pairs:
@@ -118,7 +118,7 @@ proc fillRoom(room: var LockerRoom; dependencies: DependencyGroup): bool =
       result = false
 
 proc fillDeps(dependencies: var DependencyGroup;
-              room: LockerRoom; project: Project): bool =
+              room: Lockers; project: Project): bool =
   ## fill a dependency tree with lockers and run dependency resolution
   ## using the project; returns true if there were no resolution failures
   result = true
@@ -146,18 +146,18 @@ proc toLocker*(js: JsonNode): Locker =
   result.name = js["name"].getStr
   result.url = js["url"].toUri
   result.release = js["release"].toRelease
-  result.dist = js["dist"].toDistMethod
+  result.dist = js["dist"].toDist
 
-proc toJson*(room: LockerRoom): JsonNode =
-  ## convert a LockerRoom to a JObject
+proc toJson*(room: Lockers): JsonNode =
+  ## convert a Lockers to a JObject
   result = newJObject()
   for name, locker in room.pairs:
     result[locker.name] = locker.toJson
   result[room.root.name] = room.root.toJson
 
-proc toLockerRoom*(js: JsonNode; name = ""): LockerRoom =
-  ## convert a JObject to a LockerRoom
-  result = newLockerRoom(name)
+proc toLockers*(js: JsonNode; name = ""): Lockers =
+  ## convert a JObject to a Lockers
+  result = newLockers(name)
   for name, locker in js.pairs:
     if name == rootName:
       result.root = locker.toLocker
@@ -166,27 +166,27 @@ proc toLockerRoom*(js: JsonNode; name = ""): LockerRoom =
     else:
       result.add name, locker.toLocker
 
-proc getLockerRoom*(project: Project; name: string; room: var LockerRoom): bool =
-  ## true if we pulled the named lockerroom out of the project's configuration
+proc getLockers*(project: Project; name: string; room: var Lockers): bool =
+  ## true if we pulled the named lockers out of the project's configuration
   let
-    js = project.config.getLockerRoom(name)
+    js = project.config.getLockers(name)
   if js != nil and js.kind == JObject:
-    room = js.toLockerRoom(name)
+    room = js.toLockers(name)
     result = true
 
-iterator allLockerRooms*(project: Project): LockerRoom =
-  ## emit each lockerroom in the project's configuration
-  for name, js in project.config.getAllLockerRooms.pairs:
-    yield js.toLockerRoom(name)
+iterator allLockers*(project: Project): Lockers =
+  ## emit each lockers in the project's configuration
+  for name, js in project.config.getAllLockers.pairs:
+    yield js.toLockers(name)
 
 proc unlock*(project: var Project; name: string; flags = defaultFlags): bool =
   ## unlock a project using the named lockfile
   var
     dependencies = project.newDependencyGroup(flags = {Flag.Quiet} + flags)
-    room = newLockerRoom(name, flags)
+    room = newLockers(name, flags)
 
   block unlocked:
-    if not project.getLockerRoom(name, room):
+    if not project.getLockers(name, room):
       notice &"unable to find a lock named `{name}`"
       break unlocked
 
@@ -222,10 +222,10 @@ proc lock*(project: var Project; name: string; flags = defaultFlags): bool =
   ## store a project's dependencies into the named lockfile
   var
     dependencies = project.newDependencyGroup(flags = {Flag.Quiet} + flags)
-    room = newLockerRoom(project, flags)
+    room = newLockers(project, flags)
 
   block locked:
-    if project.getLockerRoom(name, room):
+    if project.getLockers(name, room):
       notice &"lock `{name}` already exists; choose a new name"
       break locked
 
@@ -235,18 +235,18 @@ proc lock*(project: var Project; name: string; flags = defaultFlags): bool =
       notice &"unable to resolve all dependencies for {project}"
       break locked
 
-    # if the lockerroom isn't confident, we can't lock the project
-    result = room.fillRoom(dependencies)
+    # if the lockers isn't confident, we can't lock the project
+    result = room.fillLockers(dependencies)
     if not result:
       notice &"not confident enough to lock {project}"
       break locked
 
-    # compare this lockerroom to pre-existing lockerrooms and don't dupe it
-    for exists in project.allLockerRooms:
+    # compare this lockers to pre-existing lockers and don't dupe it
+    for exists in project.allLockers:
       if exists == room:
         notice &"already locked these dependencies as `{exists.name}`"
         result = false
         break locked
 
-    # write the lockerroom to the project's configuration
-    project.config.addLockerRoom name, room.toJson
+    # write the lockers to the project's configuration
+    project.config.addLockers name, room.toJson
