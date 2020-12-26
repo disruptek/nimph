@@ -518,20 +518,6 @@ The `graph` subcommand dumps some _very basic_ details about discovered
 dependencies and their associated packages and projects.
 
 ```
-$ nimph graph cligen
-
-requirement: cligen>=0.9.41 from xs
-requirement: cligen>=0.9.40 from bump
-    package: https://github.com/c-blake/cligen.git
-  directory: /home/adavidoff/.nimble/pkgs/cligen-0.9.41
-    project: cligen-#b144d5b3392bac63ed49df3e1f176becbbf04e24
-```
-
-Like other subcommands, you can provide _import names_ to retrieve the detail
-for only those dependencies, or omit any additional arguments to display all
-dependencies.
-
-```
 $ nimph graph
 
 requirement: swayipc>=3.1.4 from xs
@@ -557,6 +543,20 @@ requirement: bump>=1.8.11 from xs
     package: file:///home/adavidoff/.nimble/pkgs/bump-1.8.13
   directory: /home/adavidoff/.nimble/pkgs/bump-1.8.13
     project: bump-1.8.13
+```
+
+Like other subcommands, you can provide _import names_ to retrieve the detail
+for only those dependencies, or omit any additional arguments to display all
+dependencies.
+
+```
+$ nimph graph cligen
+
+requirement: cligen>=0.9.41 from xs
+requirement: cligen>=0.9.40 from bump
+    package: https://github.com/c-blake/cligen.git
+  directory: /home/adavidoff/.nimble/pkgs/cligen-0.9.41
+    project: cligen-#b144d5b3392bac63ed49df3e1f176becbbf04e24
 ```
 
 Raising the log level of the `graph` command will cause retrieval and display
