@@ -23,8 +23,9 @@ git clone --depth 1 https://github.com/disruptek/badresults.git
 git clone --depth 1 https://github.com/disruptek/github.git
 git clone --depth 1 https://github.com/disruptek/rest.git
 git clone --depth 1 https://github.com/disruptek/foreach.git
+git clone --depth 1 https://github.com/disruptek/ups.git
 nim c --define:release --path:nim-regex/src --path:nim-unicodedb/src --path:nim-unicodeplus/src --path:nim-segmentation/src --path:cligen nimterop/nimterop/toast.nim
-nim c --outdir:.. --define:$RELEASE --path:cligen --path:foreach --path:github/src --path:rest --path:npeg/src --path:jsonconvert --path:badresults --path:bump --path:cutelog --path:gittyup --path:nimgit2 --path:nimterop --path:nim-regex/src --path:nim-unicodedb/src --path:nim-unicodeplus/src --path:nim-segmentation/src nimph.nim
+nim c --outdir:.. --define:$RELEASE --path:ups --path:cligen --path:foreach --path:github/src --path:rest --path:npeg/src --path:jsonconvert --path:badresults --path:bump --path:cutelog --path:gittyup --path:nimgit2 --path:nimterop --path:nim-regex/src --path:nim-unicodedb/src --path:nim-unicodeplus/src --path:nim-segmentation/src nimph.nim
 cd ..
 
 if test -x nimph; then
