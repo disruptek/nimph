@@ -1,5 +1,10 @@
 #!/bin/sh
 
+RELEASE="release"
+if test "$*" = "test"; then
+  RELEASE="dummy"
+fi
+
 cd src
 git clone --depth 1 https://github.com/disruptek/bump.git
 git clone --depth 1 https://github.com/disruptek/cutelog.git
@@ -17,8 +22,13 @@ git clone --depth 1 https://github.com/disruptek/badresults.git
 git clone --depth 1 https://github.com/disruptek/github.git
 git clone --depth 1 https://github.com/disruptek/rest.git
 git clone --depth 1 https://github.com/disruptek/foreach.git
-nim c --path:nim-regex/src --path:nim-unicodedb/src --path:nim-unicodeplus/src --path:nim-segmentation/src --path:cligen nimterop/nimterop/toast.nim
-nim c --outdir:.. --path:cligen --path:foreach --path:github/src --path:rest --path:npeg/src --path:jsonconvert --path:badresults --path:bump --path:cutelog --path:gittyup --path:nimgit2 --path:nimterop --path:nim-regex/src --path:nim-unicodedb/src --path:nim-unicodeplus/src --path:nim-segmentation/src nimph.nim
+nim c --define:release --path:nim-regex/src --path:nim-unicodedb/src --path:nim-unicodeplus/src --path:nim-segmentation/src --path:cligen nimterop/nimterop/toast.nim
+nim c --outdir:.. --define:$RELEASE --path:cligen --path:foreach --path:github/src --path:rest --path:npeg/src --path:jsonconvert --path:badresults --path:bump --path:cutelog --path:gittyup --path:nimgit2 --path:nimterop --path:nim-regex/src --path:nim-unicodedb/src --path:nim-unicodeplus/src --path:nim-segmentation/src nimph.nim
 cd ..
 
-realpath nimph
+if test -x nimph; then
+  echo "nimph built successfully"
+else
+  echo "unable to build nimph"
+  exit 1
+fi

@@ -1,12 +1,14 @@
 # nimph
+
+[![Test Matrix](https://github.com/disruptek/nimph/workflows/CI/badge.svg)](https://github.com/disruptek/nimph/actions?query=workflow%3ACI)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/disruptek/nimph?style=flat)](https://github.com/disruptek/nimph/releases/latest)
+![Minimum supported Nim version](https://img.shields.io/badge/nim-1.0.10%2B-informational?style=flat&logo=nim)
+[![License](https://img.shields.io/github/license/disruptek/nimph?style=flat)](#license)
+[![buy me a coffee](https://img.shields.io/badge/donate-buy%20me%20a%20coffee-orange.svg)](https://www.buymeacoffee.com/disruptek)
+
 nim package hierarchy manager from the future
 
-
 or: _How I Learned to Stop Worrying and Love the Search Path_
-
-
-- `cpp +/ nim-1.0` [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=master)](https://travis-ci.org/disruptek/nimph)
-- `arc +/ cpp +/ nim-1.3` [![Build Status](https://travis-ci.org/disruptek/nimph.svg?branch=devel)](https://travis-ci.org/disruptek/nimph)
 
 ## Features
 
@@ -62,8 +64,11 @@ realpath nimph
 
 ### Windows
 
-To build Nimph, you need to have `cmake`.
-The easiest way to install it on Windows is via [scoop](https://scoop.sh/):
+I no longer test Windows via the CI because I have no way to debug Nimterop
+failures. That said, Windows builds may work just fine for you.
+
+To build Nimph on Windows, you need to have a working `cmake`.
+The easiest way to get it is via [scoop](https://scoop.sh/):
 
 ```
 scoop install cmake
@@ -87,7 +92,9 @@ nimble install "--passNim:--path:$(Resolve-Path 'src') --outDir:$PWD"
 
 ### GitHub Integration
 
-You may want to [create a new GitHub personal access token here](https://github.com/settings/tokens) and then add it to your environment as `NIMPH_TOKEN` or `GITHUB_TOKEN`.
+You may want to [create a new GitHub personal access token
+here](https://github.com/settings/tokens) and then add it to your environment
+as `NIMPH_TOKEN` or `GITHUB_TOKEN`.
 
 If you skip this step, Nimph will try to use a Nimble token for **search**es,
 and it will also try to read any `hub` or `ghi` credentials.  Notably, the
@@ -100,7 +107,7 @@ upwards until it finds a `.nimble` file and act as if you ran it there.
 
 Most operations do require that you be within a project, but `nimph` is
 flexible enough to operate on local dependencies, global packages, and anything
-in-between.  You can run it on any package, anywhere, and it will provide useful
+in-between. You can run it on any package, anywhere, and it will provide useful
 output (and optional repair) of the environment it finds itself in.
 
 - [Searching for New Nim Packages](https://github.com/disruptek/nimph#search)
@@ -142,10 +149,15 @@ Starting with nothing more than the project's repository, we'll...
 
 ### Search
 
-The `search` subcommand is used to query GitHub for packages.  Arguments should
-match [GitHub search syntax for repositories](https://help.github.com/en/github/searching-for-information-on-github/searching-for-repositories) and for convenience, a `language:nim` qualifier will be included.
+The `search` subcommand is used to query GitHub for
+packages. Arguments should match [GitHub search syntax for
+repositories](https://help.github.com/en/github/searching-for-information-on-gi
+thub/searching-for-repositories) and for convenience, a `language:nim`
+qualifier will be included.
 
-Results are output in **increasing order of relevance** to reduce scrolling; _the last result is the best_.
+Results are output in **increasing order of relevance** to reduce scrolling;
+_the last result is the best_.
+
 ```
 $ nimph search pegs
 

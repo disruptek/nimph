@@ -6,10 +6,15 @@ if ! test -f src/nimph.nim; then
 fi
 
 export NIMBLE_DIR="`pwd`/deps"
-mkdir --parents "$NIMBLE_DIR"
+mkdir "$NIMBLE_DIR"
 
 nimble --accept refresh
-nimble install nimterop@0.6.11
+nimble --accept install unicodedb@0.7.2 nimterop@0.6.11
 nimble install "--passNim:--path:\"`pwd`/src\" --outdir:\"`pwd`\""
 
-realpath nimph
+if test -x nimph; then
+  echo "nimph built successfully"
+else
+  echo "unable to build nimph"
+  exit 1
+fi

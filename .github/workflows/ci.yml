@@ -1,0 +1,103 @@
+name: CI
+on:
+  schedule:
+    - cron: '30 5 * * *'
+
+  push:
+    paths:
+      - '**.cfg'
+      - '**.nims'
+      - '**.nim'
+      - '**.nimble'
+      - '**.sh'
+      - 'tests/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - '**.cfg'
+      - '**.nims'
+      - '**.nim'
+      - '**.nimble'
+      - '**.sh'
+      - 'tests/**'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [version-1-0, version-1-2, version-1-4, devel]
+        target: [linux, macos]
+        include:
+          - target: linux
+            builder: ubuntu-18.04
+          - target: macos
+            builder: macos-10.15
+          #- target: windows
+          #  builder: windows-2019
+    name: '${{ matrix.target }} (${{ matrix.branch }})'
+    runs-on: ${{ matrix.builder }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: nimph
+
+      - name: Setup Nim
+        uses: alaviss/setup-nim@0.1.1
+        with:
+          path: nim
+          version: ${{ matrix.branch }}
+
+      - name: Run tests
+        shell: bash
+        run: |
+          mkdir $HOME/.nimble
+          cd nimph
+          git fetch --unshallow
+          cp ci-bootstrap.cfg nim.cfg
+          ./bootstrap.sh
+          export NIMBLE_DIR=`pwd`/deps
+          ./nimph refresh
+          ./nimph
+          ./nimph doctor || true
+          cat nim.cfg
+          cp ci-bootstrap.cfg nim.cfg
+          ./bootstrap-nonimble.sh test
+          ./nimph
+          ./nimph doctor || true
+          cat nim.cfg
+
+      - name: Build docs
+        if: ${{ matrix.docs }} == 'true'
+        shell: bash
+        run: |
+          cd nimph
+          branch=${{ github.ref }}
+          branch=${branch##*/}
+          mv ci-docs.cfg nim.cfg
+          rm -rf deps
+          mkdir deps
+          ./nimph doctor || true
+          cat nim.cfg
+          pushd deps/pkgs/nimterop-*
+          nim c nimterop/toast.nim
+          popd
+          nim doc --project --outdir:docs \
+            '--git.url:https://github.com/${{ github.repository }}' \
+            '--git.commit:${{ github.sha }}' \
+            "--git.devel:$branch" \
+            src/nimph.nim
+          # Ignore failures for older Nim
+          cp docs/{the,}index.html || true
+
+      - name: Publish docs
+        if: >
+          github.event_name == 'push' && github.ref == 'refs/heads/master' &&
+          matrix.target == 'linux' && matrix.branch == 'devel'
+        uses: crazy-max/ghaction-github-pages@v1
+        with:
+          build_dir: nimph/docs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
