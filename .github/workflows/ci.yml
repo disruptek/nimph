@@ -53,6 +53,7 @@ jobs:
         run: |
           mkdir $HOME/.nimble
           cd nimph
+          git fetch --unshallow
           ./bootstrap-nonimble.sh test
           ./nimph refresh
           ./nimph
