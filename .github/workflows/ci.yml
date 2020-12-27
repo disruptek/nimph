@@ -57,10 +57,8 @@ jobs:
           ./bootstrap-nonimble.sh test
           ./nimph refresh
           ./nimph
-          ./nimph doctor
           ./bootstrap.sh
           ./nimph
-          ./nimph doctor
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
