@@ -12,4 +12,9 @@ nimble --accept refresh
 nimble install nimterop@0.6.11
 nimble install "--passNim:--path:\"`pwd`/src\" --outdir:\"`pwd`\""
 
-realpath nimph
+if test -x nimph; then
+  echo "nimph built successfully"
+else
+  echo "unable to build nimph"
+  exit 1
+fi
