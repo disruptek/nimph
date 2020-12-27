@@ -52,11 +52,13 @@ jobs:
         shell: bash
         run: |
           cd nimph
+          ./bootstrap-nonimble.sh test
+          ./nimph refresh
+          ./nimph
+          ./nimph doctor
           ./bootstrap.sh
           ./nimph
-          rm -rf deps
-          ./bootstrap-nonimble.sh
-          ./nimph
+          ./nimph doctor
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
