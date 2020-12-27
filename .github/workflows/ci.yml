@@ -58,6 +58,7 @@ jobs:
           git fetch --unshallow
           cp ci-bootstrap.cfg nim.cfg
           ./bootstrap.sh
+          export NIMBLE_DIR=`pwd`/deps
           ./nimph refresh
           ./nimph
           ./nimph doctor || true
