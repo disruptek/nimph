@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         branch: [version-1-0, version-1-2, version-1-4, devel]
-        target: [linux, macos, windows]
+        target: [linux, macos]
         include:
           - target: linux
             builder: ubuntu-18.04
