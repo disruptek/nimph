@@ -2,7 +2,7 @@
 
 RELEASE="release"
 if test "$*" = "test"; then
-  RELEASE="debug"
+  RELEASE="dummy"
 fi
 
 cd src
