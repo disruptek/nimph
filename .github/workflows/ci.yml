@@ -34,8 +34,8 @@ jobs:
             builder: ubuntu-18.04
           - target: macos
             builder: macos-10.15
-          - target: windows
-            builder: windows-2019
+          #- target: windows
+          #  builder: windows-2019
     name: '${{ matrix.target }} (${{ matrix.branch }})'
     runs-on: ${{ matrix.builder }}
     steps:
