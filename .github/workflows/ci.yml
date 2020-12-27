@@ -61,10 +61,12 @@ jobs:
           ./nimph refresh
           ./nimph
           ./nimph doctor || true
+          cat nim.cfg
           cp ci-bootstrap.cfg nim.cfg
           ./bootstrap.sh
           ./nimph
           ./nimph doctor || true
+          cat nim.cfg
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
@@ -77,7 +79,8 @@ jobs:
           rm -rf deps
           mkdir deps
           ./nimph doctor || true
-          nimble doc --project --outdir:docs \
+          cat nim.cfg
+          nimble --accept doc --project --outdir:docs \
             '--git.url:https://github.com/${{ github.repository }}' \
             '--git.commit:${{ github.sha }}' \
             "--git.devel:$branch" \
