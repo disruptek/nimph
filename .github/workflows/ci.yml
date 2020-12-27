@@ -57,13 +57,13 @@ jobs:
           cd nimph
           git fetch --unshallow
           cp ci-bootstrap.cfg nim.cfg
-          ./bootstrap-nonimble.sh test
+          ./bootstrap.sh
           ./nimph refresh
           ./nimph
           ./nimph doctor || true
           cat nim.cfg
           cp ci-bootstrap.cfg nim.cfg
-          ./bootstrap.sh
+          ./bootstrap-nonimble.sh test
           ./nimph
           ./nimph doctor || true
           cat nim.cfg
