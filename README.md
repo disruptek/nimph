@@ -35,15 +35,19 @@ much as possible.
 
 ## Installation
 
-Some lucky few may be able to simply `nimble install https://github.com/disruptek/nimph`.
+Some lucky few may be able to simply
 
-For others, simple bootstrap scripts are provided.
+```
+nimble install https://github.com/disruptek/nimph
+```
+
+For the rest of us, bootstrap scripts are provided.
 
 ### Unix-like
 
-These are the contents of the included `bootstrap.sh`; you'll see that
-we're setting up a local dependency tree with which to build nimph and its
-dependencies. If successful, the full path to the binary is output.
+I recommend using the `bootstrap-nonimble.sh` script. If you prefer to use
+Nimble 😕 you can use the `bootstrap.sh` reproduced below; you'll see that it
+sets up a local dependency tree with which to build Nimph and its requirements.
 
 ```sh
 #!/bin/sh
@@ -54,12 +58,18 @@ if ! test -f src/nimph.nim; then
 fi
 
 export NIMBLE_DIR="`pwd`/deps"
-mkdir --parents "$NIMBLE_DIR"
+mkdir "$NIMBLE_DIR"
 
 nimble --accept refresh
-nimble install "--passNim:--path:\"`pwd`/src\""
+nimble --accept install unicodedb@0.7.2 nimterop@0.6.11
+nimble install "--passNim:--path:\"`pwd`/src\" --outdir:\"`pwd`\""
 
-realpath nimph
+if test -x nimph; then
+  echo "nimph built successfully"
+else
+  echo "unable to build nimph"
+  exit 1
+fi
 ```
 
 ### Windows
