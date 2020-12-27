@@ -51,6 +51,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
+          echo "boom"
           mkdir $HOME/.nimble
           cd nimph
           git fetch --unshallow
