@@ -56,12 +56,15 @@ jobs:
           mkdir $HOME/.nimble
           cd nimph
           git fetch --unshallow
-          mv ci-bootstrap.cfg nim.cfg
+          cp ci-bootstrap.cfg nim.cfg
           ./bootstrap-nonimble.sh test
           ./nimph refresh
           ./nimph
+          ./nimph doctor || true
+          cp ci-bootstrap.cfg nim.cfg
           ./bootstrap.sh
           ./nimph
+          ./nimph doctor || true
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
@@ -73,7 +76,7 @@ jobs:
           mv ci-docs.cfg nim.cfg
           rm -rf deps
           mkdir deps
-          ./nimph doctor
+          ./nimph doctor || true
           nimble doc --project --outdir:docs \
             '--git.url:https://github.com/${{ github.repository }}' \
             '--git.commit:${{ github.sha }}' \
