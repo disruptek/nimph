@@ -53,7 +53,6 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          echo "boom"
           mkdir $HOME/.nimble
           cd nimph
           git fetch --unshallow
@@ -70,6 +69,7 @@ jobs:
           cd nimph
           branch=${{ github.ref }}
           branch=${branch##*/}
+          nimble install unicodedb@0.7.2 nimterop@0.6.11
           nimble doc --project --outdir:docs \
             '--git.url:https://github.com/${{ github.repository }}' \
             '--git.commit:${{ github.sha }}' \

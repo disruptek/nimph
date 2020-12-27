@@ -9,8 +9,7 @@ export NIMBLE_DIR="`pwd`/deps"
 mkdir --parents "$NIMBLE_DIR"
 
 nimble --accept refresh
-nimble install nimterop@0.6.11
-nimble install unicodedb@0.7.2
+nimble install unicodedb@0.7.2 nimterop@0.6.11
 nimble install "--passNim:--path:\"`pwd`/src\" --outdir:\"`pwd`\""
 
 if test -x nimph; then
