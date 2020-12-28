@@ -39,7 +39,7 @@ jobs:
         #  - target: windows
         #    builder: windows-2019
     name: '${{ matrix.os }} (${{ matrix.nim }})'
-    runs-on: ${{ matrix.builder }}
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
