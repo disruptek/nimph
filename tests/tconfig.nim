@@ -42,5 +42,8 @@ suite "nimcfg":
     check testcfg.appendConfig("--clearNimblePath")
     let
       now = readFile(fn)
-    check was.splitLines.len + 1 == now.splitLines.len
+    check:
+      # check for empty trailing line
+      was.splitLines.len + 2 == now.splitLines.len
+      now.splitLines[^1] == ""
     writeFile(fn, was)
