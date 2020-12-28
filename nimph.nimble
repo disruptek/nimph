@@ -18,8 +18,5 @@ srcDir = "src"
 # this breaks tests
 #installDirs = @["docs", "tests", "src"]
 
-task test, "run tests":
-  when defined(windows):
-    exec "testes.cmd"
-  else:
-    exec findExe"testes"
+task test, "run unit tests":
+  exec findExe"testes"
