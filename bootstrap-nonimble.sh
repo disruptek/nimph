@@ -2,7 +2,8 @@
 
 RELEASE="release"
 if test "$*" = "test"; then
-  RELEASE="dummy"
+  # reduce nimterop spam?
+  RELEASE="release"
 fi
 
 cd src
