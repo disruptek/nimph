@@ -11,6 +11,9 @@ requires "https://github.com/disruptek/badresults < 2.0.0"
 requires "https://github.com/disruptek/cutelog >= 1.1.0 & < 2.0.0"
 requires "https://github.com/disruptek/gittyup >= 2.5.0 & < 3.0.0"
 
+# try to make nimph work on nim-1.0 again
+requires "nimterop <= 0.6.3"
+
 bin = @["nimph"]
 srcDir = "src"
 
