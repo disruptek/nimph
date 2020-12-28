@@ -181,8 +181,10 @@ proc getOfficialPackages*(nimbleDir: string): PackagesResult {.raises: [].} =
         keys = toSeq group.keys
       for key in keys.items:
         # key -> "Goats_And_Pigs"
-        group[key.toLowerAscii] = group[key]
-        group[key.toUpperAscii] = group[key]
+        {.warning: "work-around for arc bug".}
+        let package = group[key]
+        group[key.toLowerAscii] = package
+        group[key.toUpperAscii] = package
 
       result.ok = true
     except Exception as e:
