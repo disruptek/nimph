@@ -10,7 +10,7 @@ git clone --depth 1 https://github.com/disruptek/bump.git
 git clone --depth 1 https://github.com/disruptek/cutelog.git
 git clone --depth 1 https://github.com/disruptek/gittyup.git
 git clone --depth 1 https://github.com/disruptek/nimgit2.git
-git clone --depth 1 --branch v0.6.11 https://github.com/genotrance/nimterop.git
+git clone --depth 1 --branch v0.6.3 https://github.com/genotrance/nimterop.git
 git clone --depth 1 https://github.com/nitely/nim-regex.git
 git clone --depth 1 https://github.com/nitely/nim-unicodedb.git
 git clone --depth 1 https://github.com/nitely/nim-unicodeplus.git
