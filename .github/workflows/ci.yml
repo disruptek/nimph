@@ -58,7 +58,6 @@ jobs:
           git fetch --unshallow
           cp ci-bootstrap.cfg nim.cfg
           ./bootstrap-nonimble.sh test
-          export NIMBLE_DIR=`pwd`/deps
           ./nimph refresh
           ./nimph
           ./nimph doctor || true
@@ -66,6 +65,7 @@ jobs:
           rm nimph
           cp ci-bootstrap.cfg nim.cfg
           ./bootstrap.sh
+          export NIMBLE_DIR=`pwd`/deps
           ./nimph
           ./nimph doctor || true
           cat nim.cfg
