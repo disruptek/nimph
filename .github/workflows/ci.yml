@@ -70,7 +70,7 @@ jobs:
           export NIMBLE_DIR=`pwd`/deps
           echo "" >> nim.cfg
           echo "--clearNimblePath" >> nim.cfg
-          echo "--nimblePath=$NIMBLE_DIR/pkgs" >> nim.cfg
+          echo "--nimblePath=\"$NIMBLE_DIR/pkgs\"" >> nim.cfg
           cat nim.cfg
           ./bootstrap.sh
           ./nimph
