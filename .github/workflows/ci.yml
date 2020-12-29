@@ -67,12 +67,17 @@ jobs:
           cat nim.cfg
           rm nimph
           cp ci-bootstrap.cfg nim.cfg
-          ./bootstrap.sh
           export NIMBLE_DIR=`pwd`/deps
-          testes
+          echo "--clearNimblePath" >> nim.cfg
+          echo "--nimblePath=$NIMBLE_DIR/pkgs" >> nim.cfg
+          ./bootstrap.sh
           ./nimph
           ./nimph doctor || true
           cat nim.cfg
+          cd `./nimph path testes`
+          nim c --out:$HOME/testes --define:release testes.nim
+          cd -
+          $HOME/testes
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
