@@ -78,7 +78,7 @@ jobs:
           cd `./nimph path testes`
           nim c --out:$HOME/testes --define:release testes.nim
           cd -
-          rm `dirname \`which nim\``/../config/config.nims
+          rm `dirname \`which nim\``/../config/config.nims || true
           $HOME/testes
 
       - name: Build docs
