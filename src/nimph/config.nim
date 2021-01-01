@@ -164,7 +164,7 @@ proc loadAllCfgs*(directory: string): ConfigRef =
 
     # thanks, araq
     when (NimMajor, NimMinor) >= (1, 5):
-      var idgen = IdGenerator(module: 0.int32, item: 0.int32)
+      var idgen = IdGenerator()
       loadConfigs(NimCfg.RelativeFile, cache, result, idgen)
     else:
       loadConfigs(NimCfg.RelativeFile, cache, result)
