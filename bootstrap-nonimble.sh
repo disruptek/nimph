@@ -6,9 +6,7 @@ if test "$*" = "test"; then
   RELEASE="release"
 fi
 
-export NONIMBLE_DIR="`pwd`/nimbledeps"
-mkdir "$NONIMBLE_DIR"
-cd "$NONIMBLE_DIR"
+cd src
 
 git clone --depth 1 https://github.com/disruptek/bump.git
 git clone --depth 1 https://github.com/disruptek/cutelog.git
