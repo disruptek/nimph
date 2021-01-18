@@ -32,7 +32,7 @@ block:
         sshUrl = parseUri"git@github.com:disruptek/nimph.git"
         gitUrl = parseUri"git://github.com/disruptek/nimph.git"
         webUrl = parseUri"https://github.com/disruptek/nimph"
-      check:
+      check "urls look creepy":
         $sshUrl.convertToGit == $gitUrl
         $gitUrl.convertToGit == $gitUrl
         $webUrl.convertToGit == $gitUrl
@@ -64,7 +64,7 @@ block:
         normUrl1 = normalizeUrl(parseUri(sshUrl1))
         normUrl2 = normalizeUrl(parseUri(sshUrl2))
 
-      check:
+      check "more creepy urls":
         normUrl1.username == sshUser
         normUrl1.hostname == sshHost1
         normUrl1.path == sshPath1
@@ -76,7 +76,7 @@ block:
       let
         p = "goats"
         o = "pigs/"
-      check:
+      check "slash attack":
         ///p == "goats/"
         ///o == "pigs/"
         //////p == "/goats/"
@@ -92,7 +92,7 @@ block:
 
     test "open the project":
       let target = findTarget(".")
-      check:
+      check "finding targets":
         target.found.isSome
         findProject(project, (get target.found).repo)
 
@@ -116,7 +116,7 @@ block:
     test "add a line to a config":
       check testcfg.appendConfig("--clearNimblePath")
       let now = readFile(sample)
-      check:
+      check "splitlines":
         # check for empty trailing line
         was.splitLines.len + 2 == now.splitLines.len
         now.splitLines[^1] == ""
@@ -303,7 +303,7 @@ block:
             checkpoint "versioned ", key
           for key, value in required.pairs:
             checkpoint "required ", key
-        check:
+        check "version oids as expected":
           $versioned[v"0.6.5"].oid == "8937c0b998376944fd93d6d8e7b3cf4db91dfb9b"
           $versioned[v"0.6.6"].oid == "5a3de5a5fc9b83d5a9bba23f7e950b37a96d10e6"
 
