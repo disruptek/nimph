@@ -5,7 +5,7 @@ if ! test -f src/nimph.nim; then
   cd nimph
 fi
 
-export NIMBLE_DIR="`pwd`/deps"
+export NIMBLE_DIR="`pwd`/nimbledeps"
 mkdir "$NIMBLE_DIR"
 
 nimble --accept refresh

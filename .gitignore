@@ -1,3 +1,6 @@
+nimbledeps
+deps
+bin
 tests/tconfig
 tests/tnimble
 tests/tpackage
