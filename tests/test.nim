@@ -7,7 +7,7 @@ import std/uri
 
 import bump
 import gittyup
-import testes
+import balls
 
 import nimph/spec
 import nimph/config
@@ -22,7 +22,7 @@ import nimph/versiontags
 block:
   # let us shadow `project`
 
-  testes:
+  suite "welcome to the nimph-o-matic 9000":
     proc v(loose: string): Version =
       let release = parseVersionLoosely(loose)
       result = release.get.version

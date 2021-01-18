@@ -11,7 +11,7 @@ import compiler/pathutils
 import cutelog
 export cutelog
 
-import nimph/sanitize
+import ups/sanitize
 
 # slash attack ///////////////////////////////////////////////////
 when NimMajor >= 1 and NimMinor >= 1:
@@ -197,7 +197,7 @@ proc importName*(path: string): string =
     sane = path.sanitizeIdentifier(capsOkay = capsOkay)
   # if it's a sane identifier, use it
   if sane.isSome:
-    result = sane.get
+    result = $(get sane)
   elif not capsOkay:
     # emit a lowercase name on case-insensitive filesystems
     result = path.toLowerAscii
