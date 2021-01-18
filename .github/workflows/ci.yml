@@ -75,11 +75,11 @@ jobs:
           ./nimph
           ./nimph doctor || true
           cat nim.cfg
-          cd `./nimph path testes`
-          nim c --out:$HOME/testes --define:release testes.nim
+          cd `./nimph path balls`
+          nim c --out:$HOME/balls --define:release balls.nim
           cd -
           rm `dirname \`which nim\``/../config/config.nims || true
-          $HOME/testes
+          $HOME/balls
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
