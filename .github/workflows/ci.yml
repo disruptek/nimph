@@ -78,8 +78,12 @@ jobs:
           cd `./nimph path balls`
           nim c --out:$HOME/balls --define:release balls.nim
           cd -
+          pushd deps/pkgs/nimterop-*
+          nim c nimterop/toast.nim
+          popd
           rm `dirname \`which nim\``/../config/config.nims || true
-          $HOME/balls
+          $HOME/balls --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl
+          $HOME/balls --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl --define:git2Static
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'

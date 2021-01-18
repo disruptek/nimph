@@ -21,6 +21,8 @@ srcDir = "src"
 
 task test, "run unit tests":
   when defined(windows):
-    exec "balls.cmd"
+    exec """balls.cmd --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl"""
+    exec """balls.cmd --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl --define:git2Static"""
   else:
-    exec "balls"
+    exec """balls --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl"""
+    exec """balls --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl --define:git2Static"""
