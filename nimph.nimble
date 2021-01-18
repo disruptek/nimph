@@ -20,4 +20,7 @@ srcDir = "src"
 #installDirs = @["docs", "tests", "src"]
 
 task test, "run unit tests":
-  exec findExe"testes"
+  when defined(windows):
+    exec "balls.cmd"
+  else:
+    exec "balls"
