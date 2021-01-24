@@ -67,6 +67,83 @@ Starting with nothing more than the project's repository, we'll...
 
 [![asciicast](https://asciinema.org/a/aoDAm39yjoKenepl15L3AyfzN.svg)](https://asciinema.org/a/aoDAm39yjoKenepl15L3AyfzN)
 
+## Installation
+
+Some lucky few may be able to simply
+
+```
+nimble install https://github.com/disruptek/nimph
+```
+
+For the rest of us, bootstrap scripts are provided.
+
+### Unix-like
+
+I recommend using the `bootstrap-nonimble.sh` script. If you prefer to use
+Nimble 😕 you can use the `bootstrap.sh` reproduced below; you'll see that it
+sets up a local dependency tree with which to build Nimph and its requirements.
+
+```sh
+#!/bin/sh
+
+if ! test -f src/nimph.nim; then
+  git clone --depth 1 git://github.com/disruptek/nimph.git
+  cd nimph
+fi
+
+export NIMBLE_DIR="`pwd`/deps"
+mkdir "$NIMBLE_DIR"
+
+nimble --accept refresh
+nimble --accept install unicodedb@0.7.2 nimterop@0.6.11
+nimble install "--passNim:--path:\"`pwd`/src\" --outdir:\"`pwd`\""
+
+if test -x nimph; then
+  echo "nimph built successfully"
+else
+  echo "unable to build nimph"
+  exit 1
+fi
+```
+
+### Windows
+
+I no longer test Windows via the CI because I have no way to debug Nimterop
+failures. That said, Windows builds may work just fine for you.
+
+To build Nimph on Windows, you need to have a working `cmake`.
+The easiest way to get it is via [scoop](https://scoop.sh/):
+
+```
+scoop install cmake
+```
+
+Here is the included `bootstrap.ps1`; as above, it simply sets up local
+dependencies before building Nimph.
+
+```powershell
+if ( !(Join-Path 'src' 'nimph.nim' | Test-Path) ) {
+  git clone git://github.com/disruptek/nimph.git
+  Set-Location nimph
+}
+
+$env:NIMBLE_DIR = Join-Path $PWD 'deps'
+New-Item -Type Directory $env:NIMBLE_DIR -Force | Out-Null
+
+nimble --accept refresh
+nimble install "--passNim:--path:$(Resolve-Path 'src') --outDir:$PWD"
+```
+
+### GitHub Integration
+
+You may want to [create a new GitHub personal access token
+here](https://github.com/settings/tokens) and then add it to your environment
+as `NIMPH_TOKEN` or `GITHUB_TOKEN`.
+
+If you skip this step, Nimph will try to use a Nimble token for **search**es,
+and it will also try to read any `hub` or `ghi` credentials.  Notably, the
+**fork** subcommand will not work without adequate scope authorization.
+
 ## Subcommand Usage
 
 ### Search
@@ -620,83 +697,6 @@ git hash: b6924383df63c91f0ad6baf63d0b1aa84f9329b7
 
 ### Hacking `choosenim`
 It's a 20-line shell script, buddy; go nuts.
-
-## Installation
-
-Some lucky few may be able to simply
-
-```
-nimble install https://github.com/disruptek/nimph
-```
-
-For the rest of us, bootstrap scripts are provided.
-
-### Unix-like
-
-I recommend using the `bootstrap-nonimble.sh` script. If you prefer to use
-Nimble 😕 you can use the `bootstrap.sh` reproduced below; you'll see that it
-sets up a local dependency tree with which to build Nimph and its requirements.
-
-```sh
-#!/bin/sh
-
-if ! test -f src/nimph.nim; then
-  git clone --depth 1 git://github.com/disruptek/nimph.git
-  cd nimph
-fi
-
-export NIMBLE_DIR="`pwd`/deps"
-mkdir "$NIMBLE_DIR"
-
-nimble --accept refresh
-nimble --accept install unicodedb@0.7.2 nimterop@0.6.11
-nimble install "--passNim:--path:\"`pwd`/src\" --outdir:\"`pwd`\""
-
-if test -x nimph; then
-  echo "nimph built successfully"
-else
-  echo "unable to build nimph"
-  exit 1
-fi
-```
-
-### Windows
-
-I no longer test Windows via the CI because I have no way to debug Nimterop
-failures. That said, Windows builds may work just fine for you.
-
-To build Nimph on Windows, you need to have a working `cmake`.
-The easiest way to get it is via [scoop](https://scoop.sh/):
-
-```
-scoop install cmake
-```
-
-Here is the included `bootstrap.ps1`; as above, it simply sets up local
-dependencies before building Nimph.
-
-```powershell
-if ( !(Join-Path 'src' 'nimph.nim' | Test-Path) ) {
-  git clone git://github.com/disruptek/nimph.git
-  Set-Location nimph
-}
-
-$env:NIMBLE_DIR = Join-Path $PWD 'deps'
-New-Item -Type Directory $env:NIMBLE_DIR -Force | Out-Null
-
-nimble --accept refresh
-nimble install "--passNim:--path:$(Resolve-Path 'src') --outDir:$PWD"
-```
-
-### GitHub Integration
-
-You may want to [create a new GitHub personal access token
-here](https://github.com/settings/tokens) and then add it to your environment
-as `NIMPH_TOKEN` or `GITHUB_TOKEN`.
-
-If you skip this step, Nimph will try to use a Nimble token for **search**es,
-and it will also try to read any `hub` or `ghi` credentials.  Notably, the
-**fork** subcommand will not work without adequate scope authorization.
 
 ## Documentation
 
