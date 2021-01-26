@@ -1,9 +1,4 @@
-tests/tconfig
-tests/tnimble
-tests/tpackage
-tests/tspec
-tests/tgit
-tests/ttags
+nimblemeta.json
 nim.cfg
 nimph.exe
 libcurl.so*
@@ -15,3 +10,5 @@ libnghttp2.so*
 libssh2.so*
 libz.so*
 bin
+deps
+cache
