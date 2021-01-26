@@ -26,27 +26,22 @@ errors and warnings (Quiet) or prevent destructive modification (DryRun).
 ]##
 
 type
-  Suitable = concept s, t           ## the most basic of identity assumptions
-    hash(s) is Hash
-    `==`(s, t) is bool
+  ## the most basic of identity assumptions
+  Suitable = concept
+    proc hash(s: self): Hash
+    proc `==`(a, b: self): bool
 
-  Collectable[T] = concept c, var w ## a collection of suitable items
-    contains(c, T) is bool
-    len(c) is Ordinal
-    for item in items(c):           # ...that you can iterate
-      item is T
-      item is Suitable
-    for index, item in pairs(c):    # pairs iteration yields the index
-      item is T
-      item is Suitable
-      del(w, index)                 # the index can be used for deletion
-    T is Suitable
+  ## a collection of suitable items
+  Collectable[T: Suitable] = concept
+    proc contains(c: self; n: T): bool
+    proc len(c: self): int
+    iterator items(c: self): T            # ...that you can iterate
+    iterator pairs(c: self): (each I, T)  # pairs iteration yields the index
+    proc del(c: self; index: I)           # the index can be used for deletion
 
-  Groupable[T] = concept g, var w   ## a collection we can grow or shrink
-    g is Collectable
-    g is Collectable[T]
-    add(w, T)
-    del(w, T)
+  Groupable[T] = concept
+    proc add(g: self; n: T)
+    proc del(g: self; n: T)
 
   Group[T] = concept g, var w       ## add the concept of a unique index
     g is Groupable[T]
@@ -59,6 +54,7 @@ type
       `[]`(w, index) is T           # get via index
       `[]=`(w, index, T)            # set via index
 
+#[
   IdentityGroup*[T] = concept g, var w ##
     ## an IdentityGroup lets you test for membership via Identity,
     ## PackageName, or Uri
@@ -99,6 +95,7 @@ type
     contains(g, Release) is bool
     for item in g[Release]:         # indexing iteration by Release
       item is T
+]#
 
 proc incl*[T](group: Groupable[T]; value: T) =
   if value notin group:
