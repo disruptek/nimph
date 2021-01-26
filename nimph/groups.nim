@@ -186,9 +186,9 @@ proc del*[T](group: var Collectable[T]; value: T) =
       break
 
 when isMainModule:
-  import testes
+  import balls
 
-  testes:
+  suite "concepts test":
     ## we start with a simple "collection".
     var g: seq[string]
     ## add some values.
