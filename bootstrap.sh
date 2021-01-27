@@ -10,7 +10,7 @@ mkdir "$NIMBLE_DIR"
 
 nimble --accept refresh
 nimble --accept install unicodedb@0.7.2 nimterop@0.6.11
-nimble install "--passNim:--path:\"`pwd`/src\" --outdir:\"`pwd`\""
+nimble --accept install "--passNim:--path:\"`pwd`/src\" --outdir:\"`pwd`\""
 
 if test -x nimph; then
   echo "nimph built successfully"
