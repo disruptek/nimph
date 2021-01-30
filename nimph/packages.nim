@@ -13,9 +13,10 @@ import std/options
 import npeg
 import sorta
 
+import ups/paths
+
 import nimph/spec
 import nimph/requirements
-import nimph/paths
 import nimph/groups
 
 type

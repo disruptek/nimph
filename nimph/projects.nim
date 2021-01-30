@@ -16,9 +16,10 @@ import std/sequtils
 import bump
 import gittyup
 
+import ups/runner
+
 import nimph/spec
 import nimph/config
-import nimph/runner
 import nimph/nimble
 import nimph/packages
 import nimph/versions

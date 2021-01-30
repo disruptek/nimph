@@ -5,8 +5,9 @@ import std/uri except Url
 
 import gittyup
 
+import ups/paths
+
 import nimph/spec
-import nimph/paths
 import nimph/requirements
 import nimph/versions
 

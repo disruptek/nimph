@@ -8,7 +8,8 @@ import cutelog
 export cutelog
 
 import ups/sanitize
-import ups/spec
+import ups/spec as upsspec
+export upsspec
 
 type
   Flag* {.pure.} = enum

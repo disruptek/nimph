@@ -10,9 +10,10 @@ import std/strformat
 import npeg
 import bump
 
+import ups/runner
+import ups/paths
+
 import nimph/spec
-import nimph/runner
-import nimph/paths
 
 type
   DumpResult* = object
@@ -186,7 +187,10 @@ proc linkedFindTarget*(dir: AbsoluteDir; target = ""; nimToo = false;
   # critically, set the search to none because ultimately, we found nothing
   result.search.found = none(Target)
 
-proc importName*(linked: LinkedSearchResult): string =
+proc importName*(target: Target): ImportName =
+  result = target.package.importName
+
+proc importName*(linked: LinkedSearchResult): ImportName =
   ## a uniform name usable in code for imports
   if linked.via != nil:
     result = linked.via.importName
