@@ -11,13 +11,15 @@ import bump
 import gittyup
 import badresults
 
+import ups/spec as upspec
+import ups/paths
+import ups/runner
+import ups/config
+
 import nimph/spec
-import nimph/paths
-import nimph/runner
 import nimph/projects
 import nimph/doctor
 import nimph/thehub
-import nimph/config
 import nimph/packages
 import nimph/dependencies
 import nimph/lockers
