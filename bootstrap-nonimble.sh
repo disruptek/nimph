@@ -9,7 +9,7 @@ fi
 cd src
 
 git clone --depth 1 https://github.com/disruptek/bump.git
-git clone --depth 1 https://github.com/disruptek/cutelog.git
+git clone --depth 1 --branch 1.1.2 https://github.com/disruptek/cutelog.git
 git clone --depth 1 https://github.com/disruptek/gittyup.git
 git clone --depth 1 https://github.com/disruptek/nimgit2.git
 git clone --depth 1 --branch v0.6.11 https://github.com/genotrance/nimterop.git
