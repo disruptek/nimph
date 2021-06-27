@@ -41,7 +41,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          path: nimph
+          path: ci
 
       - name: Setup Nim
         uses: alaviss/setup-nim@0.1.1
@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           mkdir $HOME/.nimble
-          cd nimph
+          cd ci
           git fetch --unshallow
           cp ci-bootstrap.cfg nim.cfg
           ./bootstrap-nonimble.sh test
@@ -85,7 +85,7 @@ jobs:
         if: ${{ matrix.docs }} == 'true'
         shell: bash
         run: |
-          cd nimph
+          cd ci
           branch=${{ github.ref }}
           branch=${branch##*/}
           mv ci-docs.cfg nim.cfg
@@ -110,6 +110,6 @@ jobs:
           matrix.os == 'ubuntu-latest' && matrix.nim == 'devel'
         uses: crazy-max/ghaction-github-pages@v1
         with:
-          build_dir: nimph/docs
+          build_dir: ci/docs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
