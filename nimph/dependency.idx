@@ -1,0 +1,41 @@
+Dependency	nimph/dependency.html#Dependency	dependency: Dependency	
+DependencyGroup	nimph/dependency.html#DependencyGroup	dependency: DependencyGroup	
+name	nimph/dependency.html#name,Dependency	dependency: name(dependency: Dependency): string	
+`$`	nimph/dependency.html#$,Dependency	dependency: `$`(dependency: Dependency): string	
+newDependency	nimph/dependency.html#newDependency,Requirement	dependency: newDependency(requirement: Requirement): Dependency	
+newDependencyGroup	nimph/dependency.html#newDependencyGroup,set[Flag]	dependency: newDependencyGroup(flags: set[Flag]): DependencyGroup	
+contains	nimph/dependency.html#contains,DependencyGroup,Package	dependency: contains(dependencies: DependencyGroup; package: Package): bool	
+hasKey	nimph/dependency.html#hasKey,DependencyGroup,string	dependency: hasKey(dependencies: DependencyGroup; name: string): bool	
+asPackage	nimph/dependency.html#asPackage,Project	dependency: asPackage(project: Project): Package	
+adopt	nimph/dependency.html#adopt,Project,Project	dependency: adopt(parent: Project; child: var Project)	
+childProjects	nimph/dependency.html#childProjects,Project	dependency: childProjects(project: Project): ProjectGroup	
+determineDeps	nimph/dependency.html#determineDeps,Project	dependency: determineDeps(project: Project): Option[Requires]	
+determineDeps	nimph/dependency.html#determineDeps,Project_2	dependency: determineDeps(project: var Project): Option[Requires]	
+peelRelease	nimph/dependency.html#peelRelease,Project,Release	dependency: peelRelease(project: Project; release: Release): Release	
+peelRelease	nimph/dependency.html#peelRelease,Project	dependency: peelRelease(project: Project): Release	
+symbolicMatch	nimph/dependency.html#symbolicMatch.i,Project,Requirement	dependency: symbolicMatch(project: Project; req: Requirement): Release	
+symbolicMatch	nimph/dependency.html#symbolicMatch,Project,Requirement,Release	dependency: symbolicMatch(project: Project; req: Requirement; release: Release): bool	
+symbolicMatch	nimph/dependency.html#symbolicMatch,Project,Requirement,Release_2	dependency: symbolicMatch(project: var Project; req: Requirement; release: Release): bool	
+symbolicMatch	nimph/dependency.html#symbolicMatch,Project,Requirement	dependency: symbolicMatch(project: Project; req: Requirement): bool	
+symbolicMatch	nimph/dependency.html#symbolicMatch,Project,Requirement_2	dependency: symbolicMatch(project: var Project; req: Requirement): bool	
+isSatisfiedBy	nimph/dependency.html#isSatisfiedBy,Requirement,Project,Release	dependency: isSatisfiedBy(req: Requirement; project: Project; release: Release): bool	
+isSatisfiedBy	nimph/dependency.html#isSatisfiedBy,Requirement,Project	dependency: isSatisfiedBy(req: Requirement; project: Project): bool	
+get	nimph/dependency.html#get,Group[K: Requirement,V],Requirement	dependency: get[K: Requirement; V](group: Group[K, V]; key: Requirement): V	
+mget	nimph/dependency.html#mget,Group[K: Requirement,V],K	dependency: mget[K: Requirement; V](group: var Group[K, V]; key: K): var V	
+newDependency	nimph/dependency.html#newDependency,Project	dependency: newDependency(project: Project): Dependency	
+add	nimph/dependency.html#add,DependencyGroup,Requirement,Dependency	dependency: add(group: var DependencyGroup; req: Requirement; dep: Dependency)	
+addedRequirements	nimph/dependency.html#addedRequirements,DependencyGroup,Dependency	dependency: addedRequirements(dependencies: var DependencyGroup; dependency: var Dependency): bool	
+pathForName	nimph/dependency.html#pathForName,DependencyGroup,string	dependency: pathForName(dependencies: DependencyGroup; name: string): Option[string]	
+projectForPath	nimph/dependency.html#projectForPath,DependencyGroup,string	dependency: projectForPath(deps: DependencyGroup; path: string): Option[Project]	
+reqForProject	nimph/dependency.html#reqForProject,DependencyGroup,Project	dependency: reqForProject(group: DependencyGroup; project: Project): Option[Requirement]	
+projectForName	nimph/dependency.html#projectForName,DependencyGroup,string	dependency: projectForName(group: DependencyGroup; name: string): Option[Project]	
+isHappy	nimph/dependency.html#isHappy,Dependency	dependency: isHappy(dependency: Dependency): bool	
+isHappyWithVersion	nimph/dependency.html#isHappyWithVersion,Dependency	dependency: isHappyWithVersion(dependency: Dependency): bool	
+resolveUsing	nimph/dependency.html#resolveUsing,ProjectGroup,PackageGroup,Requirement	dependency: resolveUsing(projects: ProjectGroup; packages: PackageGroup;\n             requirement: Requirement): Dependency	
+isUsing	nimph/dependency.html#isUsing,DependencyGroup,Target,Dependency	dependency: isUsing(dependencies: DependencyGroup; target: Target; outside: Dependency = nil): bool	
+resolve	nimph/dependency.html#resolve,Project,DependencyGroup	dependency: resolve(project: var Project; dependencies: var DependencyGroup): bool	
+resolve	nimph/dependency.html#resolve,Project,DependencyGroup,Requirement	dependency: resolve(project: Project; deps: var DependencyGroup; req: Requirement): bool	
+newDependencyGroup	nimph/dependency.html#newDependencyGroup,Project	dependency: newDependencyGroup(project: Project; flags = defaultFlags): DependencyGroup	
+reset	nimph/dependency.html#reset,DependencyGroup,Project	dependency: reset(dependencies: var DependencyGroup; project: var Project)	
+roll	nimph/dependency.html#roll,Project,Requirement,RollGoal	dependency: roll(project: var Project; requirement: Requirement; goal: RollGoal;\n     dry_run = false): bool	
+rollTowards	nimph/dependency.html#rollTowards,Project,Requirement	dependency: rollTowards(project: var Project; requirement: Requirement): bool	

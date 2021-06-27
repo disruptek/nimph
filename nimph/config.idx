@@ -1,0 +1,23 @@
+ProjectCfgParsed	nimph/config.html#ProjectCfgParsed	config: ProjectCfgParsed	
+NimphConfig	nimph/config.html#NimphConfig	config: NimphConfig	
+parseConfigFile	nimph/config.html#parseConfigFile,string	config: parseConfigFile(path: string): Option[ConfigRef]	
+loadAllCfgs	nimph/config.html#loadAllCfgs,string	config: loadAllCfgs(directory: string): ConfigRef	
+appendConfig	nimph/config.html#appendConfig,Target,string	config: appendConfig(path: Target; config: string): bool	
+parseProjectCfg	nimph/config.html#parseProjectCfg,Target	config: parseProjectCfg(input: Target): ProjectCfgParsed	
+isEmpty	nimph/config.html#isEmpty,NimphConfig	config: isEmpty(config: NimphConfig): bool	
+newNimphConfig	nimph/config.html#newNimphConfig,string	config: newNimphConfig(path: string): NimphConfig	
+isStdLib	nimph/config.html#isStdLib.t,ConfigRef,string	config: isStdLib(config: ConfigRef; path: string): bool	
+isStdlib	nimph/config.html#isStdlib.t,ConfigRef,AbsoluteDir	config: isStdlib(config: ConfigRef; path: AbsoluteDir): bool	
+likelySearch	nimph/config.html#likelySearch.i,ConfigRef,bool	config: likelySearch(config: ConfigRef; libsToo: bool): string	
+likelySearch	nimph/config.html#likelySearch.i,ConfigRef,string,bool	config: likelySearch(config: ConfigRef; repo: string; libsToo: bool): string	
+likelyLazy	nimph/config.html#likelyLazy.i,ConfigRef,int	config: likelyLazy(config: ConfigRef; least = 0): string	
+likelyLazy	nimph/config.html#likelyLazy.i,ConfigRef,string,int	config: likelyLazy(config: ConfigRef; repo: string; least = 0): string	
+packagePaths	nimph/config.html#packagePaths.i,ConfigRef	config: packagePaths(config: ConfigRef; exists = true): string	
+suggestNimbleDir	nimph/config.html#suggestNimbleDir,ConfigRef,string,string	config: suggestNimbleDir(config: ConfigRef; local = &quot;&quot;; global = &quot;&quot;): string	
+removeSearchPath	nimph/config.html#removeSearchPath,ConfigRef,Target,string	config: removeSearchPath(config: ConfigRef; nimcfg: Target; path: string): bool	
+addSearchPath	nimph/config.html#addSearchPath,ConfigRef,Target,string	config: addSearchPath(config: ConfigRef; nimcfg: Target; path: string): bool	
+excludeSearchPath	nimph/config.html#excludeSearchPath,ConfigRef,Target,string	config: excludeSearchPath(config: ConfigRef; nimcfg: Target; path: string): bool	
+extantSearchPaths	nimph/config.html#extantSearchPaths.i,ConfigRef,int	config: extantSearchPaths(config: ConfigRef; least = 0): string	
+addLockerRoom	nimph/config.html#addLockerRoom,NimphConfig,string,JsonNode	config: addLockerRoom(config: var NimphConfig; name: string; room: JsonNode)	
+getAllLockerRooms	nimph/config.html#getAllLockerRooms,NimphConfig	config: getAllLockerRooms(config: NimphConfig): JsonNode	
+getLockerRoom	nimph/config.html#getLockerRoom,NimphConfig,string	config: getLockerRoom(config: NimphConfig; name: string): JsonNode	

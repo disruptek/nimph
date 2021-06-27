@@ -1,0 +1,10 @@
+DumpResult	nimph/nimble.html#DumpResult	nimble: DumpResult	
+NimbleMeta	nimph/nimble.html#NimbleMeta	nimble: NimbleMeta	
+parseNimbleDump	nimph/nimble.html#parseNimbleDump,string	nimble: parseNimbleDump(input: string): Option[StringTableRef]	
+fetchNimbleDump	nimph/nimble.html#fetchNimbleDump,string,string	nimble: fetchNimbleDump(path: string; nimbleDir = &quot;&quot;): DumpResult	
+hasUrl	nimph/nimble.html#hasUrl,NimbleMeta	nimble: hasUrl(meta: NimbleMeta): bool	
+url	nimph/nimble.html#url,NimbleMeta	nimble: url(meta: NimbleMeta): Uri	
+writeNimbleMeta	nimph/nimble.html#writeNimbleMeta,string,Uri,string	nimble: writeNimbleMeta(path: string; url: Uri; revision: string): bool	
+isLink	nimph/nimble.html#isLink,NimbleMeta	nimble: isLink(meta: NimbleMeta): bool	
+isValid	nimph/nimble.html#isValid,NimbleMeta	nimble: isValid(meta: NimbleMeta): bool	
+fetchNimbleMeta	nimph/nimble.html#fetchNimbleMeta,string	nimble: fetchNimbleMeta(path: string): NimbleMeta	

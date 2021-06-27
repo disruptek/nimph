@@ -1,0 +1,15 @@
+Locker	nimph/locker.html#Locker	locker: Locker	
+LockerRoom	nimph/locker.html#LockerRoom	locker: LockerRoom	
+hash	nimph/locker.html#hash,Locker	locker: hash(locker: Locker): Hash	
+hash	nimph/locker.html#hash,LockerRoom	locker: hash(room: LockerRoom): Hash	
+newLockerRoom	nimph/locker.html#newLockerRoom,string	locker: newLockerRoom(name = &quot;&quot;; flags = defaultFlags): LockerRoom	
+newLockerRoom	nimph/locker.html#newLockerRoom,Project	locker: newLockerRoom(project: Project; flags = defaultFlags): LockerRoom	
+add	nimph/locker.html#add,LockerRoom,Requirement,string,Project	locker: add(room: var LockerRoom; req: Requirement; name: string; project: Project)	
+toJson	nimph/locker.html#toJson,Locker	locker: toJson(locker: Locker): JsonNode	
+toLocker	nimph/locker.html#toLocker,JsonNode	locker: toLocker(js: JsonNode): Locker	
+toJson	nimph/locker.html#toJson,LockerRoom	locker: toJson(room: LockerRoom): JsonNode	
+toLockerRoom	nimph/locker.html#toLockerRoom,JsonNode,string	locker: toLockerRoom(js: JsonNode; name = &quot;&quot;): LockerRoom	
+getLockerRoom	nimph/locker.html#getLockerRoom,Project,string,LockerRoom	locker: getLockerRoom(project: Project; name: string; room: var LockerRoom): bool	
+allLockerRooms	nimph/locker.html#allLockerRooms.i,Project	locker: allLockerRooms(project: Project): LockerRoom	
+unlock	nimph/locker.html#unlock,Project,string	locker: unlock(project: var Project; name: string; flags = defaultFlags): bool	
+lock	nimph/locker.html#lock,Project,string	locker: lock(project: var Project; name: string; flags = defaultFlags): bool	

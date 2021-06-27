@@ -1,0 +1,26 @@
+Group	nimph/group.html#Group	group: Group	
+init	nimph/group.html#init,Group[K,V],set[Flag]	group: init[K, V](group: Group[K, V]; flags: set[Flag]; mode = modeStyleInsensitive)	
+delName	nimph/group.html#delName,Group,string	group: delName(group: Group; key: string)	
+del	nimph/group.html#del,Group[K: string,V],K	group: del[K: string; V](group: Group[K, V]; name: K)	
+del	nimph/group.html#del,Group[K: Uri,V],K	group: del[K: Uri; V](group: Group[K, V]; url: K)	
+len	nimph/group.html#len,Group[K,V]	group: len[K, V](group: Group[K, V]): int	
+len	nimph/group.html#len,Group	group: len(group: Group): int	
+get	nimph/group.html#get,Group[K: string,V],K	group: get[K: string; V](group: Group[K, V]; key: K): V	
+mget	nimph/group.html#mget,Group[K: string,V],K	group: mget[K: string; V](group: var Group[K, V]; key: K): var V	
+`[]`	nimph/group.html#[],Group[K,V],K	group: `[]`[K, V](group: var Group[K, V]; key: K): var V	
+`[]`	nimph/group.html#[],Group[K,V],K_2	group: `[]`[K, V](group: Group[K, V]; key: K): V	
+add	nimph/group.html#add,Group[K: string,V],K,V	group: add[K: string; V](group: Group[K, V]; key: K; value: V)	
+add	nimph/group.html#add,Group[K: string,V],Uri,V	group: add[K: string; V](group: Group[K, V]; url: Uri; value: V)	
+`[]=`	nimph/group.html#[]=,Group[K,V],K,V	group: `[]=`[K, V](group: Group[K, V]; key: K; value: V)	
+add	nimph/group.html#add,Group[K: Uri,V],Uri,V	group: add[K: Uri; V](group: Group[K, V]; url: Uri; value: V)	
+pairs	nimph/group.html#pairs.i,Group[K,V]	group: pairs[K, V](group: Group[K, V]): tuple[key: K, val: V]	
+mpairs	nimph/group.html#mpairs.i,Group[K,V]	group: mpairs[K, V](group: Group[K, V]): tuple[key: K, val: var V]	
+values	nimph/group.html#values.i,Group[K,V]	group: values[K, V](group: Group[K, V]): V	
+keys	nimph/group.html#keys.i,Group[K,V]	group: keys[K, V](group: Group[K, V]): K	
+mvalues	nimph/group.html#mvalues.i,Group[K,V]	group: mvalues[K, V](group: var Group[K, V]): var V	
+hasKey	nimph/group.html#hasKey,Group[K,V],K	group: hasKey[K, V](group: Group[K, V]; key: K): bool	
+contains	nimph/group.html#contains,Group[K,V],K	group: contains[K, V](group: Group[K, V]; key: K): bool	
+contains	nimph/group.html#contains,Group[K,V],Uri	group: contains[K, V](group: Group[K, V]; url: Uri): bool	
+contains	nimph/group.html#contains,Group[K,V],V	group: contains[K, V](group: Group[K, V]; value: V): bool	
+reversed	nimph/group.html#reversed.i,Group[K,V]	group: reversed[K, V](group: Group[K, V]): V	
+clear	nimph/group.html#clear,Group[K,V]	group: clear[K, V](group: Group[K, V])	

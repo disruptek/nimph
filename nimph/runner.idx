@@ -1,0 +1,3 @@
+RunOutput	nimph/runner.html#RunOutput	runner: RunOutput	
+stripPkgs	nimph/runner.html#stripPkgs,string	runner: stripPkgs(nimbleDir: string): string	
+runSomething	nimph/runner.html#runSomething,string,seq[string],set[ProcessOption],string	runner: runSomething(exe: string; args: seq[string]; options: set[ProcessOption];\n             nimbleDir = &quot;&quot;): RunOutput	
