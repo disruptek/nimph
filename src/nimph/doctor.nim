@@ -386,35 +386,31 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
         debug &"\tsearch: {path}"
       for path in project.cfg.lazyPaths.items:
         debug &"\t  lazy: {path}"
-    # search paths that are missing should be removed/excluded
-    for path in likelySearch(project.cfg, libsToo = false):
-      if dirExists(path):
-        continue
-      if dry:
-        warn &"search path {path} does not exist"
-        result = false
-      elif project.removeSearchPath(path):
-        info &"removed missing search path {path}"
-      elif excludeMissingSearchPaths and project.excludeSearchPath(path):
-        info &"excluded missing search path {path}"
-      else:
-        warn &"unable to remove search path {path}"
-        result = false
 
+    template cleanUpPathIn(form: string; iter: untyped): untyped =
+      block complete:
+        while true:
+          block resume:
+            for path in likelySearch(project.cfg, libsToo = false):
+              if not dirExists(path):
+                if dry:
+                  warn "$# path $# does not exist" % [ form, path ]
+                  result = false
+                elif project.removeSearchPath(path):
+                  info "removed missing $# path $#" % [ form, path ]
+                  break resume
+                elif excludeMissingSearchPaths and project.excludeSearchPath(path):
+                  info "excluded missing $# path $#" % [ form, path ]
+                  break resume
+                else:
+                  warn "unable to remove $# path $#" % [ form, path ]
+                  result = false
+            break complete
+
+    # search paths that are missing should be removed/excluded
+    cleanUpPathIn "search", likelySearch(project.cfg, libsToo = false)
     # lazy paths that are missing can be explicitly removed/ignored
-    for path in likelyLazy(project.cfg, least = 0):
-      if dirExists(path):
-        continue
-      if dry:
-        warn &"nimblePath {path} does not exist"
-        result = false
-      elif project.removeSearchPath(path):
-        info &"removed missing nimblePath {path}"
-      elif excludeMissingLazyPaths and project.excludeSearchPath(path):
-        info &"excluded missing nimblePath {path}"
-      else:
-        warn &"unable to remove nimblePath {path}"
-        result = false
+    cleanUpPathIn "nimblePath", likelyLazy(project.cfg, least = 0)
 
   # if a dependency (local or otherwise) is shadowed by another dependency
   # in one of the nimblePaths, then we should warn that a removal of one
