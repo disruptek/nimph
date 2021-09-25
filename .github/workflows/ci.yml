@@ -98,6 +98,7 @@ jobs:
           cat nim.cfg
           pushd deps/pkgs/nimterop-*
           nim c nimterop/toast.nim
+          nim c nimterop/loaf.nim
           popd
           nim doc --project --outdir:docs \
             '--git.url:https://github.com/${{ github.repository }}' \
