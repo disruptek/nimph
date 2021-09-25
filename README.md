@@ -2,7 +2,7 @@
 
 [![Test Matrix](https://github.com/disruptek/nimph/workflows/CI/badge.svg)](https://github.com/disruptek/nimph/actions?query=workflow%3ACI)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/disruptek/nimph?style=flat)](https://github.com/disruptek/nimph/releases/latest)
-![Minimum supported Nim version](https://img.shields.io/badge/nim-1.2.9%2B-informational?style=flat&logo=nim)
+![Minimum supported Nim version](https://img.shields.io/badge/nim-1.2.13%2B-informational?style=flat&logo=nim)
 [![License](https://img.shields.io/github/license/disruptek/nimph?style=flat)](#license)
 [![buy me a coffee](https://img.shields.io/badge/donate-buy%20me%20a%20coffee-orange.svg)](https://www.buymeacoffee.com/disruptek)
 
@@ -82,6 +82,8 @@ For the rest of us, bootstrap scripts are provided.
 I recommend using the `bootstrap-nonimble.sh` script. If you prefer to use
 Nimble 😕 you can use the `bootstrap.sh` reproduced below; you'll see that it
 sets up a local dependency tree with which to build Nimph and its requirements.
+
+**nimterop must be able to find `cmake` in your $PATH**
 
 ```sh
 #!/bin/sh
