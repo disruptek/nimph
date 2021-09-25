@@ -34,7 +34,7 @@ jobs:
       matrix:
         #os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
         os: ['macos-latest', 'ubuntu-latest']
-        nim: ['devel', 'version-1-4', 'version-1-2']
+        nim: ['devel', 'version-1-6', 'version-1-4', 'version-1-2']
     name: '${{ matrix.os }} (${{ matrix.nim }})'
     runs-on: ${{ matrix.os }}
     steps:
@@ -76,10 +76,13 @@ jobs:
           cd -
           pushd deps/pkgs/nimterop-*
           nim c nimterop/toast.nim
+          nim c nimterop/loaf.nim || true
           popd
+          echo "remove nim's config.nims...?"
+          ls -l `dirname \`which nim\``/../config/
           rm `dirname \`which nim\``/../config/config.nims || true
-          $HOME/balls --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl
-          $HOME/balls --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl --define:git2Static
+          nim c -r --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl tests/test.nim
+          nim c -r --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl --define:git2Static tests/test.nim
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
