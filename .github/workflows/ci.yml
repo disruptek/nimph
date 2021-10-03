@@ -82,7 +82,7 @@ jobs:
           ls -l `dirname \`which nim\``/../config/
           rm `dirname \`which nim\``/../config/config.nims || true
           nim c -r --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl tests/test.nim
-          nim c -r --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl --define:git2Static tests/test.nim
+          #nim c -r --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl --define:git2Static tests/test.nim
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
