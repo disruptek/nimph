@@ -237,7 +237,7 @@ proc getHeadOid*(project: Project): GitResult[GitOid] =
     raise newException(Defect, emsg)
   block:
     repository := openRepository(project.gitDir):
-      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+      error &"Cannot get head oid - unable to open repo at `{project.repo}`: {code.dumpError}"
       result.err code
       break
     result = repository.getHeadOid
@@ -269,7 +269,7 @@ proc shortOid(oid: GitOid; size = 6): string =
 template matchingBranches(project: Project; body: untyped): untyped =
   block:
     repository := openRepository(project.gitDir):
-      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+      error &"Cannot get matchig branches - unable to open repo at `{project.repo}`: {code.dumpError}"
       break
     for bref in repository.branches:
       if bref.isOk:
@@ -351,8 +351,8 @@ proc fetchTagTable*(project: var Project) =
   block:
     if project.dist != Git:
       break
-    repository := openRepository(project.gitDir):
-      error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+    repository := repositoryOpen(project.gitDir):
+      error &"Cannot fetch tag table - unable to open repo at `{project.repo}`: {code.dumpError}"
       break
     let
       tags = repository.tagTable
@@ -374,7 +374,7 @@ proc releaseSummary*(project: Project): string =
     # else, lookup the summary for the tag or commit
     block:
       repository := openRepository(project.gitDir):
-        error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+        error &"Cannot get release summary - unable to open repo at `{project.repo}`: {code.dumpError}"
         break
       thing := repository.lookupThing(project.release.reference):
         warn &"error reading reference `{project.release.reference}`"
@@ -541,7 +541,7 @@ proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
   block complete:
     block found:
       repository := openRepository(project.gitDir):
-        error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+        error &"Cannot find repository url - unable to open repo at `{project.repo}`: {code.dumpError}"
         break found
       let
         remote = repository.remoteLookup(name)
@@ -1377,7 +1377,9 @@ proc versionChangingCommits*(project: var Project): VersionTags =
   project.returnToHeadAfter:
     block:
       repository := openRepository(project.gitDir):
-        error &"unable to open repo at `{project.repo}`: {code.dumpError}"
+        error "Cannot get version changing commits - unable to open repo at" &
+          &"`{project.repo}`: {code.dumpError}"
+
         break
       # iterate over commits to the dotNimble file
       for thing in repository.commitsForSpec(@[package]):
