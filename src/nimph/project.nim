@@ -547,7 +547,7 @@ proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
         remote = repository.remoteLookup(name)
       if remote.isErr:
         case remote.error:
-        of grcNotFound:
+        of GIT_ENOTFOUND:
           # "not found" doesn't seem like something we need to warn of
           discard
         else:
@@ -913,7 +913,7 @@ proc addMissingUpstreams*(project: Project) =
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
-    for result in repository.branches({gbtLocal}):
+    for result in repository.branches({GIT_BRANCH_LOCAL}):
       if result.isErr:
         warn &"error fetching branches: {result.error}"
         warn result.error.dumpError
@@ -928,13 +928,13 @@ proc addMissingUpstreams*(project: Project) =
         debug &"branch: {name}"
         found := branch.branchUpstream:
           case code:
-          of grcNotFound:
+          of GIT_ENOTFOUND:
             case branch.setBranchUpstream(name):
-            of grcOk:
+            of GIT_OK:
               info &"added upstream tracking branch for {name}"
             else:
               warn &"unable to add upstream tracking branch for {name}"
-              warn grcOk.dumpError
+              warn GIT_OK.dumpError
           else:
             warn &"error fetching upstream for {name}: {code}"
             warn code.dumpError
@@ -1105,7 +1105,7 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
 
     remote := repository.remoteLookup(name):
       case code:
-      of grcNotFound:
+      of GIT_ENOTFOUND:
         discard
       else:
         warn &"unable to fetch remote `{name}` from repo in {path}"
@@ -1209,14 +1209,14 @@ proc repoLockReady*(project: Project): bool =
     # this is a high-level state check to ensure the
     # repo isn't in the middle of a merge, bisect, etc.
     let state = repository.repositoryState
-    if state != GitRepoState.grsNone:
+    if state != GIT_REPOSITORY_STATE_NONE:
       notice &"{project} repository in invalid {state} state"
     else:
       # it's our game to lose
       result = true
 
       # an alien file isn't a problem, but virtually anything else is
-      for n in repository.status(ssIndexAndWorkdir):
+      for n in repository.status(GIT_STATUS_SHOW_INDEX_AND_WORKDIR):
         result = false
         notice &"{project} repository has been modified"
         break
@@ -1319,7 +1319,7 @@ proc setHeadToRelease*(project: var Project; release: Release): bool =
     # we want the code because it'll tell us what went wrong
     let code = repository.checkoutTree(release.reference)
     case code:
-    of grcOk:
+    of GIT_OK:
       result = true
       # make sure we invalidate some data
       project.dump = nil
@@ -1358,7 +1358,7 @@ template returnToHeadAfter*(project: var Project; body: untyped) =
         raise newException(IOError, "cannot detach head to " & $previous)
 
       # re-attach the head if we can
-      if repository.setHead($home.name) != grcOk:
+      if repository.setHead($home.name) != GIT_OK:
         raise newException(IOError, "cannot set head to " & home.name)
 
       # be sure to reload the project specifics now that we're home

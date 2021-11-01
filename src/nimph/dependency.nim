@@ -11,6 +11,7 @@ import std/algorithm
 
 import bump
 import gittyup
+import hlibgit2/types
 
 import nimph/spec
 import nimph/package
@@ -161,11 +162,11 @@ proc peelRelease*(project: Project; release: Release): Release =
 
     # it's a valid reference, let's try to convert it to a release
     case thing.kind:
-    of goTag:
+    of GIT_OBJECT_TAG:
       # the reference is a tag, so we need to resolve the target oid
       result = project.peelRelease newRelease($thing.targetId,
                                               operator = Tag)
-    of goCommit:
+    of GIT_OBJECT_COMMIT:
       # good; we found a matching commit
       result = newRelease($thing.oid, operator = Tag)
     else:
