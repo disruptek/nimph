@@ -1025,7 +1025,7 @@ iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef;
   # procede in path order to try to find projects using the paths
   for path in config.packagePaths(exists = true):
     let
-      target = linkedFindTarget(path, ascend = false)
+      target = linkedFindTarget(path)
       found = target.search.found
     if found.isNone:
       continue
@@ -1041,8 +1041,9 @@ iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef;
   # now report on anything we weren't able to discover
   for project in group.mvalues:
     if project.importName notin dedupe:
-      yield project
-      notice &"no path to {project.repo} as `{project.importName}`"
+      notice &"current enviromnent allows to import {project.repo} ",
+        &"as `import {project.importName}` - this was not specified in ",
+        "`.nimble` project file, so nimph ignored it."
 
 proc countNimblePaths*(project: Project):
   tuple[local: int; global: int; paths: seq[string]] =
