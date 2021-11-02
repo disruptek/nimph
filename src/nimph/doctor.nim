@@ -383,9 +383,9 @@ proc doctor*(project: var Project; dry = true; strict = true): bool =
   block missingpaths:
     when defined(debugPath):
       for path in project.cfg.searchPaths.items:
-        debug &"\tsearch: {path}"
+        debug &"\tsearch: {path.string}"
       for path in project.cfg.lazyPaths.items:
-        debug &"\t  lazy: {path}"
+        debug &"\t  lazy: {path.string}"
     # search paths that are missing should be removed/excluded
     for path in likelySearch(project.cfg, libsToo = false):
       if dirExists(path):
