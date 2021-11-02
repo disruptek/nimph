@@ -1011,9 +1011,9 @@ proc allImportTargets*(config: ConfigRef; repo: string):
       target = linkedFindTarget(path, target = path.pathToImport.importName,
                                 nimToo = true, ascend = false)
       found = target.search.found
-    if found.isNone:
-      continue
-    result.add found.get, target
+
+    if found.isSome():
+      result.add found.get, target
 
 iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef;
                      repo: string): var Project =
@@ -1022,21 +1022,22 @@ iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef;
   var
     dedupe = newTable[string, Project](nextPowerOfTwo(group.len))
 
-  # procede in path order to try to find projects using the paths
+  # proceed in path order to try to find projects using the paths
   for path in config.packagePaths(exists = true):
+    # Find `.nimble` files for each path
     let
       target = linkedFindTarget(path)
       found = target.search.found
-    if found.isNone:
-      continue
-    # see if the target project is in our group
-    for project in group.mvalues:
-      if found.get == project.nimble:
-        # if it is, put it in the dedupe and yield it
-        if project.importName notin dedupe:
-          dedupe.add project.importName, project
-          yield project
-        break
+
+    if found.isSome():
+      # see if the target project is in our group
+      for project in group.mvalues:
+        if found.get == project.nimble:
+          # if it is, put it in the dedupe and yield it
+          if project.importName notin dedupe:
+            dedupe.add project.importName, project
+            yield project
+          break
 
   # now report on anything we weren't able to discover
   for project in group.mvalues:
