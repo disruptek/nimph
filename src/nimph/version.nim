@@ -187,7 +187,7 @@ proc `<`*(a, b: VersionMaskField): bool =
 proc `==`*(a, b: VersionMask): bool =
   result = a.major == b.major
   result = result and a.minor == b.minor
-  result = result and a.patch == a.patch
+  result = result and a.patch == b.patch
 
 proc `==`*(a, b: Release): bool =
   if a.kind == b.kind and a.isValid and b.isValid:

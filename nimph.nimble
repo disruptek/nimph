@@ -1,4 +1,4 @@
-version = "1.0.8"
+version = "1.0.10"
 author = "disruptek"
 description = "nim package handler from the future"
 license = "MIT"
@@ -14,19 +14,19 @@ requires "https://github.com/zevv/npeg >= 0.21.3 & < 1.0.0"
 requires "https://github.com/disruptek/bump >= 1.8.18 & < 2.0.0"
 requires "https://github.com/disruptek/github >= 2.0.3 & < 3.0.0"
 requires "https://github.com/disruptek/jsonconvert < 2.0.0"
-requires "https://github.com/disruptek/badresults < 2.0.0"
+requires "https://github.com/disruptek/badresults >= 2.1.2 & < 3.0.0"
 requires "https://github.com/disruptek/cutelog >= 1.1.0 & < 2.0.0"
-requires "https://github.com/disruptek/gittyup >= 2.5.0 & < 3.0.0"
+requires "https://github.com/disruptek/gittyup >= 2.7.0 & < 3.0.0"
 requires "https://github.com/disruptek/ups >= 0.0.5 & < 1.0.0"
 requires "https://github.com/disruptek/gittyup.git >= 2.8.0"
 
 when not defined(release):
-  requires "https://github.com/disruptek/balls >= 2.0.0 & < 3.0.0"
+  requires "https://github.com/disruptek/balls >= 3.0.0 & < 4.0.0"
 
 task test, "run unit tests":
   when defined(windows):
-    exec """balls.cmd --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl"""
-    exec """balls.cmd --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl --define:git2Static"""
+    exec """balls.cmd --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl"""
+    exec """balls.cmd --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl --define:git2Static"""
   else:
-    exec """balls --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl"""
-    exec """balls --define:git2Git --define:git2SetVer="v1.0.1" --define:ssl --define:git2Static"""
+    exec """balls --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl"""
+    exec """balls --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl --define:git2Static"""

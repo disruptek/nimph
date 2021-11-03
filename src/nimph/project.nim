@@ -943,7 +943,7 @@ proc clone*(project: var Project; url: Uri; name: string;
             cloned: var Project): bool =
   ## clone a package into the project's nimbleDir
   var
-    bare = url
+    bare = prepareForClone url
     tag: string
     directory = project.nimbleDir.stripPkgs / PkgDir
 
