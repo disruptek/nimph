@@ -137,7 +137,14 @@ proc normalizeUrl*(uri: Uri): Uri =
     if result.scheme.startsWith("http"):
       result.scheme = "git"
 
+  # https://github.com/disruptek/nimph/issues/145
+  # we need to remove case-sensitivity of github paths
+  if result.hostname.toLowerAscii == "github.com":
+    result.path = result.path.toLowerAscii
+
 proc convertToGit*(uri: Uri): Uri =
+  ## convert a url from any format (we will normalize it)
+  ## into something like git://github.com/disruptek/nimph.git
   result = uri.normalizeUrl
   if result.scheme == "" or result.scheme == "ssh":
     result.scheme = "git"
@@ -146,6 +153,8 @@ proc convertToGit*(uri: Uri): Uri =
   result.username = ""
 
 proc convertToSsh*(uri: Uri): Uri =
+  ## convert a url from any format (we will normalize it)
+  ## into something like git@github.com:disruptek/nimph.git
   result = uri.convertToGit
   if not result.path[0].isAlphaNumeric:
     result.path = result.path[1..^1]
@@ -155,6 +164,15 @@ proc convertToSsh*(uri: Uri): Uri =
   result.username = ""
   result.hostname = ""
   result.scheme = ""
+
+proc prepareForClone*(uri: Uri): Uri =
+  ## rewrite a url for the purposes of conducting a clone;
+  ## this currently only has bearing on github urls, which
+  ## must be rewritten to ssh format
+  if uri.hostname.toLowerAscii == "github.com":
+    convertToSsh uri
+  else:
+    uri
 
 proc packageName*(name: string): string =
   ## return a string that is plausible as a package name

@@ -32,6 +32,8 @@ block:
         sshUrl = parseUri"git@github.com:disruptek/nimph.git"
         gitUrl = parseUri"git://github.com/disruptek/nimph.git"
         webUrl = parseUri"https://github.com/disruptek/nimph"
+        bigUrl = parseUri"https://github.com/Vindaar/ginger"
+        bagUrl = parseUri"https://githob.com/Vindaar/ginger"
       check "urls look creepy":
         $sshUrl.convertToGit == $gitUrl
         $gitUrl.convertToGit == $gitUrl
@@ -39,6 +41,9 @@ block:
         $sshUrl.convertToSsh == $sshUrl
         $gitUrl.convertToSsh == $sshUrl
         $webUrl.convertToSsh == $sshUrl
+        $bigUrl.normalizeUrl == $(bigUrl).toLowerAscii
+        $bagUrl.normalizeUrl == $bagUrl
+        $webUrl.prepareForClone == $sshUrl
 
     test "fork targets":
       for url in [
