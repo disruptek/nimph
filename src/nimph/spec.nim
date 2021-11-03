@@ -133,9 +133,11 @@ proc normalizeUrl*(uri: Uri): Uri =
     result.username = uri.path[0 ..< usersep]
     result.hostname = uri.path[usersep+1 ..< pathsep]
     result.scheme = "ssh"
-  else:
-    if result.scheme.startsWith("http"):
-      result.scheme = "git"
+
+  # we used to do some ->git conversions here but they make increasingly
+  # little sense since we really cannot be sure the user will be able to
+  # use them, and with this doubt, we should err on the side of trusting
+  # our input since it was, y'know, provided by a programmer.
 
   # https://github.com/disruptek/nimph/issues/145
   # we need to remove case-sensitivity of github paths
@@ -146,9 +148,9 @@ proc convertToGit*(uri: Uri): Uri =
   ## convert a url from any format (we will normalize it)
   ## into something like git://github.com/disruptek/nimph.git
   result = uri.normalizeUrl
-  if result.scheme == "" or result.scheme == "ssh":
+  if result.scheme in ["", "http", "ssh"]:
     result.scheme = "git"
-  if result.scheme == "git" and not result.path.endsWith(".git"):
+  if not result.path.endsWith(".git"):
     result.path &= ".git"
   result.username = ""
 
@@ -156,9 +158,10 @@ proc convertToSsh*(uri: Uri): Uri =
   ## convert a url from any format (we will normalize it)
   ## into something like git@github.com:disruptek/nimph.git
   result = uri.convertToGit
+  result.username = uri.username
   if not result.path[0].isAlphaNumeric:
     result.path = result.path[1..^1]
-  if result.username == "":
+  if uri.username == "":
     result.username = "git"
   result.path = result.username & "@" & result.hostname & ":" & result.path
   result.username = ""
@@ -174,6 +177,9 @@ proc prepareForClone*(uri: Uri): Uri =
   if result.hostname.toLowerAscii == "github.com":
     if result.scheme in ["ssh", "git", "http"]:
       result.scheme = "https"
+      # add .git for consistency
+      if not result.path.endsWith(".git"):
+        result.path &= ".git"
       if result.username == "git":
         result.username = ""
 
