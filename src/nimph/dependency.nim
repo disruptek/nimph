@@ -151,7 +151,7 @@ proc peelRelease*(project: Project; release: Release): Release =
       break
 
     # else, open the repo
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -252,7 +252,7 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
         for branch in project.matchingBranches(req.release.reference):
           debug &"found {req.release.reference} in {project}"
           yield newRelease($branch.oid, operator = Tag)
-        repository := openRepository(project.gitDir):
+        repository := repositoryOpen(project.gitDir):
           error &"unable to open repo at `{project.repo}`: {code.dumpError}"
           break
         # else, it's a random oid, maybe?  look it up!
@@ -320,7 +320,7 @@ proc isSatisfiedBy*(req: Requirement; project: Project; release: Release): bool 
             break satisfied
 
           block:
-            repository := openRepository(project.gitDir):
+            repository := repositoryOpen(project.gitDir):
               error &"unable to open repo at `{project.repo}`: {code.dumpError}"
               break
             thing := repository.lookupThing(name = release.reference):

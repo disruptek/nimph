@@ -236,7 +236,7 @@ proc getHeadOid*(project: Project): GitResult[GitOid] =
     let emsg = &"{project} lacks a git repository to load" # noqa
     raise newException(Defect, emsg)
   block:
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen(project.gitDir):
       error &"Cannot get head oid - unable to open repo at `{project.repo}`: {code.dumpError}"
       result.err code
       break
@@ -268,7 +268,7 @@ proc shortOid(oid: GitOid; size = 6): string =
 
 template matchingBranches(project: Project; body: untyped): untyped =
   block:
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen(project.gitDir):
       error &"Cannot get matchig branches - unable to open repo at `{project.repo}`: {code.dumpError}"
       break
     for bref in repository.branches:
@@ -373,7 +373,7 @@ proc releaseSummary*(project: Project): string =
   else:
     # else, lookup the summary for the tag or commit
     block:
-      repository := openRepository(project.gitDir):
+      repository := repositoryOpen(project.gitDir):
         error &"Cannot get release summary - unable to open repo at `{project.repo}`: {code.dumpError}"
         break
       thing := repository.lookupThing(project.release.reference):
@@ -540,7 +540,7 @@ proc findRepositoryUrl*(project: Project; name = defaultRemote): Option[Uri] =
   ## find the (remote?) url to a given local repository
   block complete:
     block found:
-      repository := openRepository(project.gitDir):
+      repository := repositoryOpen(project.gitDir):
         error &"Cannot find repository url - unable to open repo at `{project.repo}`: {code.dumpError}"
         break found
       let
@@ -909,7 +909,7 @@ proc relocateDependency*(parent: var Project; project: var Project) =
 proc addMissingUpstreams*(project: Project) =
   ## review the local branches and add any missing tracking branches
   block:
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -1102,7 +1102,7 @@ proc promoteRemoteLike*(project: Project; url: Uri; name = defaultRemote): bool 
 
   # we'll add missing upstreams after this block
   block donehere:
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen(project.gitDir):
       error &"unable to open repo at `{path}`: {code.dumpError}"
       break
 
@@ -1205,7 +1205,7 @@ proc repoLockReady*(project: Project): bool =
     return
 
   block:
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -1316,7 +1316,7 @@ proc setHeadToRelease*(project: var Project; release: Release): bool =
     {.warning: "roll to arbitrary releases".}
     if not release.isValid or release.kind != Tag:
       break
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
     # we want the code because it'll tell us what went wrong
@@ -1346,7 +1346,7 @@ template returnToHeadAfter*(project: var Project; body: untyped) =
       error "refusing to roll the repo when it's dirty"
       break
 
-    repository := openRepository(project.gitDir):
+    repository := repositoryOpen(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
 
@@ -1379,7 +1379,7 @@ proc versionChangingCommits*(project: var Project): VersionTags =
 
   project.returnToHeadAfter:
     block:
-      repository := openRepository(project.gitDir):
+      repository := repositoryOpen(project.gitDir):
         error "Cannot get version changing commits - unable to open repo at" &
           &"`{project.repo}`: {code.dumpError}"
 
