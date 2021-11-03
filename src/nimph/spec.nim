@@ -168,11 +168,14 @@ proc convertToSsh*(uri: Uri): Uri =
 proc prepareForClone*(uri: Uri): Uri =
   ## rewrite a url for the purposes of conducting a clone;
   ## this currently only has bearing on github urls, which
-  ## must be rewritten to ssh format
-  if uri.hostname.toLowerAscii == "github.com":
-    convertToSsh uri
-  else:
-    uri
+  ## must be rewritten to https if possible, since we cannot
+  ## rely on the user's keys being correct
+  result = normalizeUrl uri
+  if result.hostname.toLowerAscii == "github.com":
+    if result.scheme in ["ssh", "git", "http"]:
+      result.scheme = "https"
+      if result.username == "git":
+        result.username = ""
 
 proc packageName*(name: string): string =
   ## return a string that is plausible as a package name
