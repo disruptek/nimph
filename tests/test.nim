@@ -41,7 +41,7 @@ block:
         $sshUrl.convertToSsh == $sshUrl
         $gitUrl.convertToSsh == $sshUrl
         $webUrl.convertToSsh == $sshUrl
-        $bigUrl.normalizeUrl == $(bigUrl).toLowerAscii
+        $bigUrl.normalizeUrl == ($bigUrl).toLowerAscii
         $bagUrl.normalizeUrl == $bagUrl
         $webUrl.prepareForClone == $sshUrl
 
