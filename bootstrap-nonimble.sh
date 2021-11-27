@@ -20,7 +20,7 @@ git clone --depth 1 --branch 0.0.7 https://github.com/disruptek/ups.git
 git clone --depth 1 --branch 0.5.3 https://github.com/disruptek/grok.git
 git clone --depth 1 --branch 0.1.6 https://github.com/haxscramper/hlibgit2.git
 git clone --depth 1 --branch 0.1.5 https://github.com/haxscramper/hlibssh2.git
-nim c --outdir:.. --define:$RELEASE --path:../src --path:hlibgit2 --path:hlibssh2 --path:ups --path:cligen --path:foreach --path:github/src --path:rest --path:npeg/src --path:jsonconvert --path:badresults --path:bump --path:cutelog --path:gittyup --path:grok nimph.nim
+nim c --outdir:.. --define:$RELEASE --path:../src --path:hlibgit2 --path:hlibssh2 --path:ups --path:cligen --path:foreach --path:github/src --path:rest --path:npeg/src --path:jsonconvert --path:badresults --path:bump --path:cutelog --path:gittyup --path:grok ../src/nimph.nim
 cd ..
 
 if test -x nimph; then
