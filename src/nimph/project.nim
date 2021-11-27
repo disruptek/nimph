@@ -1398,9 +1398,11 @@ proc versionChangingCommits*(project: var Project): VersionTags =
         # compose a new release to the commit and then go there
         let release = newRelease($thing.get.oid, operator = Tag)
         if project.setHeadToRelease(release):
-          # freshen project version, release, etc.
-          project.refresh
-          result[project.version] = thing.get
+          # this operation makes little sense if no .nimble exists
+          if fileExists($project.nimble):
+            # freshen project version, release, etc.
+            project.refresh
+            result[project.version] = thing.get
 
 proc pathForName*(group: ProjectGroup; name: string): Option[string] =
   ## try to retrieve the directory for a given import name in the group
