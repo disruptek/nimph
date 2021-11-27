@@ -27,7 +27,7 @@ if [ "$GITHUB_ACTIONS" = "true" ]; then
   else
     LGEXT="dynlib"
   fi
-  PASSES="--define:libgit2Lib=\"$(pwd)/libgit2/build/libgit2.$LGEXT\" --passC:\"-I$(pwd)/libgit2/include\""
+  PASSES="--define:libgit2Lib=\"$(pwd)/../libgit2/build/libgit2.$LGEXT\" --passC:\"-I$(pwd)/../libgit2/include\""
 fi
 
 nim c --outdir:.. --define:release --path:../src --path:hlibgit2/src --path:hlibssh2/src --path:ups --path:cligen --path:foreach --path:github/src --path:rest --path:npeg/src --path:jsonconvert --path:badresults --path:bump --path:cutelog --path:gittyup --path:grok $PASSES ../src/nimph.nim
