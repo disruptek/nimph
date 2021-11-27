@@ -57,8 +57,8 @@ jobs:
           cd libgit2
           mkdir build
           cd build
-          cmake --log-level=ERROR ..
-          cmake --log-level=ERROR --build . -- --quiet
+          cmake ..
+          cmake --build . -- --quiet
 
       - name: Run tests
         shell: bash
