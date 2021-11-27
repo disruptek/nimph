@@ -49,6 +49,17 @@ jobs:
           path: nim
           version: ${{ matrix.nim }}
 
+      - name: Setup libgit2
+        shell: bash
+        run: |
+          cd ci
+          git clone --depth 1 --branch v1.3.0 https://github.com/libgit2/libgit2.git
+          cd libgit2
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build . -- --quiet
+
       - name: Run tests
         shell: bash
         run: |
@@ -56,7 +67,7 @@ jobs:
           cd ci
           git fetch --unshallow
           cp ci-bootstrap.cfg nim.cfg
-          ./bootstrap-nonimble.sh test
+          ./bootstrap-nonimble.sh
           ./nimph refresh
           ./nimph
           ./nimph doctor || true
@@ -74,15 +85,14 @@ jobs:
           cd `./nimph path balls`
           nim c --out:$HOME/balls --define:release balls.nim
           cd -
-          pushd deps/pkgs/nimterop-*
-          nim c nimterop/toast.nim
-          nim c nimterop/loaf.nim || true
-          popd
           echo "remove nim's config.nims...?"
           ls -l `dirname \`which nim\``/../config/
           rm `dirname \`which nim\``/../config/config.nims || true
-          nim c -r --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl tests/test.nim
-          #nim c -r --define:git2Git --define:git2SetVer="v1.1.1" --define:ssl --define:git2Static tests/test.nim
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            nim c --define:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passC:"-I$(pwd)/libgit2/include" --define:ssl --define:release --run tests/test.nim
+          else
+            nim c --define:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passC:"-I$(pwd)/libgit2/include" --define:ssl --define:release --run tests/test.nim
+          fi
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
@@ -96,10 +106,6 @@ jobs:
           mkdir deps
           ./nimph doctor || true
           cat nim.cfg
-          pushd deps/pkgs/nimterop-*
-          nim c nimterop/toast.nim
-          nim c nimterop/loaf.nim
-          popd
           nim doc --project --outdir:docs \
             '--git.url:https://github.com/${{ github.repository }}' \
             '--git.commit:${{ github.sha }}' \
@@ -111,7 +117,7 @@ jobs:
       - name: Publish docs
         if: >
           github.event_name == 'push' && github.ref == 'refs/heads/master' &&
-          matrix.os == 'ubuntu-latest' && matrix.nim == 'devel'
+          matrix.os == 'ubuntu-latest' && matrix.nim == 'version-1-6'
         uses: crazy-max/ghaction-github-pages@v1
         with:
           build_dir: ci/docs
