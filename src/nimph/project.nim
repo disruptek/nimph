@@ -221,7 +221,8 @@ proc knowVersion*(project: var Project): Version =
         result = project.knowVersion
 
   if not result.isValid:
-    raise newException(IOError, "unable to determine {project.package} version")
+    raise IOError.newException:
+      &"unable to determine version of `{project.name}`"
 
 proc newProject*(nimble: Target): Project =
   ## instantiate a new project from the given .nimble
