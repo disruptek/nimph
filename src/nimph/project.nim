@@ -179,15 +179,17 @@ proc guessVersion*(project: Project): Version =
 proc fetchDump*(project: var Project; package: string; refresh = false): bool =
   ## make sure the nimble dump is available
   if project.dump == nil or refresh:
-    discard project.fetchConfig
-    let
-      dumped = fetchNimbleDump(package, nimbleDir = project.nimbleDir)
-    result = dumped.ok
-    if not result:
-      # puke on this for now...
-      raise newException(IOError, dumped.why)
-    # try to prevent a bug when the above changes
-    project.dump = dumped.table
+    # a valid .nimble is a pre-requisite for a successful dump
+    if fileExists($project.nimble):
+      discard project.fetchConfig
+      let
+        dumped = fetchNimbleDump(package, nimbleDir = project.nimbleDir)
+      result = dumped.ok
+      if not result:
+        # puke on this for now...
+        raise newException(IOError, dumped.why)
+      # try to prevent a bug when the above changes
+      project.dump = dumped.table
   else:
     result = true
 
