@@ -25,7 +25,7 @@ if [ "$GITHUB_ACTIONS" = "true" ]; then
   if [ `uname -s` = "Linux" ]; then
     LGEXT="so"
   else
-    LGEXT="dynlib"
+    LGEXT="dylib"
   fi
   PASSES="--define:libgit2Lib=\"$(pwd)/../libgit2/build/libgit2.$LGEXT\" --passC:\"-I$(pwd)/../libgit2/include\" --define:nimDebugDlOpen"
 fi
