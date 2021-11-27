@@ -9,7 +9,7 @@ if [ "$GITHUB_ACTIONS" = "true" ]; then
   fi
   SO="$(pwd)/libgit2/build/libgit2.$LGEXT"
   ls -ld "$SO"
-  PASSES="--define:libgit2Lib=\"$SO\" --passC:\"-I$(pwd)/libgit2/include\" --define:nimDebugDlOpen"
+  PASSES="--define:libgit2Lib=$SO --passC:\"-I$(pwd)/libgit2/include\" --define:nimDebugDlOpen"
 fi
 
 mkdir -p temporary
