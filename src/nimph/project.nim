@@ -162,16 +162,19 @@ proc runSomething*(project: var Project; exe: string; args: seq[string];
 
 proc guessVersion*(project: Project): Version =
   ## a poor man's measure of project version; pukes on comments
-  let
-    contents = readFile($project.nimble)
-    parsed = parseVersion(contents)
+  if fileExists($project.nimble):
+    let
+      contents = readFile($project.nimble)
+      parsed = parseVersion(contents)
 
-  if parsed.isNone:
-    debug &"unable to parse version from {project.nimble}"
+    if parsed.isNone:
+      debug &"unable to parse version from {project.nimble}"
+    else:
+      result = parsed.get
+      if not result.isValid:
+        error &"the version in {project.nimble} seems to be invalid"
   else:
-    result = parsed.get
-    if not result.isValid:
-      error &"the version in {project.nimble} seems to be invalid"
+    debug &"the {project.nimble} file does not exist"
 
 proc fetchDump*(project: var Project; package: string; refresh = false): bool =
   ## make sure the nimble dump is available
