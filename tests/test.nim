@@ -19,9 +19,13 @@ import nimph/requirement
 import nimph/dependency
 import nimph/versiontags
 
+proc v(loose: string): Version =
+  ## convenience
+  let release = parseVersionLoosely(loose)
+  result = release.get.version
+
 block:
   # let us shadow `project`
-
   suite "welcome to the nimph-o-matic 9000":
     const
       sample = "tests/sample.cfg"
@@ -231,9 +235,9 @@ block:
           let release = newRelease(ver, operator = Tag)
           let req = newRequirement($project.url, operator = Tag, release)
           if project.rollTowards(req):
-            for stat in repository.status(ssIndexAndWorkdir):
+            for stat in repository.status(GIT_STATUS_SHOW_INDEX_AND_WORKDIR):
               check stat.isOk
-              check gsfIndexModified notin stat.get.flags
+              check GIT_STATUS_INDEX_MODIFIED notin stat.get.flags
 
     test "project version changes":
       returnToHeadAfter project:
