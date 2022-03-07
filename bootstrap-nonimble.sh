@@ -17,7 +17,7 @@ cd temporary
 
 git clone --depth 1 --branch 1.8.29 https://github.com/disruptek/bump.git
 git clone --depth 1 --branch 1.1.2 https://github.com/disruptek/cutelog.git
-git clone --depth 1 --branch 3.0.0 https://github.com/disruptek/gittyup.git
+git clone --depth 1 --branch 3.1.0 https://github.com/disruptek/gittyup.git
 git clone --depth 1 --branch v0.6.13 https://github.com/genotrance/nimterop.git
 git clone --depth 1 --branch v1.5.19 https://github.com/c-blake/cligen.git
 git clone --depth 1 --branch 0.26.0 https://github.com/zevv/npeg.git
