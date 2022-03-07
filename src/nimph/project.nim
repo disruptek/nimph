@@ -34,6 +34,7 @@ import std/strtabs
 import std/asyncdispatch
 import std/algorithm
 import std/sequtils
+import std/sets
 
 import bump
 import gittyup
@@ -1311,22 +1312,33 @@ proc nextTagFor*(tags: GitTagTable; version: Version): string =
   # add any silly v. prefix as necessary
   result = pluckVAndDot(latest) & $version
 
-proc setHeadToRelease*(project: var Project; release: Release): bool =
-  ## advance the head of a project to a particular release
+proc setHeadToRelease*(project: var Project; release: Release;
+                       paths: seq[string] = @[]): bool =
+  ## advance the head of a project to a particular release;
+  ## supply paths to limit the checkout to the files/globs
   block:
     # we don't yet know how to roll to non-git releases
-    {.warning: "roll to non-git releases".}
+    {.warning: "roll to non-git releases is unimplemented".}
     if project.dist != Git:
       break
     # we don't yet know how to roll to arbitrary releases
-    {.warning: "roll to arbitrary releases".}
+    {.warning: "roll to arbitrary releases is unimplemented".}
     if not release.isValid or release.kind != Tag:
       break
     repository := repositoryOpen(project.gitDir):
       error &"unable to open repo at `{project.repo}`: {code.dumpError}"
       break
+    const strategy = [    # specify the strategy here explicitly, for safety
+      GIT_CHECKOUT_SAFE,
+      GIT_CHECKOUT_RECREATE_MISSING,
+      GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES,
+      GIT_CHECKOUT_DONT_OVERWRITE_IGNORED,
+      # NOTE: we do want to remove existing in this case
+      # GIT_CHECKOUT_DONT_REMOVE_EXISTING,
+    ].toHashSet
     # we want the code because it'll tell us what went wrong
-    let code = repository.checkoutTree(release.reference)
+    let code = repository.checkoutTree(release.reference, paths = paths,
+                                       strategy = strategy)
     case code:
     of GIT_OK:
       result = true
@@ -1371,7 +1383,7 @@ template returnToHeadAfter*(project: var Project; body: untyped) =
         raise newException(IOError, "cannot set head to " & home.name)
 
       # be sure to reload the project specifics now that we're home
-      project.refresh
+      refresh project
 
     body
 
@@ -1383,13 +1395,13 @@ proc versionChangingCommits*(project: var Project): VersionTags =
     # this is the package.nimble file without any other path parts
     package = project.nimble.package.addFileExt(project.nimble.ext)
 
-  project.returnToHeadAfter:
-    block:
-      repository := repositoryOpen(project.gitDir):
-        error "Cannot get version changing commits - unable to open repo at" &
-          &"`{project.repo}`: {code.dumpError}"
+  block:
+    # test the repo early so we can provide a better error message
+    repository := repositoryOpen(project.gitDir):
+      error &"Unable to open repository at `{project.repo}`: {code.dumpError}"
+      break
 
-        break
+    project.returnToHeadAfter:
       # iterate over commits to the dotNimble file
       for thing in repository.commitsForSpec(@[package]):
         if thing.isErr:
@@ -1397,12 +1409,14 @@ proc versionChangingCommits*(project: var Project): VersionTags =
           break
         # compose a new release to the commit and then go there
         let release = newRelease($thing.get.oid, operator = Tag)
-        if project.setHeadToRelease(release):
+        if project.setHeadToRelease(release, @[package]):
           # this operation makes little sense if no .nimble exists
           if fileExists($project.nimble):
-            # freshen project version, release, etc.
-            project.refresh
-            result[project.version] = thing.get
+            # use a more limited approach to determine the version
+            # because we've only checked-out the .nimble file;
+            # ie. we aren't simply issuing refresh(project)
+            let version = knowVersion project
+            result[version] = thing.get
 
 proc pathForName*(group: ProjectGroup; name: string): Option[string] =
   ## try to retrieve the directory for a given import name in the group

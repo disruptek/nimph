@@ -16,7 +16,7 @@ requires "https://github.com/disruptek/github >= 2.0.3 & < 3.0.0"
 requires "https://github.com/disruptek/jsonconvert < 2.0.0"
 requires "https://github.com/disruptek/badresults >= 2.1.2 & < 3.0.0"
 requires "https://github.com/disruptek/cutelog >= 1.1.0 & < 2.0.0"
-requires "https://github.com/disruptek/gittyup >= 3.0.0 & < 4.0.0"
+requires "https://github.com/disruptek/gittyup >= 3.1.0 & < 4.0.0"
 requires "https://github.com/disruptek/ups >= 0.0.5 & < 1.0.0"
 
 when not defined(release):
