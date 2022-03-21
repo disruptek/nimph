@@ -77,6 +77,10 @@ I no longer test Windows via the CI because I have no way to debug it.
 That said, Windows builds may work just fine for you using the older
 `bootstrap.ps1` which relies upon `nimble` to install dependencies.
 
+### OS X
+
+I no longer test OS X via the CI because I cannot be bothered to debug
+libgit2/libssh behavior there.  The tests for nim-1.2 do pass, however.
 
 ### GitHub Integration
 
