@@ -15,7 +15,7 @@ import bump
 import nimph/spec
 import nimph/runner
 
-import nimph/skullduggery
+include nimph/skullduggery
 export compileropts
 export nimconf
 

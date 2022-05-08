@@ -24,11 +24,3 @@ else:
   import compiler/pathutils
   import compiler/condsyms
   import compiler/lineinfos
-
-export pathutils
-export condsyms
-export lineinfos
-export compileropts
-export nimconf
-export idents
-export ast

@@ -11,7 +11,7 @@ export cutelog
 
 import ups/sanitize
 
-import nimph/skullduggery
+include nimph/skullduggery
 
 # slash attack ///////////////////////////////////////////////////
 when NimMajor >= 1 and NimMinor >= 1:
