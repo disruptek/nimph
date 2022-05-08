@@ -5,14 +5,12 @@ import std/httpcore
 import std/json
 import std/os
 import std/options
-import std/asyncfutures
-import std/asyncdispatch
 import std/strutils
 import std/strformat
 import std/uri
 import std/times
 
-import rest
+import rest  # actually adjacent to nimph.nim whatfer vendor/shadow reasons
 import github
 import jsonconvert
 
@@ -336,8 +334,7 @@ proc authorize*(request: Recallable): bool =
   else:
     error "unable to find a github authorization token"
 
-proc queryOne(recallable: Recallable; kind: HubKind): Future[Option[HubResult]]
-  {.async.} =
+proc queryOne(recallable: Recallable; kind: HubKind): Option[HubResult] =
   ## issue a recallable query and parse the response as a single item
   block success:
     # start with installing our credentials into the request
@@ -345,19 +342,18 @@ proc queryOne(recallable: Recallable; kind: HubKind): Future[Option[HubResult]]
       break success
 
     # send the request to github and see if they like it
-    let response = await recallable.issueRequest()
+    let response = recallable.issueRequest()
     if not response.code.is2xx:
       notice &"got response code {response.code} from github"
       break success
 
     # read the response and parse it to json
-    let js = parseJson(await response.body)
+    let js = parseJson(response.body)
 
     # turn the json into a hub result object
     result = newHubResult(kind, js).some
 
-proc queryMany(recallable: Recallable; kind: HubKind): Future[Option[HubGroup]]
-  {.async.} =
+proc queryMany(recallable: Recallable; kind: HubKind): Option[HubGroup] =
   ## issue a recallable query and parse the response as a group of items
   block success:
     # start with installing our credentials into the request
@@ -365,13 +361,13 @@ proc queryMany(recallable: Recallable; kind: HubKind): Future[Option[HubGroup]]
       break success
 
     # send the request to github and see if they like it
-    let response = await recallable.issueRequest()
+    let response = recallable.issueRequest()
     if not response.code.is2xx:
       notice &"got response code {response.code} from github"
       break success
 
     # read the response and parse it to json
-    let js = parseJson(await response.body)
+    let js = parseJson(response.body)
 
     # we know now that we'll be returning a group of some size
     var
@@ -389,22 +385,22 @@ proc queryMany(recallable: Recallable; kind: HubKind): Future[Option[HubGroup]]
       except Exception as e:
         warn "error parsing repo: " & e.msg
 
-proc getGitHubUser*(): Future[Option[HubResult]] {.async.} =
+proc getGitHubUser*(): Option[HubResult] =
   ## attempt to retrieve the authorized user
   var
     req = getUser.call(_ = "")
   debug &"fetching github user"
-  result = await req.queryOne(HubUser)
+  result = req.queryOne(HubUser)
 
-proc forkHub*(owner: string; repo: string): Future[Option[HubResult]] {.async.} =
+proc forkHub*(owner: string; repo: string): Option[HubResult] =
   ## attempt to fork an existing repository
   var
     req = postReposOwnerRepoForks.call(repo = repo, owner = owner, body = newJObject())
   debug &"forking owner `{owner}` repo `{repo}`"
-  result = await req.queryOne(HubRepo)
+  result = req.queryOne(HubRepo)
 
 proc searchHub*(keywords: seq[string]; sort = Best;
-                order = Descending): Future[Option[HubGroup]] {.async.} =
+                order = Descending): Option[HubGroup] =
   ## search github for packages
   var
     query = @["language:nim"].concat(keywords)
@@ -412,7 +408,7 @@ proc searchHub*(keywords: seq[string]; sort = Best;
                                      sort = $sort,
                                      order = $order)
   debug &"searching github for {query}"
-  result = await req.queryMany(HubRepo)
+  result = req.queryMany(HubRepo)
 
 when not defined(ssl):
   {.error: "this won't work without defining `ssl`".}
