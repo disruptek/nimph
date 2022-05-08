@@ -31,7 +31,6 @@ import std/strformat
 import std/os
 import std/osproc
 import std/strtabs
-import std/asyncdispatch
 import std/algorithm
 import std/sequtils
 import std/sets
@@ -1182,7 +1181,7 @@ proc promote*(project: Project; name = defaultRemote;
     user: HubResult = user
   block:
     try:
-      let gotUser = waitfor getGitHubUser()
+      let gotUser = getGitHubUser()
       if gotUser.isSome:
         user = gotUser.get
       else:

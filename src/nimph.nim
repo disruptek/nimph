@@ -2,7 +2,6 @@ import std/uri except Url
 import std/tables
 import std/os
 import std/strutils
-import std/asyncdispatch
 import std/options
 import std/strformat
 import std/sequtils
@@ -126,7 +125,7 @@ proc searcher*(args: seq[string]; strict = false;
   if args.len == 0:
     crash &"a search was requested but no query parameters were provided"
   let
-    group = waitfor searchHub(args)
+    group = searchHub(args)
   if group.isNone:
     crash &"unable to retrieve search results from github"
   for repo in group.get.reversed:
@@ -599,7 +598,7 @@ proc forker*(names: seq[string]; strict = false;
       result = 1
       continue
     info &"🍴forking {child.get}"
-    let forked = waitfor forkHub(fork.owner, fork.repo)
+    let forked = forkHub(fork.owner, fork.repo)
     if forked.isNone:
       result = 1
       continue
@@ -649,7 +648,7 @@ proc cloner*(args: seq[string]; strict = false;
     # search github using the input as a query
     let
       query {.used.} = args.join(" ")
-      hubs = waitfor searchHub(args)
+      hubs = searchHub(args)
     if hubs.isNone:
       crash &"unable to retrieve search results from github"
 
