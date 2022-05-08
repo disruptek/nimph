@@ -9,22 +9,15 @@ import std/options
 import std/strutils
 import std/algorithm
 
-import compiler/ast
-import compiler/idents
-import compiler/nimconf
-import compiler/options as compileropts
-import compiler/pathutils
-import compiler/condsyms
-import compiler/lineinfos
-
-export compileropts
-export nimconf
-
 import npeg
 import bump
 
 import nimph/spec
 import nimph/runner
+
+import nimph/skullduggery
+export compileropts
+export nimconf
 
 when defined(debugPath):
   from std/sequtils import count

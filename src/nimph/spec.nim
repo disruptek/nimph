@@ -6,12 +6,12 @@ import std/uri
 import std/os
 import std/times
 
-import compiler/pathutils
-
 import cutelog
 export cutelog
 
 import ups/sanitize
+
+import nimph/skullduggery
 
 # slash attack ///////////////////////////////////////////////////
 when NimMajor >= 1 and NimMinor >= 1:
