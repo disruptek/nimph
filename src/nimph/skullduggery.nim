@@ -6,7 +6,7 @@ for not having to read this crap at the top of every file...
 
 ]#
 
-when (compiles do: import compiler/utils/pathutils):
+when defined(isNimSkull):
   # nimskull
   import compiler/ast/ast
   import compiler/ast/idents
@@ -15,6 +15,16 @@ when (compiles do: import compiler/utils/pathutils):
   import compiler/front/nimconf
   import compiler/front/condsyms
   import compiler/utils/pathutils
+  from compiler/front/cli_reporter import reportHook
+  from compiler/ast/report_enums import ReportKind
+
+  const
+    isNimskull = true
+    hintConf = report_enums.ReportKind.rextConf
+    hintLineTooLong = report_enums.ReportKind.rlexLineTooLong
+
+  proc newConfigRef(): ConfigRef =
+    compileropts.newConfigRef(cli_reporter.reportHook)
 else:
   # mainline nim
   import compiler/ast
@@ -24,3 +34,5 @@ else:
   import compiler/pathutils
   import compiler/condsyms
   import compiler/lineinfos
+
+  const isNimskull = false

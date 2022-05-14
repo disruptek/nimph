@@ -36,11 +36,18 @@ type
     js: JsonNode
 
 template excludeAllNotes(config: ConfigRef; n: typed) =
-  config.notes.excl n
-  when compiles(config.mainPackageNotes):
-    config.mainPackageNotes.excl n
-  when compiles(config.foreignPackageNotes):
-    config.foreignPackageNotes.excl n
+  # nimskull doesn't support `excl`/`incl` on notes; this should work for both
+  # compilers, however
+  when isNimSkull:
+    config.notes = config.notes - {n}
+    config.mainPackageNotes = config.mainPackageNotes - {n}
+    config.foreignPackageNotes = config.foreignPackageNotes - {n}
+  else:
+    config.notes.excl n
+    when compiles(config.mainPackageNotes):
+      config.mainPackageNotes.excl n
+    when compiles(config.foreignPackageNotes):
+      config.foreignPackageNotes.excl n
 
 template setDefaultsForConfig(result: ConfigRef) =
   # maybe we should turn off configuration hints for these reads
