@@ -9,7 +9,7 @@ if [ "$GITHUB_ACTIONS" = "true" ]; then
   fi
   SO="$(pwd)/libgit2/build/libgit2.$LGEXT"
   ls -ld "$SO"
-  PASSES="--passC:\"-I$(pwd)/libgit2/include\" --define:nimDebugDlOpen"
+  PASSES="--define:libgit2Lib=\"$SO\" --passC:\"-I$(pwd)/libgit2/include\" --define:nimDebugDlOpen"
 fi
 
 mkdir -p temporary
@@ -18,7 +18,7 @@ cd temporary
 git clone --depth 1 --branch 1.8.31 https://github.com/disruptek/bump.git
 git clone --depth 1 --branch 2.0.0 https://github.com/disruptek/cutelog.git
 git clone --depth 1 --branch 3.1.0 https://github.com/disruptek/gittyup.git
-git clone --depth 1 --branch 2.0.0 https://github.com/disruptek/cligen.git
+git clone --depth 1 --branch 2.0.1 https://github.com/disruptek/cligen.git
 git clone --depth 1 --branch 0.26.0 https://github.com/zevv/npeg.git
 git clone --depth 1 --branch 1.0.2 https://github.com/disruptek/jsonconvert.git
 git clone --depth 1 --branch 2.1.3 https://github.com/disruptek/badresults.git
