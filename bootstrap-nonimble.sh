@@ -16,7 +16,7 @@ mkdir -p temporary
 cd temporary
 
 git clone --depth 1 --branch 1.8.31 https://github.com/disruptek/bump.git
-git clone --depth 1 --branch 2.0.0 https://github.com/disruptek/cutelog.git
+git clone --depth 1 --branch 2.0.1 https://github.com/disruptek/cutelog.git
 git clone --depth 1 --branch 3.1.0 https://github.com/disruptek/gittyup.git
 git clone --depth 1 --branch 2.0.1 https://github.com/disruptek/cligen.git
 git clone --depth 1 --branch 0.26.0 https://github.com/zevv/npeg.git
