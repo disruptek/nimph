@@ -35,7 +35,7 @@ jobs:
         #os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
         #os: ['macos-latest', 'ubuntu-latest']
         os: ['ubuntu-latest']
-        nim: ['devel', 'version-1-6', 'version-1-4', 'version-1-2']
+        nim: ['version-1-6', 'version-1-4', 'version-1-2']
     name: '${{ matrix.os }} (${{ matrix.nim }})'
     runs-on: ${{ matrix.os }}
     steps:
