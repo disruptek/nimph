@@ -1,4 +1,4 @@
-version = "1.1.2"
+version = "1.1.3"
 author = "disruptek"
 description = "nim package handler from the future"
 license = "MIT"
@@ -10,7 +10,7 @@ srcDir = "src"
 #installDirs = @["docs", "tests", "src"]
 
 requires "https://github.com/disruptek/cligen >= 2.0.1 & < 3.0.0"
-requires "https://github.com/zevv/npeg >= 0.26.0 & < 1.0.0"
+requires "https://github.com/zevv/npeg >= 0.26.0 & < 2.0.0"
 requires "https://github.com/disruptek/bump >= 1.8.31 & < 2.0.0"
 requires "https://github.com/disruptek/github >= 2.0.3 & < 3.0.0"
 requires "https://github.com/disruptek/jsonconvert < 2.0.0"
