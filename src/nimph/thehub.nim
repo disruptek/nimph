@@ -388,7 +388,7 @@ proc queryMany(recallable: Recallable; kind: HubKind): Option[HubGroup] =
 proc getGitHubUser*(): Option[HubResult] =
   ## attempt to retrieve the authorized user
   var
-    req = getUser.call(_ = "")
+    req = getUser.call(content = "")
   debug &"fetching github user"
   result = req.queryOne(HubUser)
 
