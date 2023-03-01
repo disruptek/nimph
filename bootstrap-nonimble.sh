@@ -22,7 +22,7 @@ git clone --depth 1 --branch 2.0.1 https://github.com/disruptek/cligen.git
 git clone --depth 1 --branch 0.26.0 https://github.com/zevv/npeg.git
 git clone --depth 1 --branch 1.0.2 https://github.com/disruptek/jsonconvert.git
 git clone --depth 1 --branch 2.1.3 https://github.com/disruptek/badresults.git
-git clone --depth 1 --branch 2.0.4 https://github.com/disruptek/github.git
+git clone --depth 1 --branch 3.0.0 https://github.com/disruptek/github.git
 git clone --depth 1 --branch 0.0.7 https://github.com/disruptek/ups.git
 git clone --depth 1 --branch 0.1.6 https://github.com/haxscramper/hlibgit2.git
 git clone --depth 1 --branch 0.1.5 https://github.com/haxscramper/hlibssh2.git
