@@ -99,8 +99,7 @@ and it will also try to read any `hub` or `ghi` credentials.  Notably, the
 
 The `search` subcommand is used to query GitHub for
 packages. Arguments should match [GitHub search syntax for
-repositories](https://help.github.com/en/github/searching-for-information-on-gi
-thub/searching-for-repositories) and for convenience, a `language:nim`
+repositories](https://help.github.com/en/github/searching-for-information-on-github/searching-for-repositories) and for convenience, a `language:nim`
 qualifier will be included.
 
 Results are output in **increasing order of relevance** to reduce scrolling;
