@@ -55,7 +55,8 @@ template setDefaultsForConfig(result: ConfigRef) =
     result.notes.incl hintPath
   elif not defined(debug):
     excludeAllNotes(result, hintConf)
-  excludeAllNotes(result, hintLineTooLong)
+  when compiles(hintLineTooLong):
+    excludeAllNotes(result, hintLineTooLong)
 
 proc parseConfigFile*(path: string): Option[ConfigRef] =
   ## use the compiler to parse a nim.cfg without changing to its directory
