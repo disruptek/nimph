@@ -396,8 +396,8 @@ proc cuteRelease*(project: Project): string =
     let
       head = project.getHeadOid
     # free the oid if necessary
-    if head.isOk:
-      defer:
+    defer:
+      if head.isOk:
         free head.get
 
     # assign a useful release string using the head
@@ -423,8 +423,8 @@ proc findCurrentTag*(project: Project): Release =
   let
     head = project.getHeadOid
   # free the oid if necessary
-  if head.isOk:
-    defer:
+  defer:
+    if head.isOk:
       free head.get
   var
     name: string
