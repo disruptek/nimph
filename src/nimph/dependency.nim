@@ -475,7 +475,7 @@ proc addName(group: var DependencyGroup; req: Requirement; dep: Dependency) =
         assert group.imports.hasKey(name)
 
 proc add*(group: var DependencyGroup; req: Requirement; dep: Dependency) =
-  group.table.add req, dep
+  group.table[req] = dep
   group.addName req, dep
 
 proc addedRequirements*(dependencies: var DependencyGroup;

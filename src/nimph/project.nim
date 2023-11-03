@@ -346,11 +346,11 @@ proc sortByVersion*(tags: GitTagTable): GitTagTable =
         order.add (tag: tag, version: parsed.get.version, thing: thing)
         continue
     # if the tag isn't parsable as a version, store it in the result
-    result.add tag, thing
+    result[tag] = thing
 
   # now sort the sequence and add the tags with versions to the result
   for trio in order.sortedByIt(it.version):
-    result.add trio.tag, trio.thing
+    result[trio.tag] = trio.thing
 
 proc fetchTagTable*(project: var Project) =
   ## retrieve the tags for a project from its git repository
@@ -1019,7 +1019,7 @@ proc allImportTargets*(config: ConfigRef; repo: string):
       found = target.search.found
 
     if found.isSome():
-      result.add found.get, target
+      result[found.get] = target
 
 iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef;
                      repo: string): var Project =
@@ -1041,7 +1041,7 @@ iterator asFoundVia*(group: var ProjectGroup; config: ConfigRef;
         if found.get == project.nimble:
           # if it is, put it in the dedupe and yield it
           if project.importName notin dedupe:
-            dedupe.add project.importName, project
+            dedupe[project.importName] = project
             yield project
           break
 

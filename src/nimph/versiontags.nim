@@ -29,7 +29,7 @@ proc addName*(group: var VersionTags; version: Version; thing: GitThing) =
 
 proc add*(group: var VersionTags; ver: Version; thing: GitThing) =
   ## add a version to the group; note that this overwrites semvers
-  group.table.add ver, thing
+  group.table[ver] = thing
   group.addName ver, thing
 
 proc del*(group: var VersionTags; ver: Version) =
