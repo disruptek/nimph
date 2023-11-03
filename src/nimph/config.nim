@@ -58,6 +58,12 @@ template setDefaultsForConfig(result: ConfigRef) =
   when compiles(hintLineTooLong):
     excludeAllNotes(result, hintLineTooLong)
 
+when defined(isNimSkull):
+  proc readConfigEventWriter(config: ConfigRef, evt: ConfigFileEvent,
+                             writeFrom: InstantiationInfo) =
+    ## Used to print config read events. Noop for now.
+    discard
+
 proc parseConfigFile*(path: string): Option[ConfigRef] =
   ## use the compiler to parse a nim.cfg without changing to its directory
   var
@@ -71,7 +77,12 @@ proc parseConfigFile*(path: string): Option[ConfigRef] =
 
   setDefaultsForConfig(config)
 
-  if readConfigFile(filename.AbsoluteFile, cache, config):
+  let success = when defined(isNimSkull):
+    readConfigFile(filename.AbsoluteFile, cache, config, readConfigEventWriter)
+  else:
+    readConfigFile(filename.AbsoluteFile, cache, config)
+
+  if success:
     result = some(config)
 
 when false:
@@ -163,8 +174,11 @@ proc loadAllCfgs*(directory: string): ConfigRef =
     # now follow the compiler process of loading the configs
     var cache = newIdentCache()
 
+    when isNimSkull:
+      # XXX: nimskull returns whether reading was successful, but unused atm
+      discard loadConfigs(NimCfg.RelativeFile, cache, result, readConfigEventWriter)
     # thanks, araq
-    when (NimMajor, NimMinor) >= (1, 5):
+    elif (NimMajor, NimMinor) >= (1, 5):
       var idgen = IdGenerator()
       loadConfigs(NimCfg.RelativeFile, cache, result, idgen)
     else:
