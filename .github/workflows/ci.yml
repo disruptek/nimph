@@ -53,12 +53,17 @@ jobs:
           path: nim
           version: ${{ matrix.nim }}
 
+      - name: Fetch libgit2
+        uses: actions/checkout@v4
+        with:
+          path: ci/libgit2
+          repository: libgit2/libgit2
+          ref: v1.5.0
+
       - name: Setup libgit2
         shell: bash
         run: |
-          cd ci
-          git clone --depth=1 --branch=v1.5.0 --quiet https://github.com/libgit2/libgit2.git
-          cd libgit2
+          cd ci/libgit2
           mkdir build
           cd build
           cmake ..
