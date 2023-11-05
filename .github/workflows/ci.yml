@@ -40,9 +40,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: ci
+          fetch-depth: 0
+          # nimph will scream when this is used
+          #filter: tree:0
 
       - name: Setup Nim
         uses: alaviss/setup-nim@0.1.1
@@ -66,7 +69,6 @@ jobs:
         run: |
           mkdir $HOME/.nimble
           cd ci
-          git fetch --unshallow
           cp ci-bootstrap.cfg nim.cfg
           ./bootstrap-nonimble.sh
           ./nimph refresh
