@@ -24,7 +24,7 @@ when defined(debugPath):
 
 type
   ProjectCfgParsed* = object
-    table*: TableRef[string, string]
+    table*: TableRef[string, seq[string]]
     why*: string
     ok*: bool
 
@@ -58,6 +58,12 @@ template setDefaultsForConfig(result: ConfigRef) =
   when compiles(hintLineTooLong):
     excludeAllNotes(result, hintLineTooLong)
 
+when defined(isNimSkull):
+  proc readConfigEventWriter(config: ConfigRef, evt: ConfigFileEvent,
+                             writeFrom: InstantiationInfo) =
+    ## Used to print config read events. Noop for now.
+    discard
+
 proc parseConfigFile*(path: string): Option[ConfigRef] =
   ## use the compiler to parse a nim.cfg without changing to its directory
   var
@@ -71,7 +77,12 @@ proc parseConfigFile*(path: string): Option[ConfigRef] =
 
   setDefaultsForConfig(config)
 
-  if readConfigFile(filename.AbsoluteFile, cache, config):
+  let success = when defined(isNimSkull):
+    readConfigFile(filename.AbsoluteFile, cache, config, readConfigEventWriter)
+  else:
+    readConfigFile(filename.AbsoluteFile, cache, config)
+
+  if success:
     result = some(config)
 
 when false:
@@ -163,8 +174,11 @@ proc loadAllCfgs*(directory: string): ConfigRef =
     # now follow the compiler process of loading the configs
     var cache = newIdentCache()
 
+    when isNimSkull:
+      # XXX: nimskull returns whether reading was successful, but unused atm
+      discard loadConfigs(NimCfg.RelativeFile, cache, result, readConfigEventWriter)
     # thanks, araq
-    when (NimMajor, NimMinor) >= (1, 5):
+    elif (NimMajor, NimMinor) >= (1, 5):
       var idgen = IdGenerator()
       loadConfigs(NimCfg.RelativeFile, cache, result, idgen)
     else:
@@ -228,7 +242,7 @@ proc appendConfig*(path: Target; config: string): bool =
 
 proc parseProjectCfg*(input: Target): ProjectCfgParsed =
   ## parse a .cfg for any lines we are entitled to mess with
-  result = ProjectCfgParsed(ok: false, table: newTable[string, string]())
+  result = ProjectCfgParsed(ok: false, table: newTable[string, seq[string]]())
   var
     table = result.table
 
@@ -257,11 +271,11 @@ proc parseProjectCfg*(input: Target): ProjectCfgParsed =
         otherkeys <- i"path" | i"p" | i"define" | i"d"
         keys <- nimblekeys | otherkeys
         strsetting <- hyphens * >keys * equals * >strvalue * ending:
-          table.add $1, unescape($2)
+          table.mgetOrPut($1, @[]).add unescape($2)
         anysetting <- hyphens * >keys * equals * >anyvalue * ending:
-          table.add $1, $2
+          table.mgetOrPut($1, @[]).add $2
         toggle <- hyphens * >keys * ending:
-          table.add $1, "it's enabled, okay?"
+          table.mgetOrPut($1, @[]).add "it's enabled, okay?"
         line <- strsetting | anysetting | toggle | (*(1 - nl) * nl)
         document <- *line * !1
       parsed = peggy.match(content)
@@ -539,29 +553,30 @@ proc removeSearchPath*(config: ConfigRef; nimcfg: Target; path: string): bool =
     var
       content = fn.readFile
     # iterate over the entries we parsed naively,
-    for key, value in parsed.table.pairs:
-      # skipping anything that it's a path,
-      if key.toLowerAscii notin ["p", "path", "nimblepath"]:
-        continue
-      # and perform substitutions to see if one might match the value
-      # we are trying to remove; the write flag is false so that we'll
-      # use any $nimbleDir substitutions available to us, if possible
-      for sub in config.pathSubstitutions(path, nimcfg.repo, write = false):
-        if sub notin [value, ///value]:
+    for key, values in parsed.table.pairs:
+      for value in values.items:
+        # skipping anything that it's a path,
+        if key.toLowerAscii notin ["p", "path", "nimblepath"]:
           continue
-        # perform a regexp substition to remove the entry from the content
-        let
-          regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key.escapeRe &
-                      "[:=]\"?" & value.escapeRe & "/?\"?)\\s*")
-          swapped = content.replace(regexp, "")
-        # if that didn't work, cry a bit and move on
-        if swapped == content:
-          notice &"failed regex edit to remove path `{value}`"
-          continue
-        # make sure we search the new content next time through the loop
-        content = swapped
-        result = true
-        # keep performing more substitutions
+        # and perform substitutions to see if one might match the value
+        # we are trying to remove; the write flag is false so that we'll
+        # use any $nimbleDir substitutions available to us, if possible
+        for sub in config.pathSubstitutions(path, nimcfg.repo, write = false):
+          if sub notin [value, ///value]:
+            continue
+          # perform a regexp substition to remove the entry from the content
+          let
+            regexp = re("(*ANYCRLF)(?i)(?s)(-{0,2}" & key.escapeRe &
+                        "[:=]\"?" & value.escapeRe & "/?\"?)\\s*")
+            swapped = content.replace(regexp, "")
+          # if that didn't work, cry a bit and move on
+          if swapped == content:
+            notice &"failed regex edit to remove path `{value}`"
+            continue
+          # make sure we search the new content next time through the loop
+          content = swapped
+          result = true
+          # keep performing more substitutions
 
     # finally, write the edited content
     fn.writeFile(content)

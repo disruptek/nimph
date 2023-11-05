@@ -232,7 +232,7 @@ iterator matchingReleases(requirement: Requirement; head = "";
     if requirement.happyProvision(release, head = head, tags = tags):
       yield release
 
-iterator symbolicMatch*(project: Project; req: Requirement): Release =
+iterator symbolicMatches*(project: Project; req: Requirement): Release =
   ## see if a project can match a given requirement symbolically
   if project.dist == Git:
     if project.tags == nil:
@@ -270,7 +270,7 @@ iterator symbolicMatch*(project: Project; req: Requirement): Release =
 proc symbolicMatch*(project: Project; req: Requirement; release: Release): bool =
   ## convenience
   let release = project.peelRelease(release)
-  for match in project.symbolicMatch(req):
+  for match in project.symbolicMatches(req):
     result = match == release
     if result:
       break
@@ -284,7 +284,7 @@ proc symbolicMatch*(project: var Project; req: Requirement; release: Release): b
 
 proc symbolicMatch*(project: Project; req: Requirement): bool =
   ## convenience
-  for match in project.symbolicMatch(req):
+  for match in project.symbolicMatches(req):
     result = true
     break
 
@@ -475,7 +475,7 @@ proc addName(group: var DependencyGroup; req: Requirement; dep: Dependency) =
         assert group.imports.hasKey(name)
 
 proc add*(group: var DependencyGroup; req: Requirement; dep: Dependency) =
-  group.table.add req, dep
+  group.table[req] = dep
   group.addName req, dep
 
 proc addedRequirements*(dependencies: var DependencyGroup;
@@ -721,7 +721,7 @@ proc roll*(project: var Project; requirement: Requirement;
 
   # get the list of suitable releases as a seq...
   var
-    releases = toSeq project.symbolicMatch(requirement)
+    releases = toSeq project.symbolicMatches(requirement)
   case goal:
   of Upgrade:
     # ...so we can reverse it if needed to invert semantics
@@ -785,7 +785,7 @@ proc rollTowards*(project: var Project; requirement: Requirement): bool =
 
   # reverse the order of matching releases so that we start with the latest
   # valid release first and proceed to lesser versions thereafter
-  var releases = toSeq project.symbolicMatch(requirement)
+  var releases = toSeq project.symbolicMatches(requirement)
   releases.reverse
 
   # iterate over all matching tags

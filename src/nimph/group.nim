@@ -98,7 +98,7 @@ proc `[]`*[K, V](group: Group[K, V]; key: K): V =
 
 proc add*[K: string, V](group: Group[K, V]; key: K; value: V) =
   ## add a key and value to the group
-  group.table.add key, value
+  group.table[key] = value
   group.addName(key.importName, key)
 
 proc add*[K: string, V](group: Group[K, V]; url: Uri; value: V) =
@@ -106,7 +106,7 @@ proc add*[K: string, V](group: Group[K, V]; url: Uri; value: V) =
   let
     naked = url.bare
     key = $naked
-  group.table.add key, value
+  group.table[key] = value
   # this gets picked up during instant-instantiation of a package from
   # a project's url, a la asPackage(project: Project): Package ...
   group.addName naked.importName, key
@@ -120,7 +120,7 @@ proc `[]=`*[K, V](group: Group[K, V]; key: K; value: V) =
 {.warning: "nim bug #12818".}
 proc add*[K: Uri, V](group: Group[K, V]; url: Uri; value: V) =
   ## add a (full) url as a key
-  group.table.add url, value
+  group.table[url] = value
   group.addName url
 
 iterator pairs*[K, V](group: Group[K, V]): tuple[key: K; val: V] =

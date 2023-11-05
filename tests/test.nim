@@ -50,12 +50,14 @@ block:
       check parsed.ok
       check "nimblePath" in parsed.table
       checkpoint $parsed.table
-      check parsed.table["path"].len > 1
+      check parsed.table["path"].len == 1
+      check parsed.table["path"][0].len > 1
       for find in ["test4", "test3:foo", "test2=foo"]:
         block found:
-          for value in parsed.table.values:
-            if value == find:
-              break found
+          for values in parsed.table.values:
+            for value in values.items:
+              if value == find:
+                break found
           fail "missing config values from parse"
 
     test "add a line to a config":
