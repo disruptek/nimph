@@ -35,27 +35,69 @@ jobs:
         #os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
         #os: ['macos-latest', 'ubuntu-latest']
         os: ['ubuntu-latest']
-        nim: ['version-1-6', 'version-1-4', 'version-1-2']
-    name: '${{ matrix.os }} (${{ matrix.nim }})'
+        compiler:
+          - name: nim
+            version: version-1-6
+          - name: nim
+            version: version-1-4
+          - name: nim
+            version: version-1-2
+          - name: nimskull
+            version: '^0.1.0-dev.21080'
+    name: '${{ matrix.os }} (${{ matrix.compiler.name }} ${{ matrix.compiler.version }})'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: ci
+          fetch-depth: 0
+          # nimph will scream when this is used
+          #filter: tree:0
 
-      - name: Setup Nim
+      - if: matrix.compiler.name == 'nim'
+        name: Setup Nim
         uses: alaviss/setup-nim@0.1.1
         with:
           path: nim
-          version: ${{ matrix.nim }}
+          version: ${{ matrix.compiler.version }}
+
+      - if: matrix.compiler.name == 'nimskull'
+        id: nimskull
+        name: Setup Nimskull
+        uses: alaviss/setup-nimskull@f6e8ade8ac51191024616216e5da0ee968d9da48
+        with:
+          nimskull-version: ${{ matrix.compiler.version }}
+
+      - if: matrix.compiler.name == 'nimskull'
+        name: Fetch nimble's fork for nimskull
+        uses: actions/checkout@v4
+        with:
+          path: nimble
+          repository: alaviss/nimble
+          ref: nimskull
+
+      - if: matrix.compiler.name == 'nimskull'
+        name: Build nimble and add to PATH
+        shell: bash
+        run: |
+          cd nimble
+          nim c -d:release -o:nimble src/nimble.nim
+          cp nimble "$NIMSKULL_BIN/nimble"
+        env:
+          NIMSKULL_BIN: ${{ steps.nimskull.outputs.binPath }}
+
+      - name: Fetch libgit2
+        uses: actions/checkout@v4
+        with:
+          path: ci/libgit2
+          repository: libgit2/libgit2
+          ref: v1.5.0
 
       - name: Setup libgit2
         shell: bash
         run: |
-          cd ci
-          git clone --depth=1 --branch=v1.5.0 --quiet https://github.com/libgit2/libgit2.git
-          cd libgit2
+          cd ci/libgit2
           mkdir build
           cd build
           cmake ..
@@ -66,7 +108,6 @@ jobs:
         run: |
           mkdir $HOME/.nimble
           cd ci
-          git fetch --unshallow
           cp ci-bootstrap.cfg nim.cfg
           ./bootstrap-nonimble.sh
           ./nimph refresh
@@ -82,11 +123,19 @@ jobs:
           echo "remove nim's config.nims...?"
           ls -l `dirname \`which nim\``/../config/
           rm `dirname \`which nim\``/../config/config.nims || true
-          if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            nim c --define:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passC:"-I$(pwd)/libgit2/include" --define:ssl --define:release --run tests/test.nim
-          else
-            nim c --define:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passC:"-I$(pwd)/libgit2/include" --define:ssl --define:release --run tests/test.nim
-          fi
+
+          soExt=
+          case "$RUNNER_OS" in
+          macOS)
+            soExt=dylib
+            ;;
+          Linux)
+            soExt=so
+          esac
+          libgit2Lib=$(pwd)/libgit2/build/libgit2.$soExt
+
+          nim c --define:libgit2Lib="$libgit2Lib" --passC:"-I$(pwd)/libgit2/include" --define:ssl -r tests/test.nim
+          nim c --define:libgit2Lib="$libgit2Lib" --passC:"-I$(pwd)/libgit2/include" --define:ssl --define:release -r tests/test.nim
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
