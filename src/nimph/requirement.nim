@@ -175,12 +175,14 @@ proc newRequirement*(id: string; operator: Operator; spec: string): Requirement 
 
 proc newRequirement(id: string; operator: string; spec: string): Requirement =
   ## parse a requirement with the given operator from a string
-  var
-    op = Equal
   # using "" to mean "==" was retarded and i refuse to map my Equal
   # enum to "" in capitulation; nil carborundum illegitimi
-  if operator != "":
-    op = parseEnum[Operator](operator)
+  let op =
+    case operator
+    of "": Equal    # nimble wuz here
+    of "~=": Tilde  # nimble wuz here
+    of "^=": Caret  # nimble wuz here
+    else: parseEnum[Operator](operator)
   result = newRequirement(id, op, spec)
 
 iterator orphans*(parent: Requirement): Requirement =
