@@ -141,8 +141,8 @@ jobs:
           nim c --define:libgit2Lib="$libgit2Lib" --passC:"-I$(pwd)/libgit2/include" --define:ssl -r tests/test.nim
           nim c --define:libgit2Lib="$libgit2Lib" --passC:"-I$(pwd)/libgit2/include" --define:ssl --define:release -r tests/test.nim
 
-      - name: Build docs
-        if: ${{ matrix.docs }} == 'true'
+      - name: Docs
+        if: ${{ matrix.nim }} == 'version-1-6'
         shell: bash
         run: |
           cd ci
@@ -161,7 +161,7 @@ jobs:
           # Ignore failures for older Nim
           cp docs/{the,}index.html || true
 
-      - name: Publish docs
+      - name: Pages
         if: >
           github.event_name == 'push' && github.ref == 'refs/heads/master' &&
           matrix.os == 'ubuntu-latest' && matrix.nim == 'version-1-6'
