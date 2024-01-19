@@ -97,7 +97,9 @@ block:
         text9 = "git://github.com/disruptek/bump.git"
         text10 = "pigs 2.*"
         text11 = "dogs ^3.2"
+        text15 = "dogs ^=3.2"
         text12 = "owls ~4"
+        text16 = "owls ~= 4"
         text13 = "owls any version"
         text14 = "owls >=1.0.0 &< 2"
         parsed1 = parseRequires(text1)
@@ -114,6 +116,8 @@ block:
         parsed12 = parseRequires(text12)
         parsed13 = parseRequires(text13)
         parsed14 = parseRequires(text14)
+        parsed15 = parseRequires(text15)
+        parsed16 = parseRequires(text16)
       check parsed1.isSome
       check parsed2.isSome
       check parsed3.isSome
@@ -138,9 +142,22 @@ block:
         check req.identity == "pigs"
       for req in parsed11.get.values:
         check req.identity == "dogs"
+      for req in parsed15.get.values:
+        check req.identity == "dogs"
+        check req.isSatisfiedBy newRelease"3.2.4"
+        check req.isSatisfiedBy newRelease"3.2.0"
+        check req.isSatisfiedBy newRelease"3.3.0"
+        check not req.isSatisfiedBy newRelease"3.1.0"
+        check not req.isSatisfiedBy newRelease"3.1.9"
+        check not req.isSatisfiedBy newRelease"4.0.0"
       for req in parsed12.get.values:
         check req.identity == "owls"
-        check not req.isSatisfiedBy newRelease"1.8.8"
+      for req in parsed16.get.values:
+        check req.identity == "owls"
+        check req.isSatisfiedBy newRelease"4.0.0"
+        check req.isSatisfiedBy newRelease"4.2.0"
+        check not req.isSatisfiedBy newRelease"5.0.0"
+        check not req.isSatisfiedBy newRelease"3.9.0"
       for req in parsed13.get.values:
         check $req.release == anyRelease
         check req.isSatisfiedBy newRelease"1.8.8"
