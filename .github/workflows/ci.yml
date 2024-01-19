@@ -142,7 +142,7 @@ jobs:
           nim c --define:libgit2Lib="$libgit2Lib" --passC:"-I$(pwd)/libgit2/include" --define:ssl --define:release -r tests/test.nim
 
       - name: Docs
-        if: ${{ matrix.nim }} == 'version-1-6'
+        if: matrix.compiler.version == 'version-1-6'
         shell: bash
         run: |
           cd ci
