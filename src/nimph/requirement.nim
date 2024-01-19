@@ -203,7 +203,7 @@ proc parseRequires*(input: string): Option[Requires] =
       white <- {'\t', ' '}
       url <- +Alnum * "://" * +(1 - white - ending - '#')
       name <- url | +(Alnum | '_')
-      ops <- ">=" | "<=" | ">" | "<" | "==" | "~" | "^" | 0
+      ops <- ">=" | "<=" | ">" | "<" | "==" | "~=" | "~" | "^=" | "^" | 0
       dstar <- +Digit | '*'
       ver <- (dstar * ('.' * dstar)[0..2]) | "any version"
       ending <- (*white * "," * *white) | (*white * "&" * *white) | !1
