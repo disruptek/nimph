@@ -37,6 +37,10 @@ jobs:
         os: ['ubuntu-latest']
         compiler:
           - name: nim
+            version: devel
+          #- name: nim
+          #  version: version-2-0
+          - name: nim
             version: version-1-6
           - name: nim
             version: version-1-4
@@ -92,7 +96,7 @@ jobs:
         with:
           path: ci/libgit2
           repository: libgit2/libgit2
-          ref: v1.5.0
+          ref: v1.7.1
 
       - name: Setup libgit2
         shell: bash
@@ -118,7 +122,7 @@ jobs:
           ./nimph doctor || true
           cat nim.cfg
           cd `./nimph path balls`
-          nim c --out:$HOME/balls --define:release balls.nim
+          nim c --out:$HOME/balls balls.nim
           cd -
           echo "remove nim's config.nims...?"
           ls -l `dirname \`which nim\``/../config/
@@ -137,8 +141,8 @@ jobs:
           nim c --define:libgit2Lib="$libgit2Lib" --passC:"-I$(pwd)/libgit2/include" --define:ssl -r tests/test.nim
           nim c --define:libgit2Lib="$libgit2Lib" --passC:"-I$(pwd)/libgit2/include" --define:ssl --define:release -r tests/test.nim
 
-      - name: Build docs
-        if: ${{ matrix.docs }} == 'true'
+      - name: Docs
+        if: matrix.compiler.version == 'version-1-6'
         shell: bash
         run: |
           cd ci
@@ -157,10 +161,10 @@ jobs:
           # Ignore failures for older Nim
           cp docs/{the,}index.html || true
 
-      - name: Publish docs
+      - name: Pages
         if: >
           github.event_name == 'push' && github.ref == 'refs/heads/master' &&
-          matrix.os == 'ubuntu-latest' && matrix.nim == 'version-1-6'
+          matrix.os == 'ubuntu-latest' && matrix.compiler.version == 'version-1-6'
         uses: crazy-max/ghaction-github-pages@v1
         with:
           build_dir: ci/docs
