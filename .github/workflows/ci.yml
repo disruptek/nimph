@@ -69,7 +69,7 @@ jobs:
       - if: matrix.compiler.name == 'nimskull'
         id: nimskull
         name: Setup Nimskull
-        uses: alaviss/setup-nimskull@f6e8ade8ac51191024616216e5da0ee968d9da48
+        uses: nim-works/setup-nimskull@0.1.0
         with:
           nimskull-version: ${{ matrix.compiler.version }}
 
@@ -89,7 +89,7 @@ jobs:
           nim c -d:release -o:nimble src/nimble.nim
           cp nimble "$NIMSKULL_BIN/nimble"
         env:
-          NIMSKULL_BIN: ${{ steps.nimskull.outputs.binPath }}
+          NIMSKULL_BIN: ${{ steps.nimskull.outputs.bin-path }}
 
       - name: Fetch libgit2
         uses: actions/checkout@v4
