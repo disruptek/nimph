@@ -1,0 +1,48 @@
+`///`	nimph/spec.html#///.t,string	spec: `///`(a: string): string	
+`///`	nimph/spec.html#///.t	spec: `///`(a: AbsoluteFile | AbsoluteDir): string	
+`//////`	nimph/spec.html#//////.t	spec: `//////`(a: string | AbsoluteFile | AbsoluteDir): string	
+Flag	nimph/spec.html#Flag	spec: Flag	
+Upgrade	nimph/spec.html#Upgrade	RollGoal.Upgrade	
+Downgrade	nimph/spec.html#Downgrade	RollGoal.Downgrade	
+Specific	nimph/spec.html#Specific	RollGoal.Specific	
+RollGoal	nimph/spec.html#RollGoal	spec: RollGoal	
+ForkTargetResult	nimph/spec.html#ForkTargetResult	spec: ForkTargetResult	
+dotNimble	nimph/spec.html#dotNimble	spec: dotNimble	
+dotNimbleLink	nimph/spec.html#dotNimbleLink	spec: dotNimbleLink	
+dotGit	nimph/spec.html#dotGit	spec: dotGit	
+dotHg	nimph/spec.html#dotHg	spec: dotHg	
+DepDir	nimph/spec.html#DepDir	spec: DepDir	
+PkgDir	nimph/spec.html#PkgDir	spec: PkgDir	
+NimCfg	nimph/spec.html#NimCfg	spec: NimCfg	
+ghTokenFn	nimph/spec.html#ghTokenFn	spec: ghTokenFn	
+ghTokenEnv	nimph/spec.html#ghTokenEnv	spec: ghTokenEnv	
+hubTokenFn	nimph/spec.html#hubTokenFn	spec: hubTokenFn	
+stalePackages	nimph/spec.html#stalePackages	spec: stalePackages	
+configFile	nimph/spec.html#configFile	spec: configFile	
+nimbleMeta	nimph/spec.html#nimbleMeta	spec: nimbleMeta	
+officialPackages	nimph/spec.html#officialPackages	spec: officialPackages	
+emptyRelease	nimph/spec.html#emptyRelease	spec: emptyRelease	
+defaultRemote	nimph/spec.html#defaultRemote	spec: defaultRemote	
+upstreamRemote	nimph/spec.html#upstreamRemote	spec: upstreamRemote	
+excludeMissingSearchPaths	nimph/spec.html#excludeMissingSearchPaths	spec: excludeMissingSearchPaths	
+excludeMissingLazyPaths	nimph/spec.html#excludeMissingLazyPaths	spec: excludeMissingLazyPaths	
+writeNimbleDirPaths	nimph/spec.html#writeNimbleDirPaths	spec: writeNimbleDirPaths	
+shortDate	nimph/spec.html#shortDate	spec: shortDate	
+defaultFlags	nimph/spec.html#defaultFlags	spec: defaultFlags	
+WhatHappensInVegas	nimph/spec.html#WhatHappensInVegas	spec: WhatHappensInVegas	
+withinDirectory	nimph/spec.html#withinDirectory.t,string,untyped	spec: withinDirectory(path: string; body: untyped): untyped	
+isValid	nimph/spec.html#isValid.t,Uri	spec: isValid(url: Uri): bool	
+hash	nimph/spec.html#hash,Uri	spec: hash(url: Uri): Hash	
+bare	nimph/spec.html#bare,Uri	spec: bare(url: Uri): Uri	
+bareUrlsAreEqual	nimph/spec.html#bareUrlsAreEqual,Uri,Uri	spec: bareUrlsAreEqual(a, b: Uri): bool	
+pathToImport	nimph/spec.html#pathToImport,string	spec: pathToImport(path: string): string	
+normalizeUrl	nimph/spec.html#normalizeUrl,Uri	spec: normalizeUrl(uri: Uri): Uri	
+convertToGit	nimph/spec.html#convertToGit,Uri	spec: convertToGit(uri: Uri): Uri	
+convertToSsh	nimph/spec.html#convertToSsh,Uri	spec: convertToSsh(uri: Uri): Uri	
+prepareForClone	nimph/spec.html#prepareForClone,Uri	spec: prepareForClone(uri: Uri): Uri	
+packageName	nimph/spec.html#packageName,string	spec: packageName(name: string): string	
+packageName	nimph/spec.html#packageName,Uri	spec: packageName(url: Uri): string	
+importName	nimph/spec.html#importName,string	spec: importName(path: string): string	
+importName	nimph/spec.html#importName,Uri	spec: importName(url: Uri): string	
+forkTarget	nimph/spec.html#forkTarget,Uri	spec: forkTarget(url: Uri): ForkTargetResult	
+destylize	nimph/spec.html#destylize,string	spec: destylize(s: string): string	

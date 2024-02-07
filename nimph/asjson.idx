@@ -1,0 +1,14 @@
+toJson	nimph/asjson.html#toJson,Operator	asjson: toJson(operator: Operator): JsonNode	
+toOperator	nimph/asjson.html#toOperator,JsonNode	asjson: toOperator(js: JsonNode): Operator	
+toJson	nimph/asjson.html#toJson,Version	asjson: toJson(version: Version): JsonNode	
+toVersion	nimph/asjson.html#toVersion,JsonNode	asjson: toVersion(js: JsonNode): Version	
+toJson	nimph/asjson.html#toJson,VersionMask	asjson: toJson(mask: VersionMask): JsonNode	
+toVersionMask	nimph/asjson.html#toVersionMask,JsonNode	asjson: toVersionMask(js: JsonNode): VersionMask	
+toJson	nimph/asjson.html#toJson,Release	asjson: toJson(release: Release): JsonNode	
+toRelease	nimph/asjson.html#toRelease,JsonNode	asjson: toRelease(js: JsonNode): Release	
+toJson	nimph/asjson.html#toJson,Requirement	asjson: toJson(requirement: Requirement): JsonNode	
+toRequirement	nimph/asjson.html#toRequirement,JsonNode	asjson: toRequirement(js: JsonNode): Requirement	
+toJson	nimph/asjson.html#toJson,DistMethod	asjson: toJson(dist: DistMethod): JsonNode	
+toDistMethod	nimph/asjson.html#toDistMethod,JsonNode	asjson: toDistMethod(js: JsonNode): DistMethod	
+toJson	nimph/asjson.html#toJson,Uri	asjson: toJson(uri: Uri): JsonNode	
+toUri	nimph/asjson.html#toUri,JsonNode	asjson: toUri(js: JsonNode): Uri	

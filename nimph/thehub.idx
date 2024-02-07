@@ -1,0 +1,31 @@
+hubTime	nimph/thehub.html#hubTime	thehub: hubTime	
+HubRelease	nimph/thehub.html#HubRelease	HubKind.HubRelease	
+HubTag	nimph/thehub.html#HubTag	HubKind.HubTag	
+HubCommit	nimph/thehub.html#HubCommit	HubKind.HubCommit	
+HubRepo	nimph/thehub.html#HubRepo	HubKind.HubRepo	
+HubIssue	nimph/thehub.html#HubIssue	HubKind.HubIssue	
+HubPull	nimph/thehub.html#HubPull	HubKind.HubPull	
+HubUser	nimph/thehub.html#HubUser	HubKind.HubUser	
+HubCode	nimph/thehub.html#HubCode	HubKind.HubCode	
+HubKind	nimph/thehub.html#HubKind	thehub: HubKind	
+HubTree	nimph/thehub.html#HubTree	thehub: HubTree	
+HubContact	nimph/thehub.html#HubContact	thehub: HubContact	
+HubVerification	nimph/thehub.html#HubVerification	thehub: HubVerification	
+HubCommitMeta	nimph/thehub.html#HubCommitMeta	thehub: HubCommitMeta	
+HubResult	nimph/thehub.html#HubResult	thehub: HubResult	
+HubGroup	nimph/thehub.html#HubGroup	thehub: HubGroup	
+HubSort	nimph/thehub.html#HubSort	thehub: HubSort	
+HubSortBy	nimph/thehub.html#HubSortBy	thehub: HubSortBy	
+renderShortly	nimph/thehub.html#renderShortly,HubResult	thehub: renderShortly(r: HubResult): string	
+findGithubToken	nimph/thehub.html#findGithubToken	thehub: findGithubToken(): Option[string]	
+newHubContact	nimph/thehub.html#newHubContact,JsonNode	thehub: newHubContact(js: JsonNode): HubContact	
+newHubTree	nimph/thehub.html#newHubTree,JsonNode	thehub: newHubTree(js: JsonNode): HubTree	
+newHubCommitMeta	nimph/thehub.html#newHubCommitMeta,JsonNode	thehub: newHubCommitMeta(js: JsonNode): HubCommitMeta	
+init	nimph/thehub.html#init,HubResult,JsonNode	thehub: init(result: var HubResult; js: JsonNode)	
+newHubResult	nimph/thehub.html#newHubResult,HubKind,JsonNode	thehub: newHubResult(kind: HubKind; js: JsonNode): HubResult	
+newHubGroup	nimph/thehub.html#newHubGroup,set[Flag]	thehub: newHubGroup(flags: set[Flag] = defaultFlags): HubGroup	
+add	nimph/thehub.html#add,HubGroup,HubResult	thehub: add(group: var HubGroup; hub: HubResult)	
+authorize	nimph/thehub.html#authorize,Recallable	thehub: authorize(request: Recallable): bool	
+getGitHubUser	nimph/thehub.html#getGitHubUser	thehub: getGitHubUser(): Option[HubResult]	
+forkHub	nimph/thehub.html#forkHub,string,string	thehub: forkHub(owner: string; repo: string): Option[HubResult]	
+searchHub	nimph/thehub.html#searchHub,seq[string]	thehub: searchHub(keywords: seq[string]; sort = Best; order = Descending): Option[\n    HubGroup]	

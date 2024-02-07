@@ -1,0 +1,8 @@
+DrOkay	nimph/doctor.html#DrOkay	StateKind.DrOkay	
+DrRetry	nimph/doctor.html#DrRetry	StateKind.DrRetry	
+DrError	nimph/doctor.html#DrError	StateKind.DrError	
+StateKind	nimph/doctor.html#StateKind	doctor: StateKind	
+DrState	nimph/doctor.html#DrState	doctor: DrState	
+fixTags	nimph/doctor.html#fixTags,Project	doctor: fixTags(project: var Project; dry_run = true; force = false): bool	
+fixDependencies	nimph/doctor.html#fixDependencies,Project,DependencyGroup,DrState	doctor: fixDependencies(project: var Project; group: var DependencyGroup;\n                state: var DrState): bool	
+doctor	nimph/doctor.html#doctor,Project	doctor: doctor(project: var Project; dry = true; strict = true): bool	

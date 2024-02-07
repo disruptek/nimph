@@ -1,0 +1,49 @@
+VersionField	nimph/version.html#VersionField	version: VersionField	
+VersionIndex	nimph/version.html#VersionIndex	version: VersionIndex	
+VersionMaskField	nimph/version.html#VersionMaskField	version: VersionMaskField	
+VersionMask	nimph/version.html#VersionMask	version: VersionMask	
+Tag	nimph/version.html#Tag	Operator.Tag	
+Wild	nimph/version.html#Wild	Operator.Wild	
+Tilde	nimph/version.html#Tilde	Operator.Tilde	
+Caret	nimph/version.html#Caret	Operator.Caret	
+Equal	nimph/version.html#Equal	Operator.Equal	
+AtLeast	nimph/version.html#AtLeast	Operator.AtLeast	
+Over	nimph/version.html#Over	Operator.Over	
+Under	nimph/version.html#Under	Operator.Under	
+NotMore	nimph/version.html#NotMore	Operator.NotMore	
+Operator	nimph/version.html#Operator	version: Operator	
+Release	nimph/version.html#Release	version: Release	
+Wildlings	nimph/version.html#Wildlings	version: Wildlings	
+parseDottedVersion	nimph/version.html#parseDottedVersion,string	version: parseDottedVersion(input: string): Version	
+isValid	nimph/version.html#isValid,Release	version: isValid(release: Release): bool	
+newRelease	nimph/version.html#newRelease,Version	version: newRelease(version: Version): Release	
+parseVersionLoosely	nimph/version.html#parseVersionLoosely,string	version: parseVersionLoosely(content: string): Option[Release]	
+newRelease	nimph/version.html#newRelease,string	version: newRelease(reference: string; operator = Equal): Release	
+`$`	nimph/version.html#$,VersionMaskField	version: `$`(field: VersionMaskField): string	
+`$`	nimph/version.html#$,VersionMask	version: `$`(mask: VersionMask): string	
+omitStars	nimph/version.html#omitStars,VersionMask	version: omitStars(mask: VersionMask): string	
+`$`	nimph/version.html#$,Release	version: `$`(spec: Release): string	
+`==`	nimph/version.html#==,VersionMaskField,VersionMaskField	version: `==`(a, b: VersionMaskField): bool	
+`&lt;`	nimph/version.html#<,VersionMaskField,VersionMaskField	version: `&lt;`(a, b: VersionMaskField): bool	
+`==`	nimph/version.html#==,VersionMask,VersionMask	version: `==`(a, b: VersionMask): bool	
+`==`	nimph/version.html#==,Release,Release	version: `==`(a, b: Release): bool	
+`&lt;`	nimph/version.html#<,Release,Release	version: `&lt;`(a, b: Release): bool	
+`&lt;=`	nimph/version.html#<=,Release,Release	version: `&lt;=`(a, b: Release): bool	
+`==`	nimph/version.html#==,VersionMask,Version	version: `==`(a: VersionMask; b: Version): bool	
+acceptable	nimph/version.html#acceptable,VersionMaskField,Operator,VersionField	version: acceptable(mask: VersionMaskField; op: Operator; value: VersionField): bool	
+at	nimph/version.html#at,T,VersionIndex	version: at[T: Version | VersionMask](version: T; index: VersionIndex): auto	
+`[]=`	nimph/version.html#[]=,VersionMask,VersionIndex,VersionMaskField	version: `[]=`(mask: var VersionMask; index: VersionIndex; value: VersionMaskField)	
+items	nimph/version.html#items.i,T	version: items[T: Version | VersionMask](version: T): auto	
+pairs	nimph/version.html#pairs.i,T	version: pairs[T: Version | VersionMask](version: T): auto	
+isSpecific	nimph/version.html#isSpecific,Release	version: isSpecific(release: Release): bool	
+specifically	nimph/version.html#specifically,Release	version: specifically(release: Release): Version	
+effectively	nimph/version.html#effectively,VersionMask	version: effectively(mask: VersionMask): Version	
+effectively	nimph/version.html#effectively,Release	version: effectively(release: Release): Version	
+hash	nimph/version.html#hash,VersionMaskField	version: hash(field: VersionMaskField): Hash	
+hash	nimph/version.html#hash,VersionMask	version: hash(mask: VersionMask): Hash	
+hash	nimph/version.html#hash,Release	version: hash(release: Release): Hash	
+toMask	nimph/version.html#toMask,Version	version: toMask(version: Version): VersionMask	
+importName	nimph/version.html#importName,Target	version: importName(target: Target): string	
+likelyTags	nimph/version.html#likelyTags.i,Version	version: likelyTags(version: Version): string	
+semanticVersionStrings	nimph/version.html#semanticVersionStrings.i,VersionMask	version: semanticVersionStrings(mask: VersionMask): string	
+semanticVersionStrings	nimph/version.html#semanticVersionStrings.i,Version	version: semanticVersionStrings(version: Version): string	

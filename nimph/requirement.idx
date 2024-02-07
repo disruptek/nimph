@@ -1,0 +1,18 @@
+Requirement	nimph/requirement.html#Requirement	requirement: Requirement	
+Requires	nimph/requirement.html#Requires	requirement: Requires	
+`$`	nimph/requirement.html#$,Requirement	requirement: `$`(req: Requirement): string	
+isValid	nimph/requirement.html#isValid,Requirement	requirement: isValid(req: Requirement): bool	
+isSatisfiedBy	nimph/requirement.html#isSatisfiedBy,Requirement,Release	requirement: isSatisfiedBy(req: Requirement; spec: Release): bool	
+hash	nimph/requirement.html#hash,Requirement	requirement: hash(req: Requirement): Hash	
+adopt	nimph/requirement.html#adopt,Requirement,Requirement	requirement: adopt(parent: var Requirement; child: Requirement)	
+children	nimph/requirement.html#children.i,Requirement	requirement: children(parent: Requirement; andParent = false): Requirement	
+newRequirement	nimph/requirement.html#newRequirement,string,Operator,Release,string	requirement: newRequirement(id: string; operator: Operator; release: Release; notes = &quot;&quot;): Requirement	
+newRequirement	nimph/requirement.html#newRequirement,string,Operator,string	requirement: newRequirement(id: string; operator: Operator; spec: string): Requirement	
+orphans	nimph/requirement.html#orphans.i,Requirement	requirement: orphans(parent: Requirement): Requirement	
+parseRequires	nimph/requirement.html#parseRequires,string	requirement: parseRequires(input: string): Option[Requires]	
+isVirtual	nimph/requirement.html#isVirtual,Requirement	requirement: isVirtual(requirement: Requirement): bool	
+isUrl	nimph/requirement.html#isUrl,Requirement	requirement: isUrl(requirement: Requirement): bool	
+asUrlAnchor	nimph/requirement.html#asUrlAnchor,Release	requirement: asUrlAnchor(release: Release): string	
+toUrl	nimph/requirement.html#toUrl,Requirement	requirement: toUrl(requirement: Requirement): Option[Uri]	
+importName	nimph/requirement.html#importName,Requirement	requirement: importName(requirement: Requirement): string	
+describe	nimph/requirement.html#describe,Requirement	requirement: describe(requirement: Requirement): string	

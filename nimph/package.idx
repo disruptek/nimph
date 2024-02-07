@@ -1,0 +1,21 @@
+Local	nimph/package.html#Local	DistMethod.Local	
+Git	nimph/package.html#Git	DistMethod.Git	
+Nest	nimph/package.html#Nest	DistMethod.Nest	
+Merc	nimph/package.html#Merc	DistMethod.Merc	
+DistMethod	nimph/package.html#DistMethod	package: DistMethod	
+Package	nimph/package.html#Package	package: Package	
+PackageGroup	nimph/package.html#PackageGroup	package: PackageGroup	
+PackagesResult	nimph/package.html#PackagesResult	package: PackagesResult	
+importName	nimph/package.html#importName,Package	package: importName(package: Package): string	
+newPackage	nimph/package.html#newPackage,string,string,DistMethod,Uri	package: newPackage(name: string; path: string; dist: DistMethod; url: Uri): Package	
+newPackage	nimph/package.html#newPackage,string,DistMethod,Uri	package: newPackage(name: string; dist: DistMethod; url: Uri): Package	
+newPackage	nimph/package.html#newPackage,Uri	package: newPackage(url: Uri): Package	
+`$`	nimph/package.html#$,Package	package: `$`(package: Package): string	
+newPackageGroup	nimph/package.html#newPackageGroup,set[Flag]	package: newPackageGroup(flags: set[Flag] = defaultFlags): PackageGroup	
+aimAt	nimph/package.html#aimAt,Package,Requirement	package: aimAt(package: Package; req: Requirement): Package	
+getOfficialPackages	nimph/package.html#getOfficialPackages,string	package: getOfficialPackages(nimbleDir: string): PackagesResult	
+ageInDays	nimph/package.html#ageInDays,PackagesResult	package: ageInDays(found: PackagesResult): int64	
+toUrl	nimph/package.html#toUrl,Requirement,PackageGroup	package: toUrl(requirement: Requirement; group: PackageGroup): Option[Uri]	
+hasUrl	nimph/package.html#hasUrl,PackageGroup,Uri	package: hasUrl(group: PackageGroup; url: Uri): bool	
+matching	nimph/package.html#matching,PackageGroup,Requirement	package: matching(group: PackageGroup; req: Requirement): PackageGroup	
+urls	nimph/package.html#urls.i,PackageGroup	package: urls(group: PackageGroup): Uri	

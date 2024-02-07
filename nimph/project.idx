@@ -1,0 +1,81 @@
+Project	nimph/project.html#Project	project: Project	
+ProjectGroup	nimph/project.html#ProjectGroup	project: ProjectGroup	
+Releases	nimph/project.html#Releases	project: Releases	
+LinkedSearchResult	nimph/project.html#LinkedSearchResult	project: LinkedSearchResult	
+Requirements	nimph/project.html#Requirements	project: Requirements	
+RequirementsTags	nimph/project.html#RequirementsTags	project: RequirementsTags	
+repo	nimph/project.html#repo.t,Project	project: repo(project: Project): string	
+gitDir	nimph/project.html#gitDir.t,Project	project: gitDir(project: Project): string	
+hasGit	nimph/project.html#hasGit.t,Project	project: hasGit(project: Project): bool	
+hgDir	nimph/project.html#hgDir.t,Project	project: hgDir(project: Project): string	
+hasHg	nimph/project.html#hasHg.t,Project	project: hasHg(project: Project): bool	
+nimphConfig	nimph/project.html#nimphConfig.t,Project	project: nimphConfig(project: Project): string	
+hasNimph	nimph/project.html#hasNimph.t,Project	project: hasNimph(project: Project): bool	
+localDeps	nimph/project.html#localDeps.t,Project	project: localDeps(project: Project): string	
+packageDirectory	nimph/project.html#packageDirectory.t,Project	project: packageDirectory(project: Project): string	
+hasReleaseTag	nimph/project.html#hasReleaseTag.t,Project	project: hasReleaseTag(project: Project): bool	
+nimCfg	nimph/project.html#nimCfg.t,Project	project: nimCfg(project: Project): Target	
+hasLocalDeps	nimph/project.html#hasLocalDeps.t,Project	project: hasLocalDeps(project: Project): bool	
+nimbleDir	nimph/project.html#nimbleDir,Project	project: nimbleDir(project: Project): string	
+`$`	nimph/project.html#$,Project	project: `$`(project: Project): string	
+fetchConfig	nimph/project.html#fetchConfig,Project	project: fetchConfig(project: var Project; force = false): bool	
+runSomething	nimph/project.html#runSomething,Project,string,seq[string]	project: runSomething(project: Project; exe: string; args: seq[string];\n             opts = {poParentStreams}): RunOutput	
+runSomething	nimph/project.html#runSomething,Project,string,seq[string]_2	project: runSomething(project: var Project; exe: string; args: seq[string];\n             opts = {poParentStreams}): RunOutput	
+guessVersion	nimph/project.html#guessVersion,Project	project: guessVersion(project: Project): Version	
+fetchDump	nimph/project.html#fetchDump,Project,string	project: fetchDump(project: var Project; package: string; refresh = false): bool	
+fetchDump	nimph/project.html#fetchDump,Project	project: fetchDump(project: var Project; refresh = false): bool	
+knowVersion	nimph/project.html#knowVersion,Project	project: knowVersion(project: var Project): Version	
+newProject	nimph/project.html#newProject,Target	project: newProject(nimble: Target): Project	
+getHeadOid	nimph/project.html#getHeadOid,Project	project: getHeadOid(project: Project): GitResult[GitOid]	
+demandHead	nimph/project.html#demandHead,GitRepository	project: demandHead(repository: GitRepository): string	
+demandHead	nimph/project.html#demandHead,Project	project: demandHead(project: Project): string	
+matchingBranches	nimph/project.html#matchingBranches.i,Project,GitOid	project: matchingBranches(project: Project; oid: GitOid): GitReference	
+matchingBranches	nimph/project.html#matchingBranches.i,Project,string	project: matchingBranches(project: Project; name: string): GitReference	
+sortByVersion	nimph/project.html#sortByVersion,GitTagTable	project: sortByVersion(tags: GitTagTable): GitTagTable	
+fetchTagTable	nimph/project.html#fetchTagTable,Project	project: fetchTagTable(project: var Project)	
+releaseSummary	nimph/project.html#releaseSummary,Project	project: releaseSummary(project: Project): string	
+cuteRelease	nimph/project.html#cuteRelease,Project	project: cuteRelease(project: Project): string	
+findCurrentTag	nimph/project.html#findCurrentTag,Project	project: findCurrentTag(project: Project): Release	
+findCurrentTag	nimph/project.html#findCurrentTag,Project_2	project: findCurrentTag(project: var Project): Release	
+inventRelease	nimph/project.html#inventRelease,Project	project: inventRelease(project: var Project)	
+findRepositoryUrl	nimph/project.html#findRepositoryUrl,Project	project: findRepositoryUrl(project: Project; name = defaultRemote): Option[Uri]	
+createUrl	nimph/project.html#createUrl,Project	project: createUrl(project: Project; refresh = false): Uri	
+createUrl	nimph/project.html#createUrl,Project_2	project: createUrl(project: var Project; refresh = false): Uri	
+refresh	nimph/project.html#refresh,Project	project: refresh(project: var Project)	
+findProject	nimph/project.html#findProject,Project,string,Project	project: findProject(project: var Project; dir: string; parent: Project = nil): bool	
+newProjectGroup	nimph/project.html#newProjectGroup,set[Flag]	project: newProjectGroup(flags: set[Flag] = defaultFlags): ProjectGroup	
+importName	nimph/project.html#importName,LinkedSearchResult	project: importName(linked: LinkedSearchResult): string	
+importName	nimph/project.html#importName,Project	project: importName(project: Project): string	
+hasProjectIn	nimph/project.html#hasProjectIn,ProjectGroup,string	project: hasProjectIn(group: ProjectGroup; directory: string): bool	
+getProjectIn	nimph/project.html#getProjectIn,ProjectGroup,string	project: getProjectIn(group: ProjectGroup; directory: string): Project	
+mgetProjectIn	nimph/project.html#mgetProjectIn,ProjectGroup,string	project: mgetProjectIn(group: var ProjectGroup; directory: string): var Project	
+availableProjects	nimph/project.html#availableProjects,Project	project: availableProjects(project: Project): ProjectGroup	
+`==`	nimph/project.html#==,Project,Project	project: `==`(a, b: Project): bool	
+removeSearchPath	nimph/project.html#removeSearchPath,Project,string	project: removeSearchPath(project: Project; path: string): bool	
+removeSearchPath	nimph/project.html#removeSearchPath,Project,string_2	project: removeSearchPath(project: var Project; path: string): bool	
+excludeSearchPath	nimph/project.html#excludeSearchPath,Project,string	project: excludeSearchPath(project: Project; path: string): bool	
+excludeSearchPath	nimph/project.html#excludeSearchPath,Project,string_2	project: excludeSearchPath(project: var Project; path: string): bool	
+addSearchPath	nimph/project.html#addSearchPath,Project,string	project: addSearchPath(project: Project; path: string): bool	
+addSearchPath	nimph/project.html#addSearchPath,Project,string_2	project: addSearchPath(project: var Project; path: string): bool	
+missingSearchPaths	nimph/project.html#missingSearchPaths.i,Project,Project	project: missingSearchPaths(project: Project; target: Project): string	
+missingSearchPaths	nimph/project.html#missingSearchPaths.i,Project,Project_2	project: missingSearchPaths(project: Project; target: var Project): string	
+addMissingSearchPathsTo	nimph/project.html#addMissingSearchPathsTo,Project,Project	project: addMissingSearchPathsTo(project: var Project; cloned: var Project)	
+relocateDependency	nimph/project.html#relocateDependency,Project,Project	project: relocateDependency(parent: var Project; project: var Project)	
+addMissingUpstreams	nimph/project.html#addMissingUpstreams,Project	project: addMissingUpstreams(project: Project)	
+clone	nimph/project.html#clone,Project,Uri,string,Project	project: clone(project: var Project; url: Uri; name: string; cloned: var Project): bool	
+allImportTargets	nimph/project.html#allImportTargets,ConfigRef,string	project: allImportTargets(config: ConfigRef; repo: string): OrderedTableRef[Target,\n    LinkedSearchResult]	
+asFoundVia	nimph/project.html#asFoundVia.i,ProjectGroup,ConfigRef,string	project: asFoundVia(group: var ProjectGroup; config: ConfigRef; repo: string): var Project	
+countNimblePaths	nimph/project.html#countNimblePaths,Project	project: countNimblePaths(project: Project): tuple[local: int, global: int,\n    paths: seq[string]]	
+numberOfNimblePaths	nimph/project.html#numberOfNimblePaths,Project	project: numberOfNimblePaths(project: Project): int	
+forkTarget	nimph/project.html#forkTarget,Project	project: forkTarget(project: Project): ForkTargetResult	
+promoteRemoteLike	nimph/project.html#promoteRemoteLike,Project,Uri	project: promoteRemoteLike(project: Project; url: Uri; name = defaultRemote): bool	
+promote	nimph/project.html#promote,Project,HubResult	project: promote(project: Project; name = defaultRemote; user: HubResult = nil): bool	
+requirementChangingCommits	nimph/project.html#requirementChangingCommits,Project	project: requirementChangingCommits(project: Project): RequirementsTags	
+repoLockReady	nimph/project.html#repoLockReady,Project	project: repoLockReady(project: Project): bool	
+bestRelease	nimph/project.html#bestRelease,GitTagTable,RollGoal	project: bestRelease(tags: GitTagTable; goal: RollGoal): Version	
+betterReleaseExists	nimph/project.html#betterReleaseExists,Project,RollGoal	project: betterReleaseExists(project: var Project; goal: RollGoal): bool	
+nextTagFor	nimph/project.html#nextTagFor,GitTagTable,Version	project: nextTagFor(tags: GitTagTable; version: Version): string	
+setHeadToRelease	nimph/project.html#setHeadToRelease,Project,Release,seq[string]	project: setHeadToRelease(project: var Project; release: Release;\n                 paths: seq[string] = @[]): bool	
+returnToHeadAfter	nimph/project.html#returnToHeadAfter.t,Project,untyped	project: returnToHeadAfter(project: var Project; body: untyped)	
+versionChangingCommits	nimph/project.html#versionChangingCommits,Project	project: versionChangingCommits(project: var Project): VersionTags	
+pathForName	nimph/project.html#pathForName,ProjectGroup,string	project: pathForName(group: ProjectGroup; name: string): Option[string]	

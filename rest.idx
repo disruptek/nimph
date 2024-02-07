@@ -1,0 +1,13 @@
+RestClient	rest.html#RestClient	rest: RestClient	
+RestCall	rest.html#RestCall	rest: RestCall	
+Recallable	rest.html#Recallable	rest: Recallable	
+RestError	rest.html#RestError	rest: RestError	
+RetriesExhausted	rest.html#RetriesExhausted	rest: RetriesExhausted	
+CallRequestError	rest.html#CallRequestError	rest: CallRequestError	
+massageHeaders	rest.html#massageHeaders,JsonNode	rest: massageHeaders(node: JsonNode): seq[KeyVal]	
+`$`	rest.html#$.e,ref.RestError	rest: `$`(e: ref RestError): string	
+`$`	rest.html#$.e,RestCall	rest: `$`(c: RestCall): string	
+initRestClient	rest.html#initRestClient.e,RestClient	rest: initRestClient(self: RestClient)	
+newRestClient	rest.html#newRestClient	rest: newRestClient(): RestClient	
+newRecallable	rest.html#newRecallable.e,RestCall,Uri,HttpHeaders,string	rest: newRecallable(call: RestCall; url: Uri; headers: HttpHeaders; body: string): Recallable	
+issueRequest	rest.html#issueRequest,Recallable	rest: issueRequest(rec: Recallable): Response	

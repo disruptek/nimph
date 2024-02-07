@@ -1,0 +1,13 @@
+VersionTags	nimph/versiontags.html#VersionTags	versiontags: VersionTags	
+addName	nimph/versiontags.html#addName,VersionTags,VersionMask,GitThing	versiontags: addName(group: var VersionTags; mask: VersionMask; thing: GitThing)	
+addName	nimph/versiontags.html#addName,VersionTags,Version,GitThing	versiontags: addName(group: var VersionTags; version: Version; thing: GitThing)	
+add	nimph/versiontags.html#add,VersionTags,Version,GitThing	versiontags: add(group: var VersionTags; ver: Version; thing: GitThing)	
+del	nimph/versiontags.html#del,VersionTags,Version	versiontags: del(group: var VersionTags; ver: Version)	
+`[]=`	nimph/versiontags.html#[]=,VersionTags,Version,GitThing	versiontags: `[]=`(group: var VersionTags; ver: Version; thing: GitThing)	
+`[]`	nimph/versiontags.html#[],VersionTags,Version	versiontags: `[]`(group: VersionTags; ver: Version): var GitThing	
+`[]`	nimph/versiontags.html#[],VersionTags,VersionMask	versiontags: `[]`(group: VersionTags; ver: VersionMask): var GitThing	
+newVersionTags	nimph/versiontags.html#newVersionTags	versiontags: newVersionTags(flags = defaultFlags): VersionTags	
+richen	nimph/versiontags.html#richen.i,GitTagTable	versiontags: richen(tags: GitTagTable): tuple[release: Release, thing: GitThing]	
+releaseHashes	nimph/versiontags.html#releaseHashes,Release,string	versiontags: releaseHashes(release: Release; head = &quot;&quot;): HashSet[Hash]	
+releaseHashes	nimph/versiontags.html#releaseHashes,Release,GitThing,string	versiontags: releaseHashes(release: Release; thing: GitThing; head = &quot;&quot;): HashSet[Hash]	
+matches	nimph/versiontags.html#matches.i,GitTagTable,HashSet[Hash],string	versiontags: matches(tags: GitTagTable; against: HashSet[Hash]; head: string = &quot;&quot;): tuple[\n    release: Release, thing: GitThing]	
