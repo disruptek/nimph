@@ -1,9 +1,9 @@
-import times
-import httpclient
-import httpcore
-import json
-import strutils
-import uri
+import std/times
+import std/httpclient
+import std/httpcore
+import std/json
+import std/strutils
+import std/uri
 
 export httpcore.HttpMethod, is2xx, is3xx, is4xx, is5xx
 
