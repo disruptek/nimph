@@ -38,18 +38,21 @@ jobs:
         compiler:
           - name: nim
             version: devel
-          #- name: nim
-          #  version: version-2-0
+          - name: nim
+            version: version-2-2
+          - name: nim
+            version: version-2-0
+          # 1.6 is the documented floor and drives the docs/pages job below
           - name: nim
             version: version-1-6
-          - name: nim
-            version: version-1-4
-          - name: nim
-            version: version-1-2
           - name: nimskull
             version: '^0.1.0-dev.21080'
     name: '${{ matrix.os }} (${{ matrix.compiler.name }} ${{ matrix.compiler.version }})'
     runs-on: ${{ matrix.os }}
+    # nimskull is a moving dev target whose own compiler bugs (e.g. the
+    # lambdalifting ICE seen in 0.1.0-dev.21593) are outside nimph's control;
+    # run it for visibility but don't let it fail the whole matrix.
+    continue-on-error: ${{ matrix.compiler.name == 'nimskull' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
