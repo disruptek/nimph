@@ -14,7 +14,10 @@ import ups/sanitize
 include nimph/skullduggery
 
 # slash attack ///////////////////////////////////////////////////
-when NimMajor >= 1 and NimMinor >= 1:
+# NB: must be a tuple comparison; `NimMajor >= 1 and NimMinor >= 1`
+# is false on Nim 2.0 (NimMinor == 0) and silently drops the trailing
+# DirSep that every `///` caller depends upon.
+when (NimMajor, NimMinor) >= (1, 1):
   template `///`*(a: string): string =
     # ensure a trailing DirSep
     joinPath(a, $DirSep, "")
